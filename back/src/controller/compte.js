@@ -13,7 +13,6 @@ compteRouter.post('/api/users', (req, res) => {
 compteRouter.get('/api/users', async (req, res) => {
     const service_compte = new ServiceCompte();
     const comptes = await service_compte.recupererComptes();
-    console.log(comptes);
     res.status(200).json(comptes);
 });
 

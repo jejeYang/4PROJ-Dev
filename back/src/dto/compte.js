@@ -16,13 +16,13 @@ class DtoCompte {
 
     creerCompte(compte) {
     // Simuler la sauvegarde du compte dans une base de données
-    const req = `INSERT INTO public."Compte" (nom, solde) VALUES ('${compte.nom}', ${compte.solde}) RETURNING *`;
+    const req = `INSERT INTO public.compte (nom, solde) VALUES ('${compte.nom}', ${compte.solde}) RETURNING *`;
     let result = db.one(req);
     return result;
     }
 
     async recupererComptes() {
-    const req = 'SELECT * FROM public."Compte"';
+    const req = 'SELECT * FROM public.compte';
     return db.manyOrNone(req)
         .then(result => {
             return result;
