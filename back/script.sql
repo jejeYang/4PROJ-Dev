@@ -39,8 +39,8 @@ CREATE INDEX IF NOT EXISTS idx_dossier_acces ON Dossier(idCompteAcces);
 -- Insertion de données de test (uniquement si elles n'existent pas déjà)
 INSERT INTO Compte (nomCompte, adresseMailCompte, mdpCompte, stockageCompte) 
 VALUES 
-    ('Admin', 'admin@supfile.com', 'admin123', 1073741824),
-    ('User Test', 'user@test.com', 'test123', 5368709120)
+    ('Admin', 'admin@supfile.com', '$2b$10$X.QD4ujHKJGv3I4IcxIPw.vUqH5wgKPHqIu0VaU9XNYGdB35vb24m', 1073741824),
+    ('User Test', 'user@test.com', '$2b$10$Zk6jpVPkTlETh14xa5epquImN0Ol6Yh1AgUGjfkL2c6NWyMDiz3rm', 5368709120)
 ON CONFLICT (adresseMailCompte) DO NOTHING;
 
 -- Message de confirmation
