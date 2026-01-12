@@ -4,12 +4,15 @@
   "description": "4-Proj",
   "license": "ISC",
   "author": "",
-  "type": "commonjs",
-  "main": "index.js",
+  "type": "module",
+  "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "express": "^4.18.2"
+    "bcryptjs": "^3.0.3",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.3",
+    "pg-promise": "^10.11.0"
   }
 }
