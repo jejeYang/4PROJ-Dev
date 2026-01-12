@@ -3,7 +3,7 @@ export const PG_CONFIG = {
     port: 5432,
     database: 'supfile',
     user: 'postgres',
-    password: 'root'
+    password: 'user'
 };
 
 export const PORT = process.env.PORT || 3000;
