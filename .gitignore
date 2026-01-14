@@ -1,0 +1,38 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build
+dist/
+build/
+out/
+
+# Env
+.env
+.env.*
+
+# Coverage
+coverage/
+
+# Misc
+*.local
+*.cache
+*.tmp
