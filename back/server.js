@@ -3,7 +3,7 @@ import { PORT, PG_CONFIG } from './src/global_properties.js';
 import compteRouter from './src/controller/compte.js';
 import { exec } from 'node:child_process';
 
-const dbEnv = { ...process.env, PGPASSWORD: PG_CONFIG.password };
+const dbEnv = { ...process.env, PGPASSWORD: PG_CONFIG.password, PGPORT: PG_CONFIG.port };
 const dbNameLower = PG_CONFIG.database.toLowerCase();
 
 // Fonction pour exécuter le script SQL
