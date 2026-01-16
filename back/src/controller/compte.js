@@ -27,10 +27,10 @@ compteRouter.post('/api/login', async (req, res) => {
 });
 
 // Routes protégées
-compteRouter.post('/api/users', authentifierToken, (req, res) => {
+compteRouter.post('/api/users', async (req, res) => {
     const service_compte = new ServiceCompte();
     const nouveau_compte = req.body;
-    const resultat = service_compte.creerCompte(nouveau_compte);
+    const resultat = await service_compte.creerCompte(nouveau_compte);
     res.status(201).json(resultat);
 });
 

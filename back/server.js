@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import { PORT, PG_CONFIG } from './src/global_properties.js';
 import compteRouter from './src/controller/compte.js';
 import { exec } from 'node:child_process';
@@ -55,6 +56,7 @@ exec(`psql -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname='${dbNameLo
 const app = express();
 
 // Middleware
+app.use(cors()); // TODO: RESTREINDRE ACCES POUR PRODUCTION (ici on est en dev donc c'est ok)
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
