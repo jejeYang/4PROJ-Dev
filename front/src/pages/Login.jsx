@@ -21,7 +21,7 @@ function Login() {
         localStorage.setItem('user', JSON.stringify(response.data.utilisateur));
         
         alert('Connexion réussie !');
-        navigate('/');
+        window.location.href = '/';
         } catch (error) {
         alert('Erreur de connexion : ' + (error.response?.data?.message || error.message));
         }
