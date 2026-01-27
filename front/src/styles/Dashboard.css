@@ -2,10 +2,9 @@
     z-index: 1;
     max-width: 1400px;
     margin: 0 auto;
-    padding: 2rem;
-    width: 100%;
     background: var(--bg-primary-color);
     min-height: 100%;
+    min-inline-size: -webkit-fill-available;
 }
 
 .dashboard-header {

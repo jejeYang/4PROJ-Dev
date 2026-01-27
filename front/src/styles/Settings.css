@@ -4,7 +4,6 @@
     margin: 0 auto;
     padding: 2rem;
     background: var(--bg-primary-color);
-    min-height: 100%;
 }
 
 .settings-header {

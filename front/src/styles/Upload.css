@@ -3,9 +3,9 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100%;
     padding: 2rem;
     background: var(--bg-secondary-color);
+    min-block-size: -webkit-fill-available;
 }
 
 .upload-card {

@@ -4,17 +4,23 @@ import '../styles/Home.css';
 
 function Home() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [username, setUsername] = useState('');
 
     useEffect(() => {
         const token = localStorage.getItem('token');
+        const user = localStorage.getItem('user');
         setIsAuthenticated(!!token);
+        if (user) {
+            const userData = JSON.parse(user);
+            setUsername(userData.nom || userData.email || 'User');
+        }
     }, []);
 
     return (
         <div className="home-container">
             {isAuthenticated ? (
                 <div className="dashboard-quick">
-                    <h1>Bienvenue ! 👋</h1>
+                    <h1>Bienvenue {username} !</h1>
                     <p>Gérez vos fichiers en toute sécurité</p>
                     <div className="quick-actions">
                         <Link to="/dashboard" className="action-card">
@@ -59,11 +65,8 @@ function Home() {
                         </div>
 
                         <div className="hero-cta">
-                            <Link to="/upload" className="btn-upload">
+                            <Link to="/register" className="btn-upload">
                                 Publier un fichier
-                            </Link>
-                            <Link to="/register" className="btn-secondary">
-                                Créer un compte
                             </Link>
                         </div>
                     </div>

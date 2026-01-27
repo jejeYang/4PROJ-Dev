@@ -53,8 +53,8 @@ function AppContent() {
             </>
           ) : (
             <>
-              <Link to="/register" className="nav-link">Register</Link>
-              <Link to="/login" className="nav-link">Login</Link>
+              <Link to="/register" className="nav-link">Créer un compte</Link>
+              <Link to="/login" className="nav-link">Connexion</Link>
             </>
           )}
         </div>
