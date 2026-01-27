@@ -1,0 +1,157 @@
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  --bg-primary-color: #F4EDEA;
+  --bg-secondary-color: #f8f9fa;
+  --select-primary-color: #e6f2ff;
+  --hover-primary-color: #dcdedf;
+
+  --header-bg-color: #161B33;
+  --footer-bg-color: #474973;
+
+  --text-primary-color: #0D0C1D;
+  --text-secondary-color: #888;
+  --text-secondary-hover: #424242;
+
+  --btn-color: #06BCC1;
+  --btn-hover: #10a1a6;
+  --btn-text: #F4EDEA;
+  --btn-shadow: rgba(0, 191, 216, 0.4);
+
+  --border-color: #ccc;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --error-color: #dc2626;
+}
+
+[data-theme='dark'] {
+  --bg-primary-color: #121212;
+  --bg-secondary-color: #1e1e1e;
+
+  --base-primary-color: #2a2a2a;
+  --select-primary-color: rgba(100, 149, 237, 0.2);
+  --hover-primary-color: #2e2e2e;
+
+  --text-primary-color: #e0e0e0;
+  --text-secondary-color: #aaaaaa;
+  --text-secondary-hover: #dddddd;
+
+  --btn-color: #3b82f6;
+  --btn-hover: #2563eb;
+  --btn-cancel-color: #374151;
+  --btn-cancel-hover: #4b5563;
+  --btn-delete-color: #ef4444;
+  --btn-delete-hover: #dc2626;
+  --btn-text: #ffffff;
+
+  --border-color: #808080;
+  --shadow-color: rgba(130, 130, 130, 0.5);
+  --error-color: #f87171;
+
+  --box-red-bg: #341013;
+  --box-red-color: #f77e7e;
+
+  --box-green-bg: #114021;
+  --box-green-color: #86efac;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-width: 100vw;
+  min-height: 100vh;
+  display: block;
+  background-color: var(--bg-primary-color);
+}
+
+#root {
+  max-width: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}
+
+button {
+  background-color: var(--btn-color);
+  color: var(--btn-text);
+  border-radius: 5px;
+  padding: 0.6em 1.2em;
+  font-weight: 450;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+button:hover {
+  background-color: var(--btn-hover);
+}
+
+table {
+  width: 100%;
+  font-size: 0.9rem;
+  border-collapse: collapse;
+}
+table thead {
+  background-color: var(--bg-secondary-color);
+}
+table th,
+table td {
+  padding: 0.5rem;
+  text-align: center;
+  align-items: center;
+  border: 1px solid var(--border-color);
+}
+table tbody tr:nth-child(even) {
+  background-color: var(--base-primary-color);
+}
+
+label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.modal-content {
+  background-color: var(--bg-primary-color);
+  padding: 2rem;
+  border-radius: 1rem;
+  box-shadow: 0 10px 25px var(--shadow-color);
+  width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+
+.select-input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.error-text {
+  color: var(error-color);
+  margin-top: 1rem;
+}

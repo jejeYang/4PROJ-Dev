@@ -1,0 +1,71 @@
+/* Layout général */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Header */
+.navbar {
+  background-color: var(--header-bg-color);
+  padding: 0 2rem;
+  height: 70px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--text-secondary-color);
+  box-shadow: var(--shadow-color);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--btn-color);
+  text-decoration: none;
+}
+.nav-brand:hover {
+  color: var(--btn-hover);
+}
+
+.nav-logo {
+  height: 40px;
+  width: auto;
+}
+
+.nav-links {
+  display: flex;
+  gap: 20px;
+}
+
+.nav-link {
+  color: var(--btn-color);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+.nav-link:hover {
+  color: var(--btn-hover);
+}
+
+/* Zone principale (structure commune) */
+.main-content {
+  flex: 1;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+/* Footer */
+.footer {
+  background-color: var(--footer-bg-color);
+  opacity: 0.9;
+  padding: 1.5rem;
+  text-align: left;
+  color: var(--text-secondary-color);
+  font-size: 0.9rem;
+}
