@@ -38,7 +38,7 @@
     background: white;
     padding: 2rem;
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px var(--shadow-color);
     text-decoration: none;
     display: flex;
     flex-direction: column;
@@ -180,7 +180,7 @@
     background-color: var(--accent-cyan);
     color: white;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 191, 216, 0.3);
+    box-shadow: 0 4px 12px var(--btn-shadow);
 }
 
 @media (max-width: 768px) {

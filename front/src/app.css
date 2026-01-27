@@ -1,8 +1,8 @@
 :root {
-  --primary-dark: #232741; /* Couleur  header et footer */
-  --accent-cyan: #00bfd8; /* Couleur bouton upload (à modifier plus tard) */
-  --text-white: #ffffff;
-  --bg-light: #f0f2f5;
+  --primary-dark: var(--header-bg-color);
+  --accent-cyan: var(--btn-color);
+  --text-white: var(--btn-text);
+  --bg-light: var(--bg-secondary-color);
 }
 
 body {
@@ -28,7 +28,7 @@ body {
   justify-content: space-between;
   align-items: center;
   color: var(--text-white);
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 5px var(--shadow-color);
   z-index: 1000;
 }
 
@@ -97,7 +97,7 @@ body {
   background-color: var(--primary-dark);
   padding: 2rem 0;
   overflow-y: auto;
-  box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+  box-shadow: 2px 0 10px var(--shadow-color);
   transition: transform 0.3s ease;
 }
 
@@ -199,7 +199,7 @@ body {
   font-size: 1.5rem;
   font-weight: bold;
   cursor: pointer;
-  box-shadow: 0 4px 15px rgba(0, 191, 216, 0.4);
+  box-shadow: 0 4px 15px var(--btn-shadow);
   transition: transform 0.2s;
   position: relative;
   border-radius: 8px;
@@ -251,7 +251,7 @@ body {
   background: white;
   padding: 2rem;
   border-radius: 8px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 10px var(--shadow-color);
   width: 100%;
   max-width: 400px;
 }

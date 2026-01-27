@@ -12,7 +12,7 @@
     background: white;
     padding: 2.5rem;
     border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 20px var(--shadow-color);
     width: 100%;
     max-width: 600px;
 }
@@ -142,9 +142,9 @@
 }
 
 .btn-upload-submit:hover:not(:disabled) {
-    background-color: #00a8b5;
+    background-color: var(--btn-hover);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 191, 216, 0.3);
+    box-shadow: 0 4px 12px var(--btn-shadow);
 }
 
 .btn-upload-submit:disabled {

@@ -37,9 +37,9 @@
 }
 
 .btn-primary:hover {
-    background-color: #00a8b5;
+    background-color: var(--btn-hover);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 191, 216, 0.3);
+    box-shadow: 0 4px 12px var(--btn-shadow);
 }
 
 .dashboard-grid {
@@ -54,7 +54,7 @@
     background: white;
     padding: 1.5rem;
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .storage-card h2 {
@@ -89,7 +89,7 @@
     background: white;
     padding: 1.5rem;
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px var(--shadow-color);
     display: flex;
     gap: 2rem;
     justify-content: center;
@@ -118,7 +118,7 @@
     background: white;
     padding: 2rem;
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .files-section h2 {

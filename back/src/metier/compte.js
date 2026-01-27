@@ -31,17 +31,7 @@ class ServiceCompte {
         if (compte.nom.length < 5) {
             throw new Error('Le nom d\'utilisateur doit contenir au moins 5 caractères');
         }
-        if (compte.nom.length < 5) {
-            throw new Error("Le nom doit contenir au moins 5 caractères");
-        }
-
-        if (!/[A-Z]/.test(compte.nom)) {
-            throw new Error("Le nom doit contenir au moins une majuscule");
-        }
-
-        if (!/[^a-zA-Z0-9]/.test(compte.nom)) {
-            throw new Error("Le nom doit contenir au moins un caractère spécial");
-        }
+        
         if (!/[A-Z]/.test(compte.mdp)) {
             throw new Error("Le mot de passe doit contenir au moins une majuscule");
         }
