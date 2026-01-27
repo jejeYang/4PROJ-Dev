@@ -9,7 +9,8 @@
   -moz-osx-font-smoothing: grayscale;
 
   --bg-primary-color: #F4EDEA;
-  --bg-secondary-color: #f8f9fa;
+  --bg-secondary-color: #e1e1e1;
+  --bg-tertiary-color: #ffffff;
   --select-primary-color: #e6f2ff;
   --hover-primary-color: #dcdedf;
 
@@ -17,8 +18,8 @@
   --footer-bg-color: #474973;
 
   --text-primary-color: #0D0C1D;
-  --text-secondary-color: #888;
-  --text-secondary-hover: #424242;
+  --text-secondary-color: #bcb6b6;
+  --text-hover: #424242;
 
   --btn-color: #06BCC1;
   --btn-hover: #10a1a6;
@@ -33,32 +34,25 @@
 [data-theme='dark'] {
   --bg-primary-color: #121212;
   --bg-secondary-color: #1e1e1e;
+  --bg-tertiary-color: #000000;
+  --select-primary-color: #4f5964;
+  --hover-primary-color: rgb(99, 72, 72);
 
-  --base-primary-color: #2a2a2a;
-  --select-primary-color: rgba(100, 149, 237, 0.2);
-  --hover-primary-color: #2e2e2e;
+  --header-bg-color: #161B33;
+  --footer-bg-color: #474973;
 
   --text-primary-color: #e0e0e0;
   --text-secondary-color: #aaaaaa;
-  --text-secondary-hover: #dddddd;
+  --text-hover: #dddddd;
 
   --btn-color: #3b82f6;
   --btn-hover: #2563eb;
-  --btn-cancel-color: #374151;
-  --btn-cancel-hover: #4b5563;
-  --btn-delete-color: #ef4444;
-  --btn-delete-hover: #dc2626;
   --btn-text: #ffffff;
+  --btn-shadow: rgba(59, 130, 246, 0.4);
 
   --border-color: #808080;
   --shadow-color: rgba(130, 130, 130, 0.5);
   --error-color: #f87171;
-
-  --box-red-bg: #341013;
-  --box-red-color: #f77e7e;
-
-  --box-green-bg: #114021;
-  --box-green-color: #86efac;
 }
 
 body {
@@ -79,13 +73,13 @@ body {
 
 @media (prefers-color-scheme: light) {
   :root {
-    color: #213547;
-    background-color: #ffffff;
+    color: var(--text-primary-color);
+    background-color: var(--bg-primary-color);
   }
   a:hover {
-    color: #747bff;
+    color: var(--btn-hover);
   }
   button {
-    background-color: #f9f9f9;
+    background-color: var(--btn-color);
   }
 }

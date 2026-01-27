@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import '../styles/Settings.css';
+import { ThemeContext } from '../context/theme_context';
 
 function Settings() {
     const [user, setUser] = useState(null);
@@ -10,6 +11,7 @@ function Settings() {
     const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState('');
     const navigate = useNavigate();
+    const { toggle, toggleFunction } = useContext(ThemeContext);
 
     useEffect(() => {
         const userData = JSON.parse(localStorage.getItem('user'));
@@ -173,6 +175,14 @@ function Settings() {
                     <p>Supprimer votre compte supprimera tous vos fichiers et données.</p>
                     <button onClick={handleDeleteAccount} className="btn-danger">
                         Supprimer le compte
+                    </button>
+                </div>
+
+                {/* Theme Settings */}
+                <div className="settings-card">
+                    <h2>Thème</h2>
+                    <button onClick={toggleFunction} className="btn-primary">
+                        {toggle ? 'Passer au thème clair' : 'Passer au thème sombre'}
                     </button>
                 </div>
             </div>

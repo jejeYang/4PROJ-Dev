@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import Upload from './pages/Upload';
 import Settings from './pages/Settings';
 import logo from './assets/logo.png';
+import { ThemeProvider } from './context/theme_context';
 
 function AppContent() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -78,9 +79,7 @@ function AppContent() {
           </aside>
         )}
         
-        <div className={`main-content ${isAuthenticated && !isAuthPage && !isHome ? 'with-sidebar' : ''}`}>
-          {!isAuthenticated && !isAuthPage && <div className="background-pattern"></div>}
-          
+        <div className={`main-content ${isAuthenticated && !isAuthPage && !isHome ? 'with-sidebar' : ''} ${isAuthPage ? 'auth-page' : ''}`}>
           {isAuthenticated && !isAuthPage && !isHome && (
             <button className="sidebar-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
               ☰
@@ -107,9 +106,11 @@ function AppContent() {
 
 function App() {
   return (
-    <Router>
-      <AppContent />
-    </Router>
+    <ThemeProvider>
+      <Router>
+        <AppContent />
+      </Router>
+    </ThemeProvider>
   );
 }
 

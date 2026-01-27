@@ -3,7 +3,7 @@
     max-width: 1000px;
     margin: 0 auto;
     padding: 2rem;
-    background: white;
+    background: var(--bg-primary-color);
     min-height: 100%;
 }
 
@@ -13,7 +13,7 @@
 
 .settings-header h1 {
     margin: 0;
-    color: var(--primary-dark);
+    color: var(--text-primary-color);
     font-size: 2rem;
 }
 
@@ -21,9 +21,9 @@
     padding: 1rem;
     margin-bottom: 1.5rem;
     border-radius: 6px;
-    background-color: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
+    background-color: var(--error-color);
+    color: var(--text-primary-color);
+    border: 1px solid var(--border-color);
     animation: slideIn 0.3s ease;
 }
 
@@ -45,33 +45,28 @@
 }
 
 .settings-card {
-    background: white;
+    background: var(--bg-tertiary-color);
     padding: 1.5rem;
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .settings-card h2 {
     margin: 0 0 1.5rem 0;
-    color: var(--primary-dark);
+    color: var(--text-primary-color);
     font-size: 1.2rem;
-    border-bottom: 2px solid var(--accent-cyan);
+    border-bottom: 2px solid var(--border-color);
     padding-bottom: 0.8rem;
 }
 
-.settings-card p {
-    color: #666;
-    margin: 0 0 1rem 0;
-}
-
 .settings-card.danger {
-    border: 2px solid #ff4757;
-    background-color: rgba(255, 71, 87, 0.05);
+    border: 2px solid var(--error-color);
+    background-color: var(--bg-primary-color);
 }
 
 .settings-card.danger h2 {
-    border-bottom-color: #ff4757;
-    color: #ff4757;
+    border-bottom-color: var(--border-color);
+    color: var(--error-color);
 }
 
 .form-group {
@@ -82,13 +77,13 @@
     display: block;
     margin-bottom: 0.5rem;
     font-weight: 600;
-    color: var(--primary-dark);
+    color: var(--text-primary-color);
 }
 
 .form-group input {
     width: 100%;
     padding: 0.8rem;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
     border-radius: 6px;
     font-size: 1rem;
     box-sizing: border-box;
@@ -97,8 +92,8 @@
 
 .form-group input:focus {
     outline: none;
-    border-color: var(--accent-cyan);
-    box-shadow: 0 0 0 3px rgba(0, 191, 216, 0.1);
+    border-color: var(--border-color);
+    box-shadow: 0 0 0 3px var(--shadow-color);
 }
 
 .btn-primary,
@@ -114,25 +109,25 @@
 }
 
 .btn-primary {
-    background-color: var(--accent-cyan);
-    color: white;
+    background-color: var(--btn-color);
+    color: var(--btn-text);
 }
 
 .btn-primary:hover {
-    background-color: #00a8b5;
+    background-color: var(--btn-hover);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 191, 216, 0.3);
+    box-shadow: 0 4px 12px var(btn--shadow);
 }
 
 .btn-danger {
-    background-color: #ff4757;
-    color: white;
+    background-color: var(--error-color);
+    color: var(--bg-tertiary-color);
 }
 
 .btn-danger:hover {
-    background-color: #ff3838;
+    background-color: var(--error-color);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(255, 71, 87, 0.3);
+    box-shadow: 0 4px 12px var(--btn-shadow);
 }
 
 @media (max-width: 768px) {

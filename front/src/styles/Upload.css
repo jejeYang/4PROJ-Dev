@@ -5,38 +5,37 @@
     align-items: center;
     min-height: 100%;
     padding: 2rem;
-    background: white;
+    background: var(--bg-secondary-color);
 }
 
 .upload-card {
-    background: white;
+    background: var(--bg-primary-color);
     padding: 2.5rem;
     border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 20px var(--shadow-color);
     width: 100%;
     max-width: 600px;
 }
 
 .upload-card h2 {
     margin-top: 0;
-    color: var(--primary-dark);
+    color: var(--text-primary-color);
     text-align: center;
 }
 
 .drag-drop-area {
-    border: 3px dashed #ddd;
+    border: 3px dashed var(--border-color);
     border-radius: 8px;
     padding: 3rem 2rem;
     text-align: center;
-    background-color: #fafafa;
+    background-color: var(--bg-tertiary-color);
     transition: all 0.3s ease;
-    cursor: pointer;
     margin-bottom: 2rem;
 }
 
 .drag-drop-area.active {
     border-color: var(--accent-cyan);
-    background-color: rgba(0, 191, 216, 0.05);
+    background-color: var(--btn-color);
 }
 
 .drag-drop-content {
@@ -53,20 +52,20 @@
 
 .drag-drop-area p {
     margin: 0;
-    color: #666;
+    color: var(--text-primary-color);
     font-size: 1.1rem;
 }
 
 .file-label {
-    color: var(--accent-cyan);
+    color: var(--btn-color);
     font-weight: 600;
     cursor: pointer;
     text-decoration: underline;
 }
 
 .file-list {
-    background-color: #f9f9f9;
-    border: 1px solid #e0e0e0;
+    background-color: var(--bg-tertiary-color);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 1.5rem;
     margin-bottom: 1.5rem;
@@ -74,7 +73,7 @@
 
 .file-list h3 {
     margin: 0 0 1rem 0;
-    color: var(--primary-dark);
+    color: var(--text-primary-color);
     font-size: 1rem;
 }
 
@@ -83,10 +82,10 @@
     justify-content: space-between;
     align-items: center;
     padding: 0.8rem;
-    background: white;
+    background: var(--bg-primary-color);
     border-radius: 6px;
     margin-bottom: 0.8rem;
-    border-left: 4px solid var(--accent-cyan);
+    border-left: 4px solid var(--border-color);
 }
 
 .file-item:last-child {
@@ -101,7 +100,7 @@
 }
 
 .file-size {
-    color: #999;
+    color: var(--btn-color);
     font-size: 0.9rem;
     margin: 0 1rem;
     min-width: 80px;
@@ -111,7 +110,6 @@
 .remove-btn {
     background: none;
     border: none;
-    color: #ff4757;
     font-size: 1.2rem;
     cursor: pointer;
     padding: 0;
@@ -125,14 +123,13 @@
 }
 
 .remove-btn:hover {
-    background-color: rgba(255, 71, 87, 0.1);
+    background-color: var(--error-color);
 }
 
 .btn-upload-submit {
     width: 100%;
     padding: 1rem;
-    background-color: var(--accent-cyan);
-    color: white;
+    background-color: var(--btn-color);
     border: none;
     border-radius: 6px;
     font-weight: 600;
@@ -140,14 +137,18 @@
     cursor: pointer;
     transition: all 0.3s ease;
 }
+.btn-upload-submit:not(:disabled) {
+    box-shadow: 0 2px 8px var(--shadow-color);
+    color: var(--btn-text);
+}
 
 .btn-upload-submit:hover:not(:disabled) {
-    background-color: #00a8b5;
+    background-color: var(--btn-hover);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 191, 216, 0.3);
+    box-shadow: 0 4px 12px var(--shadow-color);
 }
 
 .btn-upload-submit:disabled {
-    background-color: #ccc;
+    background-color: var(--text-secondary-color);
     cursor: not-allowed;
 }
