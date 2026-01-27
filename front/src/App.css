@@ -29,6 +29,7 @@ body {
   align-items: center;
   color: var(--text-white);
   box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  z-index: 1000;
 }
 
 .nav-brand {
@@ -49,6 +50,7 @@ body {
 .nav-links {
   display: flex;
   gap: 20px;
+  align-items: center;
 }
 
 .nav-link {
@@ -82,14 +84,84 @@ body {
   color: var(--primary-dark);
 }
 
-/* Content Area avec le Background Pattern */
+/* App Wrapper */
+.app-wrapper {
+  display: flex;
+  flex: 1;
+  position: relative;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 250px;
+  background-color: var(--primary-dark);
+  padding: 2rem 0;
+  overflow-y: auto;
+  box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+  transition: transform 0.3s ease;
+}
+
+.sidebar-content {
+  padding: 0 1rem;
+}
+
+.sidebar-content h3 {
+  color: var(--accent-cyan);
+  margin: 0 0 1.5rem 0;
+  font-size: 1.1rem;
+}
+
+.sidebar-link {
+  display: block;
+  padding: 0.8rem 1rem;
+  color: #ccc;
+  text-decoration: none;
+  margin-bottom: 0.5rem;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  border-left: 4px solid transparent;
+}
+
+.sidebar-link:hover,
+.sidebar-link.active {
+  background-color: rgba(0, 191, 216, 0.2);
+  color: var(--accent-cyan);
+  border-left-color: var(--accent-cyan);
+}
+
+.sidebar-close {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-white);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.sidebar-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--primary-dark);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 1rem;
+  z-index: 999;
+}
+
+/* Content Area */
 .main-content {
   flex: 1;
   position: relative;
   display: flex;
-  justify-content: center;
-  align-items: center;
-  overflow: hidden;
+  flex-direction: column;
+  overflow: auto;
+}
+
+.main-content.with-sidebar {
+  background-color: var(--bg-light);
 }
 
 /* Le motif de fond répété (à modifier) */
@@ -108,10 +180,15 @@ body {
   pointer-events: none;
 }
 
-/* Bouton Central (Home) (à modifier) */
+/* Bouton Central (Home) */
 .upload-hero {
   z-index: 1;
   text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  gap: 2rem;
 }
 
 .btn-upload {
@@ -125,6 +202,7 @@ body {
   box-shadow: 0 4px 15px rgba(0, 191, 216, 0.4);
   transition: transform 0.2s;
   position: relative;
+  border-radius: 8px;
 }
 
 .btn-upload::before, .btn-upload::after {
@@ -164,6 +242,7 @@ body {
   text-align: left;
   color: #ccc;
   font-size: 0.9rem;
+  border-top: 1px solid rgba(255,255,255,0.1);
 }
 
 /* Formulaires (Login/Register) */
@@ -204,4 +283,45 @@ body {
   border-radius: 4px;
   font-weight: bold;
   cursor: pointer;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .navbar {
+    padding: 0 1rem;
+  }
+
+  .nav-links {
+    gap: 10px;
+  }
+
+  .nav-link {
+    font-size: 0.9rem;
+  }
+
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 70px;
+    height: calc(100vh - 70px);
+    transform: translateX(-100%);
+    z-index: 999;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-toggle {
+    display: block;
+  }
+
+  .sidebar-close {
+    display: block;
+  }
+
+  .btn-upload {
+    padding: 1rem 2rem;
+    font-size: 1.2rem;
+  }
 }
