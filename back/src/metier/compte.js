@@ -1,14 +1,15 @@
 import DtoCompte from "../dto/compte.js";
 import jwt from 'jsonwebtoken';
+import { JWT_SECRET } from '../global_properties.js';
 
 class ServiceCompte {
     constructor() {
         this.dto_compte = new DtoCompte();
-        this.jwtSecret = 'your-secret-key'; // À changer en production
+        this.jwtSecret = JWT_SECRET;
     }
 
-    creerCompte(compte) {
-        return this.dto_compte.creerCompte(compte);
+    async creerCompte(compte) {
+        return await this.dto_compte.creerCompte(compte);
     }
 
     async recupererComptes() {
@@ -32,6 +33,7 @@ class ServiceCompte {
         try {
             return jwt.verify(token, this.jwtSecret);
         } catch (error) {
+            console.error('Token verification failed:', error);
             return null;
         }
     }
