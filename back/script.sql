@@ -25,10 +25,12 @@ CREATE TABLE IF NOT EXISTS Dossier (
     idDossier SERIAL PRIMARY KEY,
     idCompteCreateur INT NOT NULL,
     idCompteAcces INT,
+    idDossierParent INT,
     cheminDaccesDossier TEXT NOT NULL,
     status VARCHAR(50),
     CONSTRAINT fk_compte_createur FOREIGN KEY(idCompteCreateur) REFERENCES Compte(idCompte) ON DELETE CASCADE,
-    CONSTRAINT fk_compte_acces FOREIGN KEY(idCompteAcces) REFERENCES Compte(idCompte) ON DELETE SET NULL
+    CONSTRAINT fk_compte_acces FOREIGN KEY(idCompteAcces) REFERENCES Compte(idCompte) ON DELETE SET NULL,
+    CONSTRAINT fk_dossier_parent FOREIGN KEY(idDossierParent) REFERENCES Dossier(idDossier) ON DELETE CASCADE
 );
 
 -- Index pour améliorer les performances (créés seulement s'ils n'existent pas)
