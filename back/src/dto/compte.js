@@ -1,4 +1,3 @@
-// Import de la variable de configuration
 import { PG_CONFIG } from '../global_properties.js';
 import pgPromise from 'pg-promise';
 import bcrypt from 'bcryptjs';
@@ -19,10 +18,15 @@ class DtoCompte {
 
     async creerCompte(compte) {
         try {
+            const emailExiste = await this.trouverParEmail(compte.email);
+            if (emailExiste) {
+                throw new Error('Cet email est déjà utilisé');
+            }
+            
             const hashedPassword = await bcrypt.hash(compte.mdp, 10);
             const req = `
                 INSERT INTO public.compte (nomcompte, adressemailcompte, mdpcompte, stockagecompte) 
-                VALUES ($1, $2, $3, $4) RETURNING *`;
+                VALUES ($1, $2, $3, $4) RETURNING idcompte, nomcompte, adressemailcompte, stockagecompte`;
             return await db.one(req, [compte.nom, compte.email, hashedPassword, compte.stockage || 0]);
         } catch (error) {
             console.error('Erreur lors de la création du compte :', error);
