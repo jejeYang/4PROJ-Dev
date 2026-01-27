@@ -27,15 +27,15 @@ compteRouter.post('/api/login', async (req, res) => {
 });
 
 // Routes protégées
-compteRouter.post('/api/users', async (req, res) => {
+compteRouter.post('/api/users', authentifierToken, async (req, res) => {
     try {
         const service_compte = new ServiceCompte();
         const nouveau_compte = req.body;
         const resultat = await service_compte.creerCompte(nouveau_compte);
-        res.status(201).json({ message: 'Compte créé avec succès', utilisateur: resultat });
+        res.status(201).json(resultat);
     } catch (error) {
-        console.error('Erreur lors de la création du compte:', error);
-        res.status(400).json({ message: error.message || 'Erreur lors de la création du compte' });
+        console.error('Erreur lors de la création du compte :', error);
+        res.status(500).json({ error: error.message || 'Erreur lors de la création' });
     }
 });
 
