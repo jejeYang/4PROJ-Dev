@@ -7,8 +7,7 @@ function Register() {
     const [formData, setFormData] = useState({ 
         nom: '', 
         email: '', 
-        mdp: '',
-        stockage: 0
+        mdp: ''
     });
     const navigate = useNavigate();
 

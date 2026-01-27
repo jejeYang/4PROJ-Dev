@@ -21,6 +21,11 @@ class DtoCompte {
 
     async creerCompte(compte) {
         try {
+            const emailExiste = await this.trouverParEmail(compte.email);
+            if (emailExiste) {
+                throw new Error('Cet email est déjà utilisé');
+            }
+            
             const hashedPassword = await bcrypt.hash(compte.mdp, 10);
             const req = `
                 INSERT INTO public.compte (nomcompte, adressemailcompte, mdpcompte, stockagecompte) 

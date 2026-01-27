@@ -1,0 +1,153 @@
+.upload-container {
+    z-index: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100%;
+    padding: 2rem;
+    background: white;
+}
+
+.upload-card {
+    background: white;
+    padding: 2.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 600px;
+}
+
+.upload-card h2 {
+    margin-top: 0;
+    color: var(--primary-dark);
+    text-align: center;
+}
+
+.drag-drop-area {
+    border: 3px dashed #ddd;
+    border-radius: 8px;
+    padding: 3rem 2rem;
+    text-align: center;
+    background-color: #fafafa;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    margin-bottom: 2rem;
+}
+
+.drag-drop-area.active {
+    border-color: var(--accent-cyan);
+    background-color: rgba(0, 191, 216, 0.05);
+}
+
+.drag-drop-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.upload-icon {
+    font-size: 3rem;
+    display: block;
+}
+
+.drag-drop-area p {
+    margin: 0;
+    color: #666;
+    font-size: 1.1rem;
+}
+
+.file-label {
+    color: var(--accent-cyan);
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.file-list {
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.file-list h3 {
+    margin: 0 0 1rem 0;
+    color: var(--primary-dark);
+    font-size: 1rem;
+}
+
+.file-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem;
+    background: white;
+    border-radius: 6px;
+    margin-bottom: 0.8rem;
+    border-left: 4px solid var(--accent-cyan);
+}
+
+.file-item:last-child {
+    margin-bottom: 0;
+}
+
+.file-name {
+    flex: 1;
+    font-weight: 500;
+    color: var(--primary-dark);
+    word-break: break-all;
+}
+
+.file-size {
+    color: #999;
+    font-size: 0.9rem;
+    margin: 0 1rem;
+    min-width: 80px;
+    text-align: right;
+}
+
+.remove-btn {
+    background: none;
+    border: none;
+    color: #ff4757;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.remove-btn:hover {
+    background-color: rgba(255, 71, 87, 0.1);
+}
+
+.btn-upload-submit {
+    width: 100%;
+    padding: 1rem;
+    background-color: var(--accent-cyan);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-upload-submit:hover:not(:disabled) {
+    background-color: #00a8b5;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 191, 216, 0.3);
+}
+
+.btn-upload-submit:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
