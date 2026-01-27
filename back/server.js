@@ -1,6 +1,7 @@
 import express from 'express';
 import { PORT, PG_CONFIG } from './src/global_properties.js';
 import compteRouter from './src/controller/compte.js';
+import dossierRouter from './src/controller/dossier.js';
 import { exec } from 'node:child_process';
 
 const dbEnv = { ...process.env, PGPASSWORD: PG_CONFIG.password };
@@ -33,7 +34,12 @@ exec(`psql -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname='${dbNameLo
         return;
     }
     
-    if (stdout.trim() !== '1') {
+    if (stdout.trim() === '1') {
+        // La base existe déjà
+        console.log(`Base de données ${PG_CONFIG.database} existe déjà.`);
+        // Exécuter le script quand même
+        executerScript();
+    } else {
         // La base n'existe pas, on la crée
         exec(`psql -U postgres -c "CREATE DATABASE ${PG_CONFIG.database}"`, { env: dbEnv }, (error) => {
             if (error) {
@@ -44,11 +50,6 @@ exec(`psql -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname='${dbNameLo
             // Exécuter le script après création
             executerScript();
         });
-    } else {
-        // La base existe déjà
-        console.log(`Base de données ${PG_CONFIG.database} existe déjà.`);
-        // Exécuter le script quand même
-        executerScript();
     }
 });
 
@@ -66,6 +67,7 @@ app.use((err, req, res, next) => {
 
 // Routes
 app.use(compteRouter);
+app.use(dossierRouter);
 
 // Route de test
 app.get('/', (req, res) => {
