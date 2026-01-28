@@ -26,13 +26,6 @@ class DtoCompte {
                 INSERT INTO public.compte (nomcompte, adressemailcompte, mdpcompte, stockagecompte) 
                 VALUES ($1, $2, $3, $4) RETURNING *`;
             const resultat = await db.one(req, [compte.nom, compte.email, hashedPassword, compte.stockage || 0]);
-            
-            // Créer le dossier racine pour l'utilisateur
-            const cheminDossierUtilisateur = path.join(SERVER_FILES_PATH, `user_${resultat.idcompte}`);
-            if (!fs.existsSync(cheminDossierUtilisateur)) {
-                fs.mkdirSync(cheminDossierUtilisateur, { recursive: true });
-            }
-            
             return resultat;
         } catch (error) {
             console.error('Erreur lors de la création du compte :', error);
