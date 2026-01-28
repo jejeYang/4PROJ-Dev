@@ -3,7 +3,7 @@ import ServiceDossier from '../metier/dossier.js';
 import { authentifierToken } from '../middleware/auth.js';
 import multer from 'multer';
 import path from 'node:path';
-import { promises as fsPromises, fs } from 'node:fs';
+import fs, { promises as fsPromises } from 'node:fs';
 import { SERVER_FILES_PATH } from '../global_properties.js';
 
 const dossierRouter = express.Router();
@@ -200,8 +200,14 @@ dossierRouter.post('/api/dossiers/:dossierId/televerser', authentifierToken, ver
         }
 
         // Déplacer le fichier vers le dossier correct
-        // Structure: user_{idCompte}/chemin-du-dossier
-        const cheminDossierPhysique = path.join(SERVER_FILES_PATH, `user_${req.idCompteCreateur}`, req.cheminDossier);
+        // Structure: dossier_{idCompte}
+        const cheminDossierPhysique = path.join(SERVER_FILES_PATH, req.cheminDossier);
+        
+        // Créer le dossier de destination s'il n'existe pas
+        if (!fs.existsSync(cheminDossierPhysique)) {
+            fs.mkdirSync(cheminDossierPhysique, { recursive: true });
+        }
+        
         const ancienChemin = req.file.path;
         const nouveauChemin = path.join(cheminDossierPhysique, req.file.filename);
         
@@ -237,8 +243,14 @@ dossierRouter.post('/api/dossiers/:dossierId/televerser-multiple', authentifierT
         }
 
         // Déplacer les fichiers vers le dossier correct
-        // Structure: user_{idCompte}/chemin-du-dossier
-        const cheminDossierPhysique = path.join(SERVER_FILES_PATH, `user_${req.idCompteCreateur}`, req.cheminDossier);
+        // Structure: dossier_{idCompte}
+        const cheminDossierPhysique = path.join(SERVER_FILES_PATH, req.cheminDossier);
+        
+        // Créer le dossier de destination s'il n'existe pas
+        if (!fs.existsSync(cheminDossierPhysique)) {
+            fs.mkdirSync(cheminDossierPhysique, { recursive: true });
+        }
+        
         const fichiersDeplaces = req.files.map(file => {
             const ancienChemin = file.path;
             const nouveauChemin = path.join(cheminDossierPhysique, file.filename);

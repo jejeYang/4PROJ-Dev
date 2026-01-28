@@ -19,22 +19,21 @@ class DtoDossier {
         try {
             // Créer l'entrée en base de données
             const req = `
-                INSERT INTO public.dossier (idCompteCreateur, cheminDaccesDossier, idDossierParent) 
+                INSERT INTO public.dossier (idcomptecreateur, chemindaccesdossier, iddossierparent) 
                 VALUES ($1, $2, $3) RETURNING *`;
             const resultat = await db.one(req, [dossier.idCompteCreateur, dossier.cheminDaccesDossier, dossier.idDossierParent || null]);
             
-            // Créer le dossier physique dans le dossier utilisateur
+            // Créer le dossier physique
             let cheminDossierPhysique;
             
             if (dossier.idDossierParent) {
                 // Si le dossier a un parent, on le crée dans le parent
                 const dossierParent = await this.recupererDossierParId(dossier.idDossierParent);
-                const cheminParent = path.join(SERVER_FILES_PATH, `user_${resultat.idcomptecreateur}`, dossierParent.chemindaccesdossier);
-                cheminDossierPhysique = path.join(cheminParent, dossier.cheminDaccesDossier);
+                cheminDossierPhysique = path.join(SERVER_FILES_PATH, dossierParent.chemindaccesdossier, dossier.cheminDaccesDossier);
             } else {
-                // Sinon, on le crée directement dans le dossier utilisateur
-                // Structure: user_{idCompte}/cheminDaccesDossier
-                cheminDossierPhysique = path.join(SERVER_FILES_PATH, `user_${resultat.idcomptecreateur}`, dossier.cheminDaccesDossier);
+                // Sinon, on le crée directement à la racine des fichiers
+                // Structure: dossier_{idCompte}
+                cheminDossierPhysique = path.join(SERVER_FILES_PATH, dossier.cheminDaccesDossier);
             }
             
             if (!fs.existsSync(cheminDossierPhysique)) {
@@ -50,7 +49,7 @@ class DtoDossier {
 
     async recupererDossierCompte(idCompteCreateur) {
         try {
-            const req = 'SELECT * FROM public.dossier WHERE idCompteCreateur = $1';
+            const req = 'SELECT * FROM public.dossier WHERE idcomptecreateur = $1';
             return await db.manyOrNone(req, [idCompteCreateur]);
         } catch (error) {
             console.error('Erreur lors de la récupération des dossiers de l\'utilisateur :', error);
@@ -60,7 +59,7 @@ class DtoDossier {
 
     async recupererDossierParId(dossierId) {
         try {
-            const req = 'SELECT * FROM public.dossier WHERE idDossier = $1';
+            const req = 'SELECT * FROM public.dossier WHERE iddossier = $1';
             return await db.one(req, [dossierId]);
         } catch (error) {
             console.error('Erreur lors de la récupération du dossier :', error);
