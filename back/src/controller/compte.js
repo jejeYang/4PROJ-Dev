@@ -26,8 +26,7 @@ compteRouter.post('/api/login', async (req, res) => {
     }
 });
 
-// Route de création de compte (non protégée)
-compteRouter.post('/api/users', async (req, res) => {
+compteRouter.post('/api/register', async (req, res) => {
     try {
         const service_compte = new ServiceCompte();
         const nouveau_compte = req.body;
