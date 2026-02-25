@@ -43,7 +43,6 @@ function AppContent() {
       <nav className="navbar">
         <Link to="/" className="nav-brand">
           <img src={logo} alt="SupFile Logo" className="nav-logo" />
-          SUPFile
         </Link>
         <div className="nav-links">
           {isAuthenticated ? (
