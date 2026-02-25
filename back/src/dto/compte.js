@@ -1,77 +1,58 @@
-import { db } from '../db.js';
-// Import de la variable de configuration
-import { PG_CONFIG, SERVER_FILES_PATH } from '../global_properties.js';
+import prisma from '../prisma.js';
 import bcrypt from 'bcryptjs';
-import fs from 'node:fs';
+import fs from 'node:fs/promises';
 import path from 'node:path';
+import { SERVER_FILES_PATH } from '../global_properties.js';
 
-
-// La classe DTO pour le compte
 class DtoCompte {
-    constructor(id, nom, email, mdp, stockage, avatar) {
-        this.id = id;
-        this.nom = nom;
-        this.email = email;
-        this.mdp = mdp;
-        this.stockage = stockage;
-        this.avatar = avatar;
-    }
-
     async creerCompte(compte) {
-        try {
-            const hashedPassword = await bcrypt.hash(compte.mdp, 10);
-            const req = `
-                INSERT INTO public.compte (nomcompte, adressemailcompte, mdpcompte, stockagecompte) 
-                VALUES ($1, $2, $3, $4) RETURNING *`;
-            const resultat = await db.one(req, [compte.nom, compte.email, hashedPassword, compte.stockage || 0]);
-            
-            // Créer le dossier racine pour l'utilisateur
-            const cheminDossierUtilisateur = path.join(SERVER_FILES_PATH, `user_${resultat.idcompte}`);
-            if (!fs.existsSync(cheminDossierUtilisateur)) {
-                fs.mkdirSync(cheminDossierUtilisateur, { recursive: true });
-            }
-            
-            return resultat;
-        } catch (error) {
-            console.error('Erreur lors de la création du compte :', error);
-            throw error;
-        }
+        const hashedPassword = await bcrypt.hash(compte.mdp, 10);
+
+        const resultat = await prisma.$transaction(async (tx) => {
+            const created = await tx.compte.create({
+                data: {
+                    nomCompte: compte.nom,
+                    adresseMailCompte: compte.email,
+                    mdpCompte: hashedPassword,
+                    stockageCompte: compte.stockage ?? 0,
+                },
+            });
+
+            const cheminDossierUtilisateur = path.join(SERVER_FILES_PATH, `user_${created.idCompte}`);
+            await fs.mkdir(cheminDossierUtilisateur, { recursive: true });
+
+            return created;
+        });
+
+        return resultat;
     }
 
     async recupererComptes() {
-        try {
-            const req = 'SELECT idcompte, nomcompte, adressemailcompte, stockagecompte FROM public.compte';
-            return await db.manyOrNone(req);
-        } catch (error) {
-            console.error('Erreur lors de la récupération des comptes :', error);
-            throw error;
-        }
+        return prisma.compte.findMany({
+            select: {
+                idCompte: true,
+                nomCompte: true,
+                adresseMailCompte: true,
+                stockageCompte: true,
+            },
+        });
     }
 
     async trouverParEmail(email) {
-        try {
-            const req = 'SELECT * FROM public.compte WHERE adressemailcompte = $1';
-            return await db.oneOrNone(req, [email]);
-        } catch (error) {
-            console.error('Erreur lors de la recherche du compte :', error);
-            throw error;
-        }
+        return prisma.compte.findUnique({
+            where: { adresseMailCompte: email },
+        });
     }
 
     async verifierMotDePasse(email, mdp) {
-        try {
-            const compte = await this.trouverParEmail(email);
-            if (!compte) return null;
-            
-            const isValid = await bcrypt.compare(mdp, compte.mdpcompte);
-            if (isValid) {
-                return { id: compte.idcompte, nom: compte.nomcompte, email: compte.adressemailcompte };
-            }
-            return null;
-        } catch (error) {
-            console.error('Erreur lors de la vérification du mot de passe :', error);
-            throw error;
+        const compte = await this.trouverParEmail(email);
+        if (!compte) return null;
+
+        const isValid = await bcrypt.compare(mdp, compte.mdpCompte);
+        if (isValid) {
+            return { id: compte.idCompte, nom: compte.nomCompte, email: compte.adresseMailCompte };
         }
+        return null;
     }
 }
 

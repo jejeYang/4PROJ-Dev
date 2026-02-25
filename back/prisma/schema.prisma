@@ -1,0 +1,54 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Compte {
+  idCompte           Int           @id @default(autoincrement())
+  nomCompte          String        @db.VarChar(100)
+  adresseMailCompte  String        @unique @db.VarChar(255)
+  mdpCompte          String        @db.VarChar(255)
+  stockageCompte     Int           @default(0)
+  avatarBlobCompte   Bytes?
+
+  dossiersCrees      Dossier[]     @relation("CompteCreateur")
+  dossiersAcces      Dossier[]     @relation("CompteAcces")
+  liensGeneres       LienGenere[]
+
+  @@map("compte")
+}
+
+model LienGenere {
+  idLienGenere       Int       @id @default(autoincrement())
+  idCompte           Int
+  cheminDaccesLien   String
+  dateCreation       DateTime  @default(now())
+  dateExpiration     DateTime?
+  mdpLienGenere      String?   @db.VarChar(255)
+  urlLienGenere      String?
+
+  compte             Compte    @relation(fields: [idCompte], references: [idCompte], onDelete: Cascade)
+
+  @@map("liengenere")
+}
+
+model Dossier {
+  idDossier            Int       @id @default(autoincrement())
+  idCompteCreateur     Int
+  idCompteAcces        Int?
+  idDossierParent      Int?
+  cheminDaccesDossier  String
+  status               String?   @db.VarChar(50)
+
+  compteCreateur       Compte    @relation("CompteCreateur", fields: [idCompteCreateur], references: [idCompte], onDelete: Cascade)
+  compteAcces          Compte?   @relation("CompteAcces", fields: [idCompteAcces], references: [idCompte], onDelete: SetNull)
+  dossierParent        Dossier?  @relation("SousDossiers", fields: [idDossierParent], references: [idDossier], onDelete: Cascade)
+  sousDossiers         Dossier[] @relation("SousDossiers")
+
+  @@map("dossier")
+}

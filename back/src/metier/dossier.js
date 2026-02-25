@@ -43,13 +43,19 @@ class ServiceDossier {
         return await this.dto_dossier.recupererEndpoints(dossierId);
     }
 
-    async recupererFichiers(dossierId,endpoint) {
-        return await this.dto_dossier.recupererFichiers(dossierId,endpoint);
+    async recupererFichiersDossier(dossierId) {
+        return await this.dto_dossier.recupererFichiersDossier(dossierId);
     }
 
     async supprimerFichier(dossierId, path) {
         return await this.dto_dossier.supprimerFichier(dossierId, path);
     }
+
+    async recupererDossierRacineParCompte(idCompteCreateur) {
+        return await this.dto_dossier.recupererDossierRacineParCompte(idCompteCreateur);
+    }
+
+
 
 }
 

@@ -29,15 +29,29 @@ const upload = multer({
 });
 
 // Middleware de vérification du dossier avant téléversement
+// Fonction pour construire le chemin complet d'un dossier en remontant les parents
+const construireCheminComplet = async (dossierId, service_dossier) => {
+    const dossier = await service_dossier.recupererDossierParId(dossierId);
+    
+    if (dossier.iddossierparent) {
+        // Récursivement construire le chemin du parent
+        const cheminParent = await construireCheminComplet(dossier.iddossierparent, service_dossier);
+        return path.join(cheminParent, dossier.cheminDaccesDossier);
+    } else {
+        // C'est un dossier racine
+        return dossier.cheminDaccesDossier;
+    }
+};
+
 const verifierDossierExiste = async (req, res, next) => {
     try {
         const { dossierId } = req.params;
         const service_dossier = new ServiceDossier();
         const dossier = await service_dossier.recupererDossierParId(dossierId);
-        // Stocker l'ID du dossier, l'ID du créateur et le chemin d'accès dans la requête
-        req.dossierId = dossier.iddossier;
-        req.idCompteCreateur = dossier.idcomptecreateur;
-        req.cheminDossier = dossier.chemindaccesdossier;
+        // Stocker l'ID du dossier, l'ID du créateur et le chemin d'accès complet dans la requête
+        req.dossierId = dossier.idDossier;
+        req.idCompteCreateur = dossier.idCompteCreateur;
+        req.cheminDossier = await construireCheminComplet(dossierId, service_dossier);
         next();
     } catch (error) {
         console.error('Erreur lors de la vérification du dossier :', error);
@@ -52,29 +66,37 @@ const verifierDossierExiste = async (req, res, next) => {
 // CREATE - Créer un nouveau dossier
 dossierRouter.post('/api/dossiers', authentifierToken, async (req, res) => {
     try {
-        const { idCompteCreateur, cheminDaccesDossier, idDossierParent } = req.body;
+        const { cheminDaccesDossier, idDossierParent } = req.body;
         const idUtilisateurAuthentifie = req.utilisateur.id;
 
-        if (!idCompteCreateur || !cheminDaccesDossier) {
-            return res.status(400).json({ error: 'idCompteCreateur et cheminDaccesDossier sont requis' });
-        }
-
-        // Vérifier que l'utilisateur authentifié crée un dossier pour son propre compte
-        if (idCompteCreateur !== idUtilisateurAuthentifie) {
-            return res.status(403).json({ error: 'Vous ne pouvez créer un dossier que pour votre compte' });
-        }
-
-        // Si un dossier parent est spécifié, vérifier qu'il appartient aussi à l'utilisateur
-        if (idDossierParent) {
-            const service_dossier = new ServiceDossier();
-            const dossierParent = await service_dossier.recupererDossierParId(idDossierParent);
-            if (dossierParent.idcomptecreateur !== idUtilisateurAuthentifie) {
-                return res.status(403).json({ error: 'Le dossier parent ne vous appartient pas' });
-            }
+        if (!cheminDaccesDossier) {
+            return res.status(400).json({ error: 'cheminDaccesDossier est requis' });
         }
 
         const service_dossier = new ServiceDossier();
-        const dossier = { idCompteCreateur, cheminDaccesDossier, idDossierParent };
+        
+        // Récupérer le dossier personnel de l'utilisateur
+        const dossiersUtilisateur = await service_dossier.recupererDossiersParCompte(idUtilisateurAuthentifie);
+        if (!dossiersUtilisateur || dossiersUtilisateur.length === 0) {
+            return res.status(404).json({ error: 'Dossier personnel non trouvé' });
+        }
+        
+        let dossierParentId = dossiersUtilisateur[0].iddossier; // Par défaut, le dossier personnel
+
+        // Si un dossier parent est spécifié, vérifier qu'il appartient à l'utilisateur
+        if (idDossierParent) {
+            const dossierParent = await service_dossier.recupererDossierParId(idDossierParent);
+            if (dossierParent.idCompteCreateur !== idUtilisateurAuthentifie) {
+                return res.status(403).json({ error: 'Le dossier parent ne vous appartient pas' });
+            }
+            dossierParentId = idDossierParent;
+        }
+
+        const dossier = { 
+            idCompteCreateur: idUtilisateurAuthentifie, 
+            cheminDaccesDossier, 
+            idDossierParent: dossierParentId 
+        };
         const resultat = await service_dossier.creerDossier(dossier);
         res.status(201).json(resultat);
     } catch (error) {
@@ -113,7 +135,8 @@ dossierRouter.get('/api/comptes/:idCompteCreateurDossier/dossiers', authentifier
     try {
         const { idCompteCreateurDossier } = req.params;
         const service_dossier = new ServiceDossier();
-        const dossiers = await service_dossier.recupererDossiersParCompte(idCompteCreateurDossier);
+        // Récupérer uniquement les dossiers racine (sans parent)
+        const dossiers = await service_dossier.recupererDossierRacineParCompte(idCompteCreateurDossier);
         res.json(dossiers);
     } catch (error) {
         console.error('Erreur lors de la récupération des dossiers :', error);
@@ -134,12 +157,25 @@ dossierRouter.get('/api/dossiers/:dossierId/sous-dossiers', authentifierToken, a
     }
 });
 
+// READ - Récupérer les fichiers d'un dossier
+dossierRouter.get('/api/dossiers/:dossierId/fichiers', authentifierToken, async (req, res) => {
+    try {
+        const { dossierId } = req.params;
+        const service_dossier = new ServiceDossier();
+        const fichiers = await service_dossier.recupererFichiersDossier(dossierId);
+        res.json(fichiers);
+    } catch (error) {
+        console.error('Erreur lors de la récupération des fichiers :', error);
+        res.status(500).json({ error: error.message || 'Erreur lors de la récupération' });
+    }
+});
+
 // UPDATE - Mettre à jour un dossier
 dossierRouter.put('/api/dossiers/:dossierId', authentifierToken, async (req, res) => {
     try {
         const { dossierId } = req.params;
         const { cheminDaccesDossier } = req.body;
-        const idUtilisateurAuthentifie = req.utilisateur.id;
+        const idUtilisateurAuthentifie = +req.utilisateur.id;
 
         if (!cheminDaccesDossier) {
             return res.status(400).json({ error: 'cheminDaccesDossier est requis' });
@@ -148,7 +184,7 @@ dossierRouter.put('/api/dossiers/:dossierId', authentifierToken, async (req, res
         // Vérifier que le dossier appartient à l'utilisateur
         const service_dossier = new ServiceDossier();
         const dossier = await service_dossier.recupererDossierParId(dossierId);
-        if (dossier.idcomptecreateur !== idUtilisateurAuthentifie) {
+        if (dossier.idCompteCreateur !== idUtilisateurAuthentifie) {
             return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
         }
 
@@ -169,7 +205,7 @@ dossierRouter.delete('/api/dossiers/:dossierId', authentifierToken, async (req, 
         // Vérifier que le dossier appartient à l'utilisateur
         const service_dossier = new ServiceDossier();
         const dossier = await service_dossier.recupererDossierParId(dossierId);
-        if (dossier.idcomptecreateur !== idUtilisateurAuthentifie) {
+        if (dossier.idCompteCreateur !== idUtilisateurAuthentifie) {
             return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
         }
 
@@ -203,6 +239,12 @@ dossierRouter.post('/api/dossiers/:dossierId/televerser', authentifierToken, ver
         // Déplacer le fichier vers le dossier correct
         // Structure: user_{idCompte}/chemin-du-dossier
         const cheminDossierPhysique = path.join(SERVER_FILES_PATH, `user_${req.idCompteCreateur}`, req.cheminDossier);
+        
+        // Créer le dossier de destination s'il n'existe pas
+        if (!fs.existsSync(cheminDossierPhysique)) {
+            fs.mkdirSync(cheminDossierPhysique, { recursive: true });
+        }
+        
         const ancienChemin = req.file.path;
         const nouveauChemin = path.join(cheminDossierPhysique, req.file.filename);
         
@@ -240,6 +282,12 @@ dossierRouter.post('/api/dossiers/:dossierId/televerser-multiple', authentifierT
         // Déplacer les fichiers vers le dossier correct
         // Structure: user_{idCompte}/chemin-du-dossier
         const cheminDossierPhysique = path.join(SERVER_FILES_PATH, `user_${req.idCompteCreateur}`, req.cheminDossier);
+        
+        // Créer le dossier de destination s'il n'existe pas
+        if (!fs.existsSync(cheminDossierPhysique)) {
+            fs.mkdirSync(cheminDossierPhysique, { recursive: true });
+        }
+        
         const fichiersDeplaces = req.files.map(file => {
             const ancienChemin = file.path;
             const nouveauChemin = path.join(cheminDossierPhysique, file.filename);
@@ -257,6 +305,93 @@ dossierRouter.post('/api/dossiers/:dossierId/televerser-multiple', authentifierT
         console.error('Erreur lors du téléversement multiple :', error);
         res.status(500).json({ error: error.message || 'Erreur lors du téléversement' });
     }
+
+// ===== GESTION DE LA CORBEILLE =====
+
+// READ - Récupérer les dossiers de la corbeille
+dossierRouter.get('/api/corbeille', authentifierToken, async (req, res) => {
+    try {
+        const idUtilisateurAuthentifie = req.utilisateur.id;
+        const service_dossier = new ServiceDossier();
+        
+        const dossiersCorbeille = await service_dossier.recupererDossiersCorbeille(idUtilisateurAuthentifie);
+        res.json(dossiersCorbeille);
+    } catch (error) {
+        console.error('Erreur lors de la récupération de la corbeille :', error);
+        res.status(500).json({ error: error.message || 'Erreur lors de la récupération' });
+    }
+});
+
+// DELETE - Déplacer un dossier à la corbeille
+dossierRouter.delete('/api/dossiers/:dossierId/vers-corbeille', authentifierToken, async (req, res) => {
+    try {
+        const { dossierId } = req.params;
+        const idUtilisateurAuthentifie = req.utilisateur.id;
+
+        // Vérifier que le dossier appartient à l'utilisateur
+        const service_dossier = new ServiceDossier();
+        const dossier = await service_dossier.recupererDossierParId(dossierId);
+        
+        if (dossier.idCompteCreateur !== idUtilisateurAuthentifie) {
+            return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
+        }
+
+        // Ne pas permettre de supprimer la corbeille elle-même
+        if (dossier.cheminDaccesDossier === `.corbeille_${idUtilisateurAuthentifie}`) {
+            return res.status(400).json({ error: 'Impossible de supprimer la corbeille' });
+        }
+
+        const resultat = await service_dossier.deplacerVerCorbeille(dossierId, idUtilisateurAuthentifie);
+        res.json({ message: 'Dossier déplacé à la corbeille', dossier: resultat });
+    } catch (error) {
+        console.error('Erreur lors du déplacement vers la corbeille :', error);
+        res.status(500).json({ error: error.message || 'Erreur lors du déplacement' });
+    }
+});
+
+// POST - Restaurer un dossier depuis la corbeille
+dossierRouter.post('/api/dossiers/:dossierId/restaurer', authentifierToken, async (req, res) => {
+    try {
+        const { dossierId } = req.params;
+        const idUtilisateurAuthentifie = req.utilisateur.id;
+
+        // Vérifier que le dossier appartient à l'utilisateur
+        const service_dossier = new ServiceDossier();
+        const dossier = await service_dossier.recupererDossierParId(dossierId);
+        
+        if (dossier.idCompteCreateur !== idUtilisateurAuthentifie) {
+            return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
+        }
+
+        // Vérifier que le dossier est dans la corbeille
+        const corbeille = await service_dossier.recupererCorbeille(idUtilisateurAuthentifie);
+        if (dossier.iddossierparent !== corbeille.iddossier) {
+            return res.status(400).json({ error: 'Ce dossier n\'est pas dans la corbeille' });
+        }
+
+        const resultat = await service_dossier.restaurerDossier(dossierId);
+        res.json({ message: 'Dossier restauré avec succès', dossier: resultat });
+    } catch (error) {
+        console.error('Erreur lors de la restauration du dossier :', error);
+        res.status(500).json({ error: error.message || 'Erreur lors de la restauration' });
+    }
+});
+
+// DELETE - Vider complètement la corbeille
+dossierRouter.delete('/api/corbeille/vider', authentifierToken, async (req, res) => {
+    try {
+        const idUtilisateurAuthentifie = req.utilisateur.id;
+        const service_dossier = new ServiceDossier();
+        
+        const resultat = await service_dossier.viderCorbeille(idUtilisateurAuthentifie);
+        res.json({ message: 'Corbeille vidée avec succès', dossiersSupprimes: resultat });
+    } catch (error) {
+        console.error('Erreur lors du vidage de la corbeille :', error);
+        res.status(500).json({ error: error.message || 'Erreur lors du vidage' });
+    }
+});
+
+    
 });
 
 export default dossierRouter;
