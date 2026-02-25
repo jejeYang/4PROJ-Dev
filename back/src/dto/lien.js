@@ -1,9 +1,7 @@
+import { db } from '../db.js';
 //Import de la variable de configuration
 import { PG_CONFIG } from '../global_properties.js';
-import pgPromise from 'pg-promise';
 
-const pgp = pgPromise(/* initialization options */);
-const db = pgp(PG_CONFIG);
 // La class DTO pour le compte
 
 class DtoLienGenere{
@@ -29,7 +27,7 @@ class DtoLienGenere{
         })
         .catch(error => {
             console.error('Erreur lors de la récupération des liens de l utilisateur :', error);
-            throw er=ror;
+            throw error;
         });
     }
     async recupererLiens() {
