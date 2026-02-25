@@ -26,8 +26,7 @@ compteRouter.post('/api/login', async (req, res) => {
     }
 });
 
-// Routes protégées
-compteRouter.post('/api/users', authentifierToken, async (req, res) => {
+compteRouter.post('/api/register', async (req, res) => {
     try {
         const service_compte = new ServiceCompte();
         const nouveau_compte = req.body;
@@ -38,6 +37,8 @@ compteRouter.post('/api/users', authentifierToken, async (req, res) => {
         res.status(500).json({ error: error.message || 'Erreur lors de la création' });
     }
 });
+
+// Routes protégées
 
 compteRouter.get('/api/users', authentifierToken, async (req, res) => {
     const service_compte = new ServiceCompte();
