@@ -17,7 +17,7 @@ class ServiceCompte {
         // Créer automatiquement un dossier corbeille pour le nouvel utilisateur
         try {
             const dossierCorbeille = {
-                idCompteCreateur: utilisateur.idcompte,
+                idCompteCreateur: utilisateur.idCompte,
                 cheminDaccesDossier: `.corbeille`,
             };
             await this.service_dossier.creerDossier(dossierCorbeille);

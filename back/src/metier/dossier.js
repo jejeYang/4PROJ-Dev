@@ -23,8 +23,8 @@ class ServiceDossier {
         return await this.dto_dossier.recupererDossierCompte(idCompteCreateurDossier);
     }
 
-    async recupererDossiersRacineParCompte(idCompteCreateurDossier) {
-        return await this.dto_dossier.recupererDossiersRacineCompte(idCompteCreateurDossier);
+    async recupererDossierRacineParCompte(idCompteCreateurDossier) {
+        return await this.dto_dossier.recupererDossierRacineParCompte(idCompteCreateurDossier);
     }
 
     async recupererCorbeille(idCompteCreateur) {
