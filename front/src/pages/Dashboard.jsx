@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import '../styles/Dashboard.css';
 
@@ -7,14 +7,17 @@ function Dashboard() {
     const [dossiers, setDossiers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showCreateFolder, setShowCreateFolder] = useState(false);
-    const [newFolderName, setNewFolderName] = useState('');
+    const [menu_nom_dossier, setChangeNomDossier] = useState('');
     const [creating, setCreating] = useState(false);
     const [error, setError] = useState('');
     
     // États pour la navigation dans les dossiers
-    const [currentFolder, setCurrentFolder] = useState(null);
-    const [folderContents, setFolderContents] = useState([]);
-    const [breadcrumb, setBreadcrumb] = useState([]);
+    const [dossier_actuel, setDossierActuel] = useState(null);
+    const [contenu_dossier, setContenuDossier] = useState([]);
+    const [fil_ariane, setFilAriane] = useState([]);
+    const [taille_dossiers, setTailleDossiers] = useState({});
+    const [menu_options_dossier, setMenuOptionsDossier] = useState(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
         fetchData();
@@ -39,7 +42,39 @@ function Dashboard() {
         }
     };
 
-    const handleFolderDoubleClick = async (dossier) => {
+    // Récupère la taille des dossiers
+    useEffect(() => {
+        const recupereTaille = async (list) => {
+            if (!list || list.length === 0) return;
+            const token = localStorage.getItem('token');
+            const promises = list.map(async (dossier) => {
+                if (!dossier || taille_dossiers[dossier.iddossier] !== undefined) return null;
+                try {
+                    const res = await axios.get(
+                        `http://localhost:3000/api/dossiers/${dossier.iddossier}/fichiers`,
+                        { headers: { Authorization: `Bearer ${token}` } }
+                    );
+                    const sum = (res.data || []).reduce((acc, f) => acc + (f.taille || 0), 0);
+                    return { id: dossier.iddossier, size: sum };
+                } catch (err) {
+                    alert('Erreur :'+err);
+                    return { id: dossier.iddossier, size: 0 };
+                }
+            });
+
+            const resultat = await Promise.all(promises);
+            const updates = {};
+            resultat.forEach(r => { if (r) updates[r.id] = r.size; });
+            if (Object.keys(updates).length > 0) setTailleDossiers(prev => ({ ...prev, ...updates }));
+        };
+
+        recupereTaille(dossiers);
+        if (contenu_dossier && contenu_dossier.dossiers) recupereTaille(contenu_dossier.dossiers);
+    }, [dossiers, contenu_dossier, taille_dossiers]);
+    
+
+    // Accede au dossier et récupère son contenu (sous-dossiers + fichiers)
+    const gestionClicDossier = async (dossier) => {
         try {
             const token = localStorage.getItem('token');
             
@@ -55,43 +90,32 @@ function Dashboard() {
                 )
             ]);
             
-            setCurrentFolder(dossier);
-            setFolderContents({
+            setDossierActuel(dossier);
+            setContenuDossier({
                 dossiers: dossiersResponse.data || [],
                 fichiers: fichiersResponse.data || []
             });
-            setBreadcrumb([...breadcrumb, dossier]);
+            setFilAriane([...fil_ariane, dossier]);
         } catch (error) {
             console.error('Erreur lors de la récupération du contenu du dossier:', error);
             setError('Erreur lors de l\'ouverture du dossier');
         }
     };
 
-    const handleBackToParent = () => {
-        const newBreadcrumb = breadcrumb.slice(0, -1);
-        setBreadcrumb(newBreadcrumb);
-        
-        if (newBreadcrumb.length === 0) {
-            setCurrentFolder(null);
-            setFolderContents([]);
-        } else {
-            const parentFolder = newBreadcrumb[newBreadcrumb.length - 1];
-            setCurrentFolder(parentFolder);
-        }
-    };
-
-    const handleBreadcrumbClick = async (index) => {
+    // Gère les clics sur le fil d'Ariane pour la navigation
+    // breadcrum = fil d'ariane (plus simple a ecrire)
+    const gestionClicBreadcrumb = async (index) => {
         try {
             const token = localStorage.getItem('token');
             
             if (index === -1) {
                 // Clic sur "Mon Espace" - retour à la racine
-                setCurrentFolder(null);
-                setFolderContents([]);
-                setBreadcrumb([]);
+                setDossierActuel(null);
+                setContenuDossier([]);
+                setFilAriane([]);
             } else {
-                // Clic sur un dossier du breadcrumb
-                const newBreadcrumb = breadcrumb.slice(0, index + 1);
+                // Clic sur un dossier du fil d'Ariane
+                const newBreadcrumb = fil_ariane.slice(0, index + 1);
                 const selectedFolder = newBreadcrumb[index];
                 
                 // Charger le contenu du dossier sélectionné
@@ -106,9 +130,9 @@ function Dashboard() {
                     )
                 ]);
                 
-                setBreadcrumb(newBreadcrumb);
-                setCurrentFolder(selectedFolder);
-                setFolderContents({
+                setFilAriane(newBreadcrumb);
+                setDossierActuel(selectedFolder);
+                setContenuDossier({
                     dossiers: dossiersResponse.data || [],
                     fichiers: fichiersResponse.data || []
                 });
@@ -119,10 +143,10 @@ function Dashboard() {
         }
     };
 
-    const handleCreateFolder = async (e) => {
+    const gestionCreeDossier = async (e) => {
         e.preventDefault();
         
-        if (!newFolderName.trim()) {
+        if (!menu_nom_dossier.trim()) {
             setError('Le nom du dossier ne peut pas être vide');
             return;
         }
@@ -136,29 +160,83 @@ function Dashboard() {
             const response = await axios.post(
                 'http://localhost:3000/api/dossiers',
                 {
-                    cheminDaccesDossier: newFolderName.trim(),
-                    idDossierParent: currentFolder ? currentFolder.iddossier : null
+                    cheminDaccesDossier: menu_nom_dossier.trim(),
+                    idDossierParent: dossier_actuel ? dossier_actuel.iddossier : null
                 },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             
             // Ajouter le nouveau dossier à la liste appropriée
-            if (currentFolder) {
-                setFolderContents({
-                    ...folderContents,
-                    dossiers: [...folderContents.dossiers, response.data]
+            if (dossier_actuel) {
+                setContenuDossier({
+                    ...contenu_dossier,
+                    dossiers: [...contenu_dossier.dossiers, response.data]
                 });
             } else {
                 setDossiers([...dossiers, response.data]);
             }
             
-            setNewFolderName('');
+            setChangeNomDossier('');
             setShowCreateFolder(false);
         } catch (err) {
             setError(err.response?.data?.error || 'Erreur lors de la création du dossier');
             console.error('Erreur:', err);
         } finally {
             setCreating(false);
+        }
+    };
+
+    const gestionRenommeDossier = async (dossier) => {
+        const newName = window.prompt('Nouveau nom du dossier', dossier.chemindaccesdossier);
+        if (!newName || !newName.trim()) return setMenuOptionsDossier(null);
+        try {
+            const token = localStorage.getItem('token');
+            const res = await axios.put(
+                `http://localhost:3000/api/dossiers/${dossier.iddossier}`,
+                { cheminDaccesDossier: newName.trim() },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            // Mets à jour
+            if (dossier_actuel) {
+                setContenuDossier(prev => ({
+                    ...prev,
+                    dossiers: prev.dossiers.map(d => d.iddossier === dossier.iddossier ? res.data : d)
+                }));
+            } else {
+                setDossiers(prev => prev.map(d => d.iddossier === dossier.iddossier ? res.data : d));
+            }
+        } catch (err) {
+            console.error('Erreur lors du renommage:', err);
+            alert('Erreur lors du renommage');
+        } finally {
+            setMenuOptionsDossier(null);
+        }
+    };
+
+    const gestionSupprimeDossier = async (dossier) => {
+        const ok = window.confirm(`Êtes vous sur que vous voulez supprimer le dossier "${dossier.chemindaccesdossier}" ?`);
+        if (!ok) return setMenuOptionsDossier(null);
+        try {
+            const token = localStorage.getItem('token');
+            await axios.delete(
+                `http://localhost:3000/api/dossiers/${dossier.iddossier}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (dossier_actuel) {
+                setContenuDossier(prev => ({
+                    ...prev,
+                    dossiers: prev.dossiers.filter(d => d.iddossier !== dossier.iddossier)
+                }));
+            } else {
+                setDossiers(prev => prev.filter(d => d.iddossier !== dossier.iddossier));
+            }
+        } catch (err) {
+            console.error('Erreur lors de la suppression:', err);
+            alert('Erreur lors de la suppression');
+        } finally {
+            setMenuOptionsDossier(null);
         }
     };
 
@@ -175,35 +253,38 @@ function Dashboard() {
     }
 
     // Afficher le contenu du dossier actuel
-    const displayItems = currentFolder ? {
-        dossiers: folderContents.dossiers || [],
-        fichiers: folderContents.fichiers || []
+    const displayItems = dossier_actuel ? {
+        dossiers: contenu_dossier.dossiers || [],
+        fichiers: contenu_dossier.fichiers || []
     } : {
         dossiers: dossiers,
         fichiers: []
     };
 
     const allItems = [...displayItems.dossiers, ...displayItems.fichiers];
+        // Récupere les dossiers visibles (sauf la corbeille) et la corbeille séparément
+        const dossiers_visible = (displayItems.dossiers || []).filter(d => d && !d.chemindaccesdossier.startsWith('.'));
+        const corbeille = (displayItems.dossiers || []).find(d => d && d.chemindaccesdossier === '.bin');
 
     return (
         <div className="dashboard-container">
             <div className="dashboard-header">
                 <div>
                     <h1>Mon Espace</h1>
-                    {breadcrumb.length > 0 && (
-                        <nav className="breadcrumb">
+                    {fil_ariane.length > 0 && (
+                        <nav className="breadcrumb" aria-label="Fil d'arianne">
                             <button 
-                                className="breadcrumb-item"
-                                onClick={() => handleBreadcrumbClick(-1)}
+                                className="breadcrumb-objet"
+                                onClick={() => gestionClicBreadcrumb(-1)}
                             >
-                                📁 Mon Espace
+                                Mon Espace
                             </button>
-                            {breadcrumb.map((dossier, index) => (
+                            {fil_ariane.map((dossier, index) => (
                                 <React.Fragment key={dossier.iddossier}>
-                                    <span className="breadcrumb-separator">/</span>
+                                    <span className="breadcrumb-separateur">›</span>
                                     <button 
-                                        className="breadcrumb-item"
-                                        onClick={() => handleBreadcrumbClick(index)}
+                                        className="breadcrumb-objet"
+                                        onClick={() => gestionClicBreadcrumb(index)}
                                     >
                                         {dossier.chemindaccesdossier}
                                     </button>
@@ -211,28 +292,27 @@ function Dashboard() {
                             ))}
                         </nav>
                     )}
-                </div>
-                <div className="header-actions">
-                    <Link to="/upload" className="btn-primary">
-                        <span className="icon">+</span> Uploader un fichier
-                    </Link>
-                    <button 
-                        className="btn-secondary"
-                        onClick={() => setShowCreateFolder(!showCreateFolder)}
-                    >
-                        <span className="icon">📁</span> Créer un dossier
-                    </button>
-                </div>
+                    </div>
+                    <div className={`dashboard-header-actions ${dossier_actuel ? 'in-folder' : ''}`}>
+                        <button className="btn-publie-dashboard-header" onClick={() => navigate('/upload')}>
+                            Publier un fichier
+                        </button>
+                        <button className="btn-cree-dossier-dashboard-header" onClick={() => setShowCreateFolder(!showCreateFolder)}
+                            aria-pressed={showCreateFolder}
+                        >
+                            Créer un dossier
+                        </button>
+                    </div>
             </div>
 
             {showCreateFolder && (
-                <div className="create-folder-form">
-                    <form onSubmit={handleCreateFolder}>
+                <div className="menu-cree-dossier">
+                    <form onSubmit={gestionCreeDossier}>
                         <input
                             type="text"
                             placeholder="Nom du dossier"
-                            value={newFolderName}
-                            onChange={(e) => setNewFolderName(e.target.value)}
+                            value={menu_nom_dossier}
+                            onChange={(e) => setChangeNomDossier(e.target.value)}
                             disabled={creating}
                         />
                         <button type="submit" disabled={creating}>
@@ -243,7 +323,7 @@ function Dashboard() {
                             onClick={() => {
                                 setShowCreateFolder(false);
                                 setError('');
-                                setNewFolderName('');
+                                setChangeNomDossier('');
                             }}
                             disabled={creating}
                         >
@@ -256,47 +336,64 @@ function Dashboard() {
 
             <div className="dossiers-section">
                 <h2>
-                    {currentFolder ? `Contenu de ${currentFolder.chemindaccesdossier}` : 'Mes dossiers'}
+                    {dossier_actuel ? `Contenu de ${dossier_actuel.chemindaccesdossier}` : 'Mes dossiers'}
                 </h2>
                 {allItems.length === 0 ? (
-                    <div className="empty-state">
+                    <div className="dossier-vide">
                         <p>Aucun dossier ou fichier pour le moment</p>
                         <p className="hint">
-                            {currentFolder 
+                            {dossier_actuel 
                                 ? 'Cliquez sur "Créer un dossier" pour en ajouter un' 
                                 : 'Cliquez sur "Créer un dossier" pour commencer'}
                         </p>
                     </div>
                 ) : (
-                    <div className="dossiers-grid">
-                        {displayItems.dossiers.map((dossier) => (
-                            <div 
-                                key={dossier.iddossier} 
-                                className="dossier-card"
-                                onDoubleClick={() => handleFolderDoubleClick(dossier)}
+                    <div className="dossiers-liste">
+                        {dossiers_visible.map((dossier) => (
+                            <div
+                                key={dossier.iddossier}
+                                className="dossier-ligne"
+                                onClick={() => gestionClicDossier(dossier)}
                             >
-                                <div className="dossier-icon">📁</div>
-                                <h3>{dossier.chemindaccesdossier}</h3>
-                                <p className="dossier-id">ID: {dossier.iddossier}</p>
-                                <p className="double-click-hint">(Double-clic pour ouvrir)</p>
-                                <div className="dossier-actions">
-                                    <Link to="/upload" className="action-btn upload">
-                                        Uploader
-                                    </Link>
+                                <div className="col-nom">
+                                    <span className="dossier-name">{dossier.chemindaccesdossier}</span>
+                                </div>
+                                <div className="col-id">ID: {dossier.iddossier}</div>
+                                <div className="col-taille">{taille_dossiers[dossier.iddossier] !== undefined ? formatFileSize(taille_dossiers[dossier.iddossier]) : 'Calcul...'}</div>
+                                <div className="col-actions">
+                                    <button
+                                        className="options-btn"
+                                        onClick={(e) => { e.stopPropagation(); setMenuOptionsDossier(menu_options_dossier === dossier.iddossier ? null : dossier.iddossier); }}
+                                        aria-haspopup="true"
+                                        aria-expanded={menu_options_dossier === dossier.iddossier}
+                                    >
+                                        ⋮
+                                    </button>
+                                    {menu_options_dossier === dossier.iddossier && (
+                                        <div className="options-menu" onClick={(e) => e.stopPropagation()}>
+                                            <button onClick={() => gestionRenommeDossier(dossier)}>Renommer</button>
+                                            <button onClick={() => gestionSupprimeDossier(dossier)}>Supprimer</button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
                         {displayItems.fichiers.map((fichier, index) => (
-                            <div key={`file-${index}`} className="fichier-card">
-                                <div className="fichier-icon">📄</div>
+                            <div key={`file-${index}`} className="bloc-fichier">
                                 <h3>{fichier.nom}</h3>
                                 <p className="fichier-taille">{formatFileSize(fichier.taille)}</p>
                                 <p className="fichier-date">
                                     {new Date(fichier.dateModification).toLocaleDateString('fr-FR')}
                                 </p>
                                 <div className="fichier-actions">
-                                    <button className="action-btn download">
+                                    <button className="btn-fichier-telecharge">
                                         Télécharger
+                                    </button>
+                                    <button className="btn-fichier-renomme">
+                                        Renommer
+                                    </button>
+                                    <button className="btn-fichier-supprime">
+                                        Supprimer
                                     </button>
                                 </div>
                             </div>
@@ -304,6 +401,23 @@ function Dashboard() {
                     </div>
                 )}
             </div>
+            {corbeille && (
+                <div className="section-corbeille">
+                    <h2>Corbeille</h2>
+                    <div
+                        className="bloc-corbeille"
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => gestionClicDossier(corbeille)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') gestionClicDossier(corbeille); }}
+                        aria-label="Ouvrir la corbeille"
+                    >
+                        <div className="trash-icon">🗑️</div>
+                        <h3>Corbeille</h3>
+                        <p className="taille-dossier">{taille_dossiers[corbeille.iddossier] !== undefined ? formatFileSize(taille_dossiers[corbeille.iddossier]) : 'Calcul...'}</p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

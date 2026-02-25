@@ -13,6 +13,7 @@
   --bg-tertiary-color: #ffffff;
   --select-primary-color: #e6f2ff;
   --hover-primary-color: #dcdedf;
+  --hover-tertiary-color: #e5f1ef;
 
   --header-bg-color: #161B33;
   --footer-bg-color: #474973;
@@ -22,11 +23,11 @@
   --text-hover: #424242;
 
   --btn-color: #06BCC1;
-  --btn-hover: #10a1a6;
+  --btn-hover: #5e9294;
   --btn-text: #F4EDEA;
   --btn-shadow: rgba(0, 191, 216, 0.4);
 
-  --border-color: #ccc;
+  --border-color: #3a3737;
   --shadow-color: rgba(0, 0, 0, 0.1);
   --error-color: #dc2626;
 }
@@ -37,6 +38,7 @@
   --bg-tertiary-color: #000000;
   --select-primary-color: #4f5964;
   --hover-primary-color: rgb(99, 72, 72);
+  --hover-tertiary-color: #575958;
 
   --header-bg-color: #161B33;
   --footer-bg-color: #474973;

@@ -65,13 +65,13 @@ function AppContent() {
             <div className="sidebar-content">
               <h3>Menu</h3>
               <Link to="/dashboard" className={`sidebar-link ${location.pathname === '/dashboard' ? 'active' : ''}`}>
-                📊 Tableau de bord
+                Tableau de bord
               </Link>
               <Link to="/upload" className={`sidebar-link ${location.pathname === '/upload' ? 'active' : ''}`}>
-                📤 Uploader
+                Uploader
               </Link>
               <Link to="/settings" className={`sidebar-link ${location.pathname === '/settings' ? 'active' : ''}`}>
-                ⚙️ Paramètres
+                Paramètres
               </Link>
             </div>
             <button className="sidebar-close" onClick={() => setSidebarOpen(false)}>✕</button>
