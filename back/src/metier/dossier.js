@@ -23,6 +23,18 @@ class ServiceDossier {
         return await this.dto_dossier.recupererDossierCompte(idCompteCreateurDossier);
     }
 
+    async recupererDossierRacineParCompte(idCompteCreateurDossier) {
+        return await this.dto_dossier.recupererDossierRacineParCompte(idCompteCreateurDossier);
+    }
+
+    async recupererCorbeille(idCompteCreateur) {
+        return await this.dto_dossier.recupererCorbeille(idCompteCreateur);
+    }
+
+    async recupererDossiersCorbeille(idCompteCreateur) {
+        return await this.dto_dossier.recupererDossiersCorbeille(idCompteCreateur);
+    }
+
     async recupererSousDossiers(dossierId) {
         return await this.dto_dossier.recupererSousDossiers(dossierId);
     }
