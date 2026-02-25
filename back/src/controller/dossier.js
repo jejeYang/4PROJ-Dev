@@ -3,7 +3,8 @@ import ServiceDossier from '../metier/dossier.js';
 import { authentifierToken } from '../middleware/auth.js';
 import multer from 'multer';
 import path from 'node:path';
-import fs, { promises as fsPromises } from 'node:fs';
+import { promises as fsPromises } from 'node:fs';
+import fs from 'node:fs';
 import { SERVER_FILES_PATH } from '../global_properties.js';
 
 const dossierRouter = express.Router();
@@ -28,29 +29,15 @@ const upload = multer({
 });
 
 // Middleware de vérification du dossier avant téléversement
-// Fonction pour construire le chemin complet d'un dossier en remontant les parents
-const construireCheminComplet = async (dossierId, service_dossier) => {
-    const dossier = await service_dossier.recupererDossierParId(dossierId);
-    
-    if (dossier.iddossierparent) {
-        // Récursivement construire le chemin du parent
-        const cheminParent = await construireCheminComplet(dossier.iddossierparent, service_dossier);
-        return path.join(cheminParent, dossier.chemindaccesdossier);
-    } else {
-        // C'est un dossier racine
-        return dossier.chemindaccesdossier;
-    }
-};
-
 const verifierDossierExiste = async (req, res, next) => {
     try {
         const { dossierId } = req.params;
         const service_dossier = new ServiceDossier();
         const dossier = await service_dossier.recupererDossierParId(dossierId);
-        // Stocker l'ID du dossier, l'ID du créateur et le chemin d'accès complet dans la requête
+        // Stocker l'ID du dossier, l'ID du créateur et le chemin d'accès dans la requête
         req.dossierId = dossier.iddossier;
         req.idCompteCreateur = dossier.idcomptecreateur;
-        req.cheminDossier = await construireCheminComplet(dossierId, service_dossier);
+        req.cheminDossier = dossier.chemindaccesdossier;
         next();
     } catch (error) {
         console.error('Erreur lors de la vérification du dossier :', error);
@@ -65,37 +52,29 @@ const verifierDossierExiste = async (req, res, next) => {
 // CREATE - Créer un nouveau dossier
 dossierRouter.post('/api/dossiers', authentifierToken, async (req, res) => {
     try {
-        const { cheminDaccesDossier, idDossierParent } = req.body;
+        const { idCompteCreateur, cheminDaccesDossier, idDossierParent } = req.body;
         const idUtilisateurAuthentifie = req.utilisateur.id;
 
-        if (!cheminDaccesDossier) {
-            return res.status(400).json({ error: 'cheminDaccesDossier est requis' });
+        if (!idCompteCreateur || !cheminDaccesDossier) {
+            return res.status(400).json({ error: 'idCompteCreateur et cheminDaccesDossier sont requis' });
         }
 
-        const service_dossier = new ServiceDossier();
-        
-        // Récupérer le dossier personnel de l'utilisateur
-        const dossiersUtilisateur = await service_dossier.recupererDossiersParCompte(idUtilisateurAuthentifie);
-        if (!dossiersUtilisateur || dossiersUtilisateur.length === 0) {
-            return res.status(404).json({ error: 'Dossier personnel non trouvé' });
+        // Vérifier que l'utilisateur authentifié crée un dossier pour son propre compte
+        if (idCompteCreateur !== idUtilisateurAuthentifie) {
+            return res.status(403).json({ error: 'Vous ne pouvez créer un dossier que pour votre compte' });
         }
-        
-        let dossierParentId = dossiersUtilisateur[0].iddossier; // Par défaut, le dossier personnel
 
-        // Si un dossier parent est spécifié, vérifier qu'il appartient à l'utilisateur
+        // Si un dossier parent est spécifié, vérifier qu'il appartient aussi à l'utilisateur
         if (idDossierParent) {
+            const service_dossier = new ServiceDossier();
             const dossierParent = await service_dossier.recupererDossierParId(idDossierParent);
             if (dossierParent.idcomptecreateur !== idUtilisateurAuthentifie) {
                 return res.status(403).json({ error: 'Le dossier parent ne vous appartient pas' });
             }
-            dossierParentId = idDossierParent;
         }
 
-        const dossier = { 
-            idCompteCreateur: idUtilisateurAuthentifie, 
-            cheminDaccesDossier, 
-            idDossierParent: dossierParentId 
-        };
+        const service_dossier = new ServiceDossier();
+        const dossier = { idCompteCreateur, cheminDaccesDossier, idDossierParent };
         const resultat = await service_dossier.creerDossier(dossier);
         res.status(201).json(resultat);
     } catch (error) {
@@ -134,8 +113,7 @@ dossierRouter.get('/api/comptes/:idCompteCreateurDossier/dossiers', authentifier
     try {
         const { idCompteCreateurDossier } = req.params;
         const service_dossier = new ServiceDossier();
-        // Récupérer uniquement les dossiers racine (sans parent)
-        const dossiers = await service_dossier.recupererDossiersRacineParCompte(idCompteCreateurDossier);
+        const dossiers = await service_dossier.recupererDossiersParCompte(idCompteCreateurDossier);
         res.json(dossiers);
     } catch (error) {
         console.error('Erreur lors de la récupération des dossiers :', error);
@@ -152,19 +130,6 @@ dossierRouter.get('/api/dossiers/:dossierId/sous-dossiers', authentifierToken, a
         res.json(sousDossiers);
     } catch (error) {
         console.error('Erreur lors de la récupération des sous-dossiers :', error);
-        res.status(500).json({ error: error.message || 'Erreur lors de la récupération' });
-    }
-});
-
-// READ - Récupérer les fichiers d'un dossier
-dossierRouter.get('/api/dossiers/:dossierId/fichiers', authentifierToken, async (req, res) => {
-    try {
-        const { dossierId } = req.params;
-        const service_dossier = new ServiceDossier();
-        const fichiers = await service_dossier.recupererFichiersDossier(dossierId);
-        res.json(fichiers);
-    } catch (error) {
-        console.error('Erreur lors de la récupération des fichiers :', error);
         res.status(500).json({ error: error.message || 'Erreur lors de la récupération' });
     }
 });
@@ -238,12 +203,6 @@ dossierRouter.post('/api/dossiers/:dossierId/televerser', authentifierToken, ver
         // Déplacer le fichier vers le dossier correct
         // Structure: user_{idCompte}/chemin-du-dossier
         const cheminDossierPhysique = path.join(SERVER_FILES_PATH, `user_${req.idCompteCreateur}`, req.cheminDossier);
-        
-        // Créer le dossier de destination s'il n'existe pas
-        if (!fs.existsSync(cheminDossierPhysique)) {
-            fs.mkdirSync(cheminDossierPhysique, { recursive: true });
-        }
-        
         const ancienChemin = req.file.path;
         const nouveauChemin = path.join(cheminDossierPhysique, req.file.filename);
         
@@ -281,12 +240,6 @@ dossierRouter.post('/api/dossiers/:dossierId/televerser-multiple', authentifierT
         // Déplacer les fichiers vers le dossier correct
         // Structure: user_{idCompte}/chemin-du-dossier
         const cheminDossierPhysique = path.join(SERVER_FILES_PATH, `user_${req.idCompteCreateur}`, req.cheminDossier);
-        
-        // Créer le dossier de destination s'il n'existe pas
-        if (!fs.existsSync(cheminDossierPhysique)) {
-            fs.mkdirSync(cheminDossierPhysique, { recursive: true });
-        }
-        
         const fichiersDeplaces = req.files.map(file => {
             const ancienChemin = file.path;
             const nouveauChemin = path.join(cheminDossierPhysique, file.filename);
