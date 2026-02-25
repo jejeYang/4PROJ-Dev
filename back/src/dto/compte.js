@@ -1,12 +1,10 @@
+import { db } from '../db.js';
 // Import de la variable de configuration
 import { PG_CONFIG, SERVER_FILES_PATH } from '../global_properties.js';
-import pgPromise from 'pg-promise';
 import bcrypt from 'bcryptjs';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const pgp = pgPromise(/* initialization options */);
-const db = pgp(PG_CONFIG);
 
 // La classe DTO pour le compte
 class DtoCompte {
