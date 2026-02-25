@@ -4,27 +4,34 @@ import axios from 'axios';
 import '../styles/Dashboard.css';
 
 function Dashboard() {
-    const [files, setFiles] = useState([]);
-    const [storageUsed, setStorageUsed] = useState(0);
-    const [storageTotal, setStorageTotal] = useState(100); // GB
+    const [dossiers, setDossiers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [showCreateFolder, setShowCreateFolder] = useState(false);
+    const [newFolderName, setNewFolderName] = useState('');
+    const [creating, setCreating] = useState(false);
+    const [error, setError] = useState('');
+    
+    // États pour la navigation dans les dossiers
+    const [currentFolder, setCurrentFolder] = useState(null);
+    const [folderContents, setFolderContents] = useState([]);
+    const [breadcrumb, setBreadcrumb] = useState([]);
 
     useEffect(() => {
-        fetchUserData();
+        fetchData();
     }, []);
 
-    const fetchUserData = async () => {
+    const fetchData = async () => {
         try {
             const token = localStorage.getItem('token');
             const user = JSON.parse(localStorage.getItem('user'));
             
-            // Récupérer les fichiers de l'utilisateur
-            const filesResponse = await axios.get('http://localhost:3000/api/files', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            // Récupérer les dossiers de l'utilisateur
+            const response = await axios.get(
+                `http://localhost:3000/api/comptes/${user.id}/dossiers`,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
             
-            setFiles(filesResponse.data || []);
-            setStorageUsed(user.storagecompte || 0);
+            setDossiers(response.data || []);
         } catch (error) {
             console.error('Erreur lors de la récupération des données:', error);
         } finally {
@@ -32,7 +39,128 @@ function Dashboard() {
         }
     };
 
-    const storagePercentage = (storageUsed / (storageTotal * 1024 * 1024 * 1024)) * 100;
+    const handleFolderDoubleClick = async (dossier) => {
+        try {
+            const token = localStorage.getItem('token');
+            
+            // Récupérer les sous-dossiers et les fichiers
+            const [dossiersResponse, fichiersResponse] = await Promise.all([
+                axios.get(
+                    `http://localhost:3000/api/dossiers/${dossier.iddossier}/sous-dossiers`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                ),
+                axios.get(
+                    `http://localhost:3000/api/dossiers/${dossier.iddossier}/fichiers`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                )
+            ]);
+            
+            setCurrentFolder(dossier);
+            setFolderContents({
+                dossiers: dossiersResponse.data || [],
+                fichiers: fichiersResponse.data || []
+            });
+            setBreadcrumb([...breadcrumb, dossier]);
+        } catch (error) {
+            console.error('Erreur lors de la récupération du contenu du dossier:', error);
+            setError('Erreur lors de l\'ouverture du dossier');
+        }
+    };
+
+    const handleBackToParent = () => {
+        const newBreadcrumb = breadcrumb.slice(0, -1);
+        setBreadcrumb(newBreadcrumb);
+        
+        if (newBreadcrumb.length === 0) {
+            setCurrentFolder(null);
+            setFolderContents([]);
+        } else {
+            const parentFolder = newBreadcrumb[newBreadcrumb.length - 1];
+            setCurrentFolder(parentFolder);
+        }
+    };
+
+    const handleBreadcrumbClick = async (index) => {
+        try {
+            const token = localStorage.getItem('token');
+            
+            if (index === -1) {
+                // Clic sur "Mon Espace" - retour à la racine
+                setCurrentFolder(null);
+                setFolderContents([]);
+                setBreadcrumb([]);
+            } else {
+                // Clic sur un dossier du breadcrumb
+                const newBreadcrumb = breadcrumb.slice(0, index + 1);
+                const selectedFolder = newBreadcrumb[index];
+                
+                // Charger le contenu du dossier sélectionné
+                const [dossiersResponse, fichiersResponse] = await Promise.all([
+                    axios.get(
+                        `http://localhost:3000/api/dossiers/${selectedFolder.iddossier}/sous-dossiers`,
+                        { headers: { Authorization: `Bearer ${token}` } }
+                    ),
+                    axios.get(
+                        `http://localhost:3000/api/dossiers/${selectedFolder.iddossier}/fichiers`,
+                        { headers: { Authorization: `Bearer ${token}` } }
+                    )
+                ]);
+                
+                setBreadcrumb(newBreadcrumb);
+                setCurrentFolder(selectedFolder);
+                setFolderContents({
+                    dossiers: dossiersResponse.data || [],
+                    fichiers: fichiersResponse.data || []
+                });
+            }
+        } catch (error) {
+            console.error('Erreur lors de la navigation:', error);
+            setError('Erreur lors de la navigation');
+        }
+    };
+
+    const handleCreateFolder = async (e) => {
+        e.preventDefault();
+        
+        if (!newFolderName.trim()) {
+            setError('Le nom du dossier ne peut pas être vide');
+            return;
+        }
+
+        setCreating(true);
+        setError('');
+
+        try {
+            const token = localStorage.getItem('token');
+            
+            const response = await axios.post(
+                'http://localhost:3000/api/dossiers',
+                {
+                    cheminDaccesDossier: newFolderName.trim(),
+                    idDossierParent: currentFolder ? currentFolder.iddossier : null
+                },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            
+            // Ajouter le nouveau dossier à la liste appropriée
+            if (currentFolder) {
+                setFolderContents({
+                    ...folderContents,
+                    dossiers: [...folderContents.dossiers, response.data]
+                });
+            } else {
+                setDossiers([...dossiers, response.data]);
+            }
+            
+            setNewFolderName('');
+            setShowCreateFolder(false);
+        } catch (err) {
+            setError(err.response?.data?.error || 'Erreur lors de la création du dossier');
+            console.error('Erreur:', err);
+        } finally {
+            setCreating(false);
+        }
+    };
 
     const formatFileSize = (bytes) => {
         if (bytes === 0) return '0 B';
@@ -42,93 +170,133 @@ function Dashboard() {
         return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
     };
 
-    const handleDeleteFile = async (fileId) => {
-        if (window.confirm('Supprimer ce fichier ?')) {
-            try {
-                const token = localStorage.getItem('token');
-                await axios.delete(`http://localhost:3000/api/files/${fileId}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                fetchUserData();
-            } catch (error) {
-                console.error('Erreur lors de la suppression:', error);
-            }
-        }
-    };
-
     if (loading) {
         return <div className="dashboard-container">Chargement...</div>;
     }
 
+    // Afficher le contenu du dossier actuel
+    const displayItems = currentFolder ? {
+        dossiers: folderContents.dossiers || [],
+        fichiers: folderContents.fichiers || []
+    } : {
+        dossiers: dossiers,
+        fichiers: []
+    };
+
+    const allItems = [...displayItems.dossiers, ...displayItems.fichiers];
+
     return (
         <div className="dashboard-container">
             <div className="dashboard-header">
-                <h1>Mon Espace</h1>
-                <Link to="/upload" className="btn-primary">
-                    <span className="icon">+</span> Uploader un fichier
-                </Link>
+                <div>
+                    <h1>Mon Espace</h1>
+                    {breadcrumb.length > 0 && (
+                        <nav className="breadcrumb">
+                            <button 
+                                className="breadcrumb-item"
+                                onClick={() => handleBreadcrumbClick(-1)}
+                            >
+                                📁 Mon Espace
+                            </button>
+                            {breadcrumb.map((dossier, index) => (
+                                <React.Fragment key={dossier.iddossier}>
+                                    <span className="breadcrumb-separator">/</span>
+                                    <button 
+                                        className="breadcrumb-item"
+                                        onClick={() => handleBreadcrumbClick(index)}
+                                    >
+                                        {dossier.chemindaccesdossier}
+                                    </button>
+                                </React.Fragment>
+                            ))}
+                        </nav>
+                    )}
+                </div>
+                <div className="header-actions">
+                    <Link to="/upload" className="btn-primary">
+                        <span className="icon">+</span> Uploader un fichier
+                    </Link>
+                    <button 
+                        className="btn-secondary"
+                        onClick={() => setShowCreateFolder(!showCreateFolder)}
+                    >
+                        <span className="icon">📁</span> Créer un dossier
+                    </button>
+                </div>
             </div>
 
-            <div className="dashboard-grid">
-                {/* Storage Info */}
-                <div className="storage-card">
-                    <h2>Espace de stockage</h2>
-                    <div className="storage-bar">
-                        <div className="storage-used" style={{ width: `${Math.min(storagePercentage, 100)}%` }}></div>
-                    </div>
-                    <p className="storage-text">
-                        {formatFileSize(storageUsed)} / {storageTotal} GB
-                    </p>
+            {showCreateFolder && (
+                <div className="create-folder-form">
+                    <form onSubmit={handleCreateFolder}>
+                        <input
+                            type="text"
+                            placeholder="Nom du dossier"
+                            value={newFolderName}
+                            onChange={(e) => setNewFolderName(e.target.value)}
+                            disabled={creating}
+                        />
+                        <button type="submit" disabled={creating}>
+                            {creating ? 'Création...' : 'Créer'}
+                        </button>
+                        <button 
+                            type="button" 
+                            onClick={() => {
+                                setShowCreateFolder(false);
+                                setError('');
+                                setNewFolderName('');
+                            }}
+                            disabled={creating}
+                        >
+                            Annuler
+                        </button>
+                    </form>
+                    {error && <p className="error-message">{error}</p>}
                 </div>
+            )}
 
-                {/* Stats */}
-                <div className="stats-card">
-                    <div className="stat">
-                        <span className="stat-value">{files.length}</span>
-                        <span className="stat-label">Fichiers</span>
-                    </div>
-                    <div className="stat">
-                        <span className="stat-value">0</span>
-                        <span className="stat-label">Partages</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Files List */}
-            <div className="files-section">
-                <h2>Mes fichiers</h2>
-                {files.length === 0 ? (
+            <div className="dossiers-section">
+                <h2>
+                    {currentFolder ? `Contenu de ${currentFolder.chemindaccesdossier}` : 'Mes dossiers'}
+                </h2>
+                {allItems.length === 0 ? (
                     <div className="empty-state">
-                        <p>Aucun fichier pour le moment</p>
-                        <Link to="/upload" className="btn-secondary">
-                            Commencer à uploader
-                        </Link>
+                        <p>Aucun dossier ou fichier pour le moment</p>
+                        <p className="hint">
+                            {currentFolder 
+                                ? 'Cliquez sur "Créer un dossier" pour en ajouter un' 
+                                : 'Cliquez sur "Créer un dossier" pour commencer'}
+                        </p>
                     </div>
                 ) : (
-                    <div className="files-table">
-                        <div className="table-header">
-                            <div className="col-name">Nom</div>
-                            <div className="col-size">Taille</div>
-                            <div className="col-date">Date</div>
-                            <div className="col-actions">Actions</div>
-                        </div>
-                        {files.map((file) => (
-                            <div key={file.id} className="table-row">
-                                <div className="col-name">
-                                    <span className="file-icon">📄</span>
-                                    {file.name}
+                    <div className="dossiers-grid">
+                        {displayItems.dossiers.map((dossier) => (
+                            <div 
+                                key={dossier.iddossier} 
+                                className="dossier-card"
+                                onDoubleClick={() => handleFolderDoubleClick(dossier)}
+                            >
+                                <div className="dossier-icon">📁</div>
+                                <h3>{dossier.chemindaccesdossier}</h3>
+                                <p className="dossier-id">ID: {dossier.iddossier}</p>
+                                <p className="double-click-hint">(Double-clic pour ouvrir)</p>
+                                <div className="dossier-actions">
+                                    <Link to="/upload" className="action-btn upload">
+                                        Uploader
+                                    </Link>
                                 </div>
-                                <div className="col-size">{formatFileSize(file.size)}</div>
-                                <div className="col-date">{new Date(file.uploadDate).toLocaleDateString()}</div>
-                                <div className="col-actions">
-                                    <button className="action-btn download" title="Télécharger">⬇</button>
-                                    <button className="action-btn share" title="Partager">🔗</button>
-                                    <button 
-                                        className="action-btn delete" 
-                                        title="Supprimer"
-                                        onClick={() => handleDeleteFile(file.id)}
-                                    >
-                                        🗑
+                            </div>
+                        ))}
+                        {displayItems.fichiers.map((fichier, index) => (
+                            <div key={`file-${index}`} className="fichier-card">
+                                <div className="fichier-icon">📄</div>
+                                <h3>{fichier.nom}</h3>
+                                <p className="fichier-taille">{formatFileSize(fichier.taille)}</p>
+                                <p className="fichier-date">
+                                    {new Date(fichier.dateModification).toLocaleDateString('fr-FR')}
+                                </p>
+                                <div className="fichier-actions">
+                                    <button className="action-btn download">
+                                        Télécharger
                                     </button>
                                 </div>
                             </div>

@@ -15,42 +15,55 @@ class DtoDossier {
         this.cheminDaccesDossier = cheminDaccesDossier;
     }
 
-    async creerDossier(dossier) {
-        try {
-            // Créer l'entrée en base de données
-            const req = `
-                INSERT INTO public.dossier (idCompteCreateur, cheminDaccesDossier, idDossierParent) 
-                VALUES ($1, $2, $3) RETURNING *`;
-            const resultat = await db.one(req, [dossier.idCompteCreateur, dossier.cheminDaccesDossier, dossier.idDossierParent || null]);
-            
-            // Créer le dossier physique dans le dossier utilisateur
-            let cheminDossierPhysique;
-            
-            if (dossier.idDossierParent) {
-                // Si le dossier a un parent, on le crée dans le parent
-                const dossierParent = await this.recupererDossierParId(dossier.idDossierParent);
-                const cheminParent = path.join(SERVER_FILES_PATH, `user_${resultat.idcomptecreateur}`, dossierParent.chemindaccesdossier);
-                cheminDossierPhysique = path.join(cheminParent, dossier.cheminDaccesDossier);
-            } else {
-                // Sinon, on le crée directement dans le dossier utilisateur
-                // Structure: user_{idCompte}/cheminDaccesDossier
-                cheminDossierPhysique = path.join(SERVER_FILES_PATH, `user_${resultat.idcomptecreateur}`, dossier.cheminDaccesDossier);
-            }
-            
-            if (!fs.existsSync(cheminDossierPhysique)) {
-                fs.mkdirSync(cheminDossierPhysique, { recursive: true });
-            }
-            
-            return resultat;
-        } catch (error) {
-            console.error('Erreur lors de la création du dossier :', error);
-            throw error;
-        }
+// Fonction pour construire le chemin complet d'un dossier
+async construireCheminComplet(dossierId) {
+    const dossier = await this.recupererDossierParId(dossierId);
+    
+    if (dossier.iddossierparent) {
+        // Récursivement construire le chemin du parent
+        const cheminParent = await this.construireCheminComplet(dossier.iddossierparent);
+        return path.join(cheminParent, dossier.chemindaccesdossier);
+    } else {
+        // C'est un dossier racine
+        return dossier.chemindaccesdossier;
     }
+}
+
+async creerDossier(dossier) {
+    try {
+        // Créer l'entrée en base de données
+        const req = `
+            INSERT INTO public.dossier (idcomptecreateur, chemindaccesdossier, iddossierparent) 
+            VALUES ($1, $2, $3) RETURNING *`;
+        const resultat = await db.one(req, [dossier.idCompteCreateur, dossier.cheminDaccesDossier, dossier.idDossierParent || null]);
+        
+        // Créer le dossier physique
+        let cheminDossierPhysique;
+        
+        if (dossier.idDossierParent) {
+            // Si le dossier a un parent, construire le chemin complet du parent
+            const cheminParentComplet = await this.construireCheminComplet(dossier.idDossierParent);
+            cheminDossierPhysique = path.join(SERVER_FILES_PATH, `user_${resultat.idcomptecreateur}`, cheminParentComplet, dossier.cheminDaccesDossier);
+        } else {
+            // Sinon, on le crée directement dans le dossier utilisateur
+            // Structure: user_{idCompte}/cheminDaccesDossier
+            cheminDossierPhysique = path.join(SERVER_FILES_PATH, `user_${resultat.idcomptecreateur}`, dossier.cheminDaccesDossier);
+        }
+        
+        if (!fs.existsSync(cheminDossierPhysique)) {
+            fs.mkdirSync(cheminDossierPhysique, { recursive: true });
+        }
+        
+        return resultat;
+    } catch (error) {
+        console.error('Erreur lors de la création du dossier :', error);
+        throw error;
+    }
+}
 
     async recupererDossierCompte(idCompteCreateur) {
         try {
-            const req = 'SELECT * FROM public.dossier WHERE idCompteCreateur = $1';
+            const req = 'SELECT * FROM public.dossier WHERE idcomptecreateur = $1';
             return await db.manyOrNone(req, [idCompteCreateur]);
         } catch (error) {
             console.error('Erreur lors de la récupération des dossiers de l\'utilisateur :', error);
@@ -58,9 +71,19 @@ class DtoDossier {
         }
     }
 
+    async recupererDossiersRacineCompte(idCompteCreateur) {
+        try {
+            const req = 'SELECT * FROM public.dossier WHERE idcomptecreateur = $1 AND iddossierparent IS NULL';
+            return await db.manyOrNone(req, [idCompteCreateur]);
+        } catch (error) {
+            console.error('Erreur lors de la récupération des dossiers racine de l\'utilisateur :', error);
+            throw error;
+        }
+    }
+
     async recupererDossierParId(dossierId) {
         try {
-            const req = 'SELECT * FROM public.dossier WHERE idDossier = $1';
+            const req = 'SELECT * FROM public.dossier WHERE iddossier = $1';
             return await db.one(req, [dossierId]);
         } catch (error) {
             console.error('Erreur lors de la récupération du dossier :', error);
@@ -132,6 +155,41 @@ class DtoDossier {
             return await db.manyOrNone(req, [dossierId]);
         } catch (error) {
             console.error('Erreur lors de la récupération des sous-dossiers :', error);
+            throw error;
+        }
+    }
+
+    async recupererFichiersDossier(dossierId) {
+        try {
+            const dossier = await this.recupererDossierParId(dossierId);
+            
+            // Construire le chemin physique complet du dossier
+            const cheminComplet = await this.construireCheminComplet(dossierId);
+            const cheminPhysique = path.join(SERVER_FILES_PATH, `user_${dossier.idcomptecreateur}`, cheminComplet);
+            
+            // Lire les fichiers du dossier
+            if (!fs.existsSync(cheminPhysique)) {
+                return [];
+            }
+            
+            const fichiers = fs.readdirSync(cheminPhysique).map(nom => {
+                const cheminFichier = path.join(cheminPhysique, nom);
+                const stat = fs.statSync(cheminFichier);
+                
+                if (!stat.isDirectory()) {
+                    return {
+                        nom: nom,
+                        taille: stat.size,
+                        dateModification: stat.mtime,
+                        type: 'fichier'
+                    };
+                }
+                return null;
+            }).filter(f => f !== null);
+            
+            return fichiers;
+        } catch (error) {
+            console.error('Erreur lors de la récupération des fichiers :', error);
             throw error;
         }
     }

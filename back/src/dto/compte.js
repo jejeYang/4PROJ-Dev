@@ -21,18 +21,13 @@ class DtoCompte {
 
     async creerCompte(compte) {
         try {
-            const emailExiste = await this.trouverParEmail(compte.email);
-            if (emailExiste) {
-                throw new Error('Cet email est déjà utilisé');
-            }
-            
             const hashedPassword = await bcrypt.hash(compte.mdp, 10);
             const req = `
                 INSERT INTO public.compte (nomcompte, adressemailcompte, mdpcompte, stockagecompte) 
                 VALUES ($1, $2, $3, $4) RETURNING *`;
             const resultat = await db.one(req, [compte.nom, compte.email, hashedPassword, compte.stockage || 0]);
             
-            // Créer le dossier racine pour l'utilisateur
+            // Créer le dossier racine user_X pour l'utilisateur
             const cheminDossierUtilisateur = path.join(SERVER_FILES_PATH, `user_${resultat.idcompte}`);
             if (!fs.existsSync(cheminDossierUtilisateur)) {
                 fs.mkdirSync(cheminDossierUtilisateur, { recursive: true });
