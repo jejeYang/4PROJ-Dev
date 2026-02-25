@@ -304,6 +304,93 @@ dossierRouter.post('/api/dossiers/:dossierId/televerser-multiple', authentifierT
         console.error('Erreur lors du téléversement multiple :', error);
         res.status(500).json({ error: error.message || 'Erreur lors du téléversement' });
     }
+
+// ===== GESTION DE LA CORBEILLE =====
+
+// READ - Récupérer les dossiers de la corbeille
+dossierRouter.get('/api/corbeille', authentifierToken, async (req, res) => {
+    try {
+        const idUtilisateurAuthentifie = req.utilisateur.id;
+        const service_dossier = new ServiceDossier();
+        
+        const dossiersCorbeille = await service_dossier.recupererDossiersCorbeille(idUtilisateurAuthentifie);
+        res.json(dossiersCorbeille);
+    } catch (error) {
+        console.error('Erreur lors de la récupération de la corbeille :', error);
+        res.status(500).json({ error: error.message || 'Erreur lors de la récupération' });
+    }
+});
+
+// DELETE - Déplacer un dossier à la corbeille
+dossierRouter.delete('/api/dossiers/:dossierId/vers-corbeille', authentifierToken, async (req, res) => {
+    try {
+        const { dossierId } = req.params;
+        const idUtilisateurAuthentifie = req.utilisateur.id;
+
+        // Vérifier que le dossier appartient à l'utilisateur
+        const service_dossier = new ServiceDossier();
+        const dossier = await service_dossier.recupererDossierParId(dossierId);
+        
+        if (dossier.idcomptecreateur !== idUtilisateurAuthentifie) {
+            return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
+        }
+
+        // Ne pas permettre de supprimer la corbeille elle-même
+        if (dossier.chemindaccesdossier === `.corbeille_${idUtilisateurAuthentifie}`) {
+            return res.status(400).json({ error: 'Impossible de supprimer la corbeille' });
+        }
+
+        const resultat = await service_dossier.deplacerVerCorbeille(dossierId, idUtilisateurAuthentifie);
+        res.json({ message: 'Dossier déplacé à la corbeille', dossier: resultat });
+    } catch (error) {
+        console.error('Erreur lors du déplacement vers la corbeille :', error);
+        res.status(500).json({ error: error.message || 'Erreur lors du déplacement' });
+    }
+});
+
+// POST - Restaurer un dossier depuis la corbeille
+dossierRouter.post('/api/dossiers/:dossierId/restaurer', authentifierToken, async (req, res) => {
+    try {
+        const { dossierId } = req.params;
+        const idUtilisateurAuthentifie = req.utilisateur.id;
+
+        // Vérifier que le dossier appartient à l'utilisateur
+        const service_dossier = new ServiceDossier();
+        const dossier = await service_dossier.recupererDossierParId(dossierId);
+        
+        if (dossier.idcomptecreateur !== idUtilisateurAuthentifie) {
+            return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
+        }
+
+        // Vérifier que le dossier est dans la corbeille
+        const corbeille = await service_dossier.recupererCorbeille(idUtilisateurAuthentifie);
+        if (dossier.iddossierparent !== corbeille.iddossier) {
+            return res.status(400).json({ error: 'Ce dossier n\'est pas dans la corbeille' });
+        }
+
+        const resultat = await service_dossier.restaurerDossier(dossierId);
+        res.json({ message: 'Dossier restauré avec succès', dossier: resultat });
+    } catch (error) {
+        console.error('Erreur lors de la restauration du dossier :', error);
+        res.status(500).json({ error: error.message || 'Erreur lors de la restauration' });
+    }
+});
+
+// DELETE - Vider complètement la corbeille
+dossierRouter.delete('/api/corbeille/vider', authentifierToken, async (req, res) => {
+    try {
+        const idUtilisateurAuthentifie = req.utilisateur.id;
+        const service_dossier = new ServiceDossier();
+        
+        const resultat = await service_dossier.viderCorbeille(idUtilisateurAuthentifie);
+        res.json({ message: 'Corbeille vidée avec succès', dossiersSupprimes: resultat });
+    } catch (error) {
+        console.error('Erreur lors du vidage de la corbeille :', error);
+        res.status(500).json({ error: error.message || 'Erreur lors du vidage' });
+    }
+});
+
+    
 });
 
 export default dossierRouter;
