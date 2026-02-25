@@ -45,25 +45,6 @@ function Home() {
                     <div className="hero-content">
                         <h1>Partagez vos fichiers en toute sécurité</h1>
                         <p>SUPFile : Votre plateforme de partage de fichiers simple et sécurisée</p>
-                        
-                        <div className="hero-features">
-                            <div className="feature">
-                                <span className="feature-icon">🛡️</span>
-                                <h3>Sécurisé</h3>
-                                <p>Vos fichiers sont protégés avec le chiffrement</p>
-                            </div>
-                            <div className="feature">
-                                <span className="feature-icon">⚡</span>
-                                <h3>Rapide</h3>
-                                <p>Uploads et downloads ultra-rapides</p>
-                            </div>
-                            <div className="feature">
-                                <span className="feature-icon">🌐</span>
-                                <h3>Accessible</h3>
-                                <p>Accédez à vos fichiers de partout</p>
-                            </div>
-                        </div>
-
                         <div className="hero-cta">
                             <Link to="/register" className="btn-upload">
                                 Publier un fichier

@@ -1,11 +1,10 @@
 .home-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    min-height: 100%;
-    z-index: 1;
-    background: var(--bg-primary-color);
+  display: flex;
+  flex: 1; 
+  justify-content: center; 
+  align-items: center; 
+  width: 100%;
+  text-align: center;
 }
 
 /* Dashboard Quick View */
