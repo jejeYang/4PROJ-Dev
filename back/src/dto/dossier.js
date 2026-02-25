@@ -27,8 +27,26 @@ async construireCheminComplet(dossierId) {
     }
 }
 
+
 async creerDossier(dossier) {
     try {
+        // Vérifier si un dossier avec le même nom existe déjà chez l'utilisateur au même niveau
+        const requeteVerification = `
+            SELECT * FROM public.dossier 
+            WHERE idcomptecreateur = $1 
+            AND chemindaccesdossier = $2 
+            AND iddossierparent IS NOT DISTINCT FROM $3`;
+        
+        const dossierExistant = await db.oneOrNone(requeteVerification, [
+            dossier.idCompteCreateur, 
+            dossier.cheminDaccesDossier, 
+            dossier.idDossierParent || null
+        ]);
+
+        if (dossierExistant) {
+            throw new Error(`Un dossier nommé "${dossier.cheminDaccesDossier}" existe déjà à cet emplacement`);
+        }
+
         // Créer l'entrée en base de données
         const req = `
             INSERT INTO public.dossier (idcomptecreateur, chemindaccesdossier, iddossierparent) 
@@ -59,6 +77,7 @@ async creerDossier(dossier) {
     }
 }
 
+
     async recupererDossierCompte(idCompteCreateur) {
         try {
             const req = 'SELECT * FROM public.dossier WHERE idcomptecreateur = $1';
@@ -78,7 +97,51 @@ async creerDossier(dossier) {
             throw error;
         }
     }
+    async deplacerVerCorbeille(dossierId, idCompteCreateur) {
+        try {
+            const corbeille = await this.recupererCorbeille(idCompteCreateur);
+            
+            const dossier = await this.recupererDossierParId(dossierId);
+            
+            const req = `
+                UPDATE public.dossier 
+                SET iddossierparent = $1, iddossierparentoriginal = $2
+                WHERE iddossier = $3 
+                RETURNING *`;
+            return await db.one(req, [corbeille.iddossier, dossier.iddossierparent, dossierId]);
+        } catch (error) {
+            console.error('Erreur lors du déplacement vers la corbeille :', error);
+            throw error;
+        }
+    }
 
+    async restaurerDanCorbeille(dossierId) {
+        try {
+            const dossier = await this.recupererDossierParId(dossierId);
+            
+            const req = `
+                UPDATE public.dossier 
+                SET iddossierparent = $1, iddossierparentoriginal = NULL
+                WHERE iddossier = $2 
+                RETURNING *`;
+            return await db.one(req, [dossier.iddossierparentoriginal, dossierId]);
+        } catch (error) {
+            console.error('Erreur lors de la restauration du dossier :', error);
+            throw error;
+        }
+    }
+    async viderCorbeille(idCompteCreateur) {
+        try {
+            const dossiersCorbeille = await this.recupererDossiersCorbeille(idCompteCreateur);
+            
+            // Supprimer chaque dossier
+        const req = `DELETE FROM public.dossier WHERE iddossierparent = (SELECT iddossier FROM public.dossier WHERE idcomptecreateur = $1 AND chemindaccesdossier = '.corbeille_${idCompteCreateur}') RETURNING *`;
+            return await db.manyOrNone(req, [idCompteCreateur]);
+        } catch (error) {
+            console.error('Erreur lors du vidage de la corbeille :', error);
+            throw error;
+        }
+    }
     async recupererDossierParId(dossierId) {
         try {
             const req = 'SELECT * FROM public.dossier WHERE iddossier = $1';

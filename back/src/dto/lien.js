@@ -4,18 +4,23 @@ import { PG_CONFIG } from '../global_properties.js';
 
 // La class DTO pour le compte
 
-class DtoLienGenere{
+class DtoLienGenere {
     constructor(idCompte, cheminDaccesLienGenere, idLienGenere) {
         this.idCompte = idCompte;
         this.cheminDaccesLienGenere = cheminDaccesLienGenere;
         this.idLienGenere = idLienGenere;
     }
 
-    creerLien(lien) {
-    // Simuler la sauvegarde d'un lien dans une base de données
-    const req = `INSERT INTO public.liengenere (idCompte, cheminDaccesLienGenere) VALUES ('${lien.idCompte}', ${lien.cheminDaccesLienGenere}) RETURNING *`;
-    let result = db.one(req);
-    return result;
+    async creerLien(lien) {
+        try {
+            const req = `
+                INSERT INTO public.liengenere (idCompte, cheminDaccesLienGenere) 
+                VALUES ($1, $2) RETURNING *`;
+            return await db.one(req, [lien.idCompte, lien.cheminDaccesLienGenere]);
+        } catch (error) {
+            console.error('Erreur lors de la création du lien :', error);
+            throw error;
+        }
     }
 
     async recupererLiensCompte(lien) {
@@ -30,17 +35,16 @@ class DtoLienGenere{
             throw error;
         });
     }
+
     async recupererLiens() {
-    // Simuler la récupération de tous les liens dans une base de données
-    const req = 'SELECT * FROM public.liengenere"';
-    return db.manyOrNone(req)
-        .then(result => {
-            return result;
-        })
-        .catch(error => {
-            console.error('Erreur lors de la récupération des liens:', error);
+        try {
+            const req = 'SELECT * FROM public.liengenere';
+            return await db.manyOrNone(req);
+        } catch (error) {
+            console.error('Erreur lors de la récupération de tous les liens :', error);
             throw error;
-        });
+        }
+    }
 }
-}
+
 export default DtoLienGenere;
