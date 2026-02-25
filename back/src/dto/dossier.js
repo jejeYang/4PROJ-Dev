@@ -1,5 +1,6 @@
 import prisma from '../prisma.js';
 import fs from 'node:fs';
+import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { SERVER_FILES_PATH } from '../global_properties.js';
 
@@ -36,7 +37,7 @@ class DtoDossier {
             );
         }
 
-        await fs.mkdir(cheminDossierPhysique, { recursive: true });
+        await mkdir(cheminDossierPhysique, { recursive: true });
 
         return resultat;
     }
