@@ -46,11 +46,11 @@ function Dashboard() {
             // Récupérer les sous-dossiers et les fichiers
             const [dossiersResponse, fichiersResponse] = await Promise.all([
                 axios.get(
-                    `http://localhost:3000/api/dossiers/${dossier.iddossier}/sous-dossiers`,
+                    `http://localhost:3000/api/dossiers/${dossier.idDossier}/sous-dossiers`,
                     { headers: { Authorization: `Bearer ${token}` } }
                 ),
                 axios.get(
-                    `http://localhost:3000/api/dossiers/${dossier.iddossier}/fichiers`,
+                    `http://localhost:3000/api/dossiers/${dossier.idDossier}/fichiers`,
                     { headers: { Authorization: `Bearer ${token}` } }
                 )
             ]);
@@ -97,11 +97,11 @@ function Dashboard() {
                 // Charger le contenu du dossier sélectionné
                 const [dossiersResponse, fichiersResponse] = await Promise.all([
                     axios.get(
-                        `http://localhost:3000/api/dossiers/${selectedFolder.iddossier}/sous-dossiers`,
+                        `http://localhost:3000/api/dossiers/${selectedFolder.idDossier}/sous-dossiers`,
                         { headers: { Authorization: `Bearer ${token}` } }
                     ),
                     axios.get(
-                        `http://localhost:3000/api/dossiers/${selectedFolder.iddossier}/fichiers`,
+                        `http://localhost:3000/api/dossiers/${selectedFolder.idDossier}/fichiers`,
                         { headers: { Authorization: `Bearer ${token}` } }
                     )
                 ]);
@@ -137,7 +137,7 @@ function Dashboard() {
                 'http://localhost:3000/api/dossiers',
                 {
                     cheminDaccesDossier: newFolderName.trim(),
-                    idDossierParent: currentFolder ? currentFolder.iddossier : null
+                    idDossierParent: currentFolder ? currentFolder.idDossier : null
                 },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -199,13 +199,13 @@ function Dashboard() {
                                 📁 Mon Espace
                             </button>
                             {breadcrumb.map((dossier, index) => (
-                                <React.Fragment key={dossier.iddossier}>
+                                <React.Fragment key={dossier.idDossier}>
                                     <span className="breadcrumb-separator">/</span>
                                     <button 
                                         className="breadcrumb-item"
                                         onClick={() => handleBreadcrumbClick(index)}
                                     >
-                                        {dossier.chemindaccesdossier}
+                                        {dossier.cheminDaccesDossier}
                                     </button>
                                 </React.Fragment>
                             ))}
@@ -256,7 +256,7 @@ function Dashboard() {
 
             <div className="dossiers-section">
                 <h2>
-                    {currentFolder ? `Contenu de ${currentFolder.chemindaccesdossier}` : 'Mes dossiers'}
+                    {currentFolder ? `Contenu de ${currentFolder.cheminDaccesDossier}` : 'Mes dossiers'}
                 </h2>
                 {allItems.length === 0 ? (
                     <div className="empty-state">
@@ -271,13 +271,13 @@ function Dashboard() {
                     <div className="dossiers-grid">
                         {displayItems.dossiers.map((dossier) => (
                             <div 
-                                key={dossier.iddossier} 
+                                key={dossier.idDossier} 
                                 className="dossier-card"
                                 onDoubleClick={() => handleFolderDoubleClick(dossier)}
                             >
                                 <div className="dossier-icon">📁</div>
-                                <h3>{dossier.chemindaccesdossier}</h3>
-                                <p className="dossier-id">ID: {dossier.iddossier}</p>
+                                <h3>{dossier.cheminDaccesDossier}</h3>
+                                <p className="dossier-id">ID: {dossier.idDossier}</p>
                                 <p className="double-click-hint">(Double-clic pour ouvrir)</p>
                                 <div className="dossier-actions">
                                     <Link to="/upload" className="action-btn upload">

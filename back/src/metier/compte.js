@@ -17,8 +17,8 @@ class ServiceCompte {
         // Créer automatiquement un dossier personnel pour le nouvel utilisateur
         try {
             const dossierPersonnel = {
-                idCompteCreateur: utilisateur.idcompte, // Utiliser idcompte (minuscule) comme retourné par la BD
-                cheminDaccesDossier: `dossier_${utilisateur.idcompte}`
+                idCompteCreateur: utilisateur.idCompte,
+                cheminDaccesDossier: `dossier_${utilisateur.idCompte}`
             };
             await this.service_dossier.creerDossier(dossierPersonnel);
         } catch (error) {
