@@ -27,7 +27,7 @@ function Upload() {
             
             setDossiers(response.data || []);
             if (response.data && response.data.length > 0) {
-                setDossierId(response.data[0].iddossier);
+                setDossierId(response.data[0].idDossier);
             }
         } catch (error) {
             console.error('Erreur lors de la récupération des dossiers:', error);
@@ -126,8 +126,8 @@ function Upload() {
                                 >
                                     <option value="">-- Choisir un dossier --</option>
                                     {dossiers.map((dossier) => (
-                                        <option key={dossier.iddossier} value={dossier.iddossier}>
-                                            {dossier.chemindaccesdossier}
+                                        <option key={dossier.idDossier} value={dossier.idDossier}>
+                                            {dossier.cheminDaccesDossier}
                                         </option>
                                     ))}
                                 </select>

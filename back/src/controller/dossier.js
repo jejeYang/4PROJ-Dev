@@ -177,7 +177,7 @@ dossierRouter.put('/api/dossiers/:dossierId', authentifierToken, async (req, res
         const { cheminDaccesDossier } = req.body;
         const idUtilisateurAuthentifie = req.utilisateur.id;
 
-        if (!cheminDaccesDossier) {
+         if (!cheminDaccesDossier) {
             return res.status(400).json({ error: 'cheminDaccesDossier est requis' });
         }
 
