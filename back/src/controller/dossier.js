@@ -337,7 +337,7 @@ dossierRouter.delete('/api/dossiers/:dossierId/vers-corbeille', authentifierToke
         }
 
         // Ne pas permettre de supprimer la corbeille elle-même
-        if (dossier.chemindaccesdossier === `.corbeille_${idUtilisateurAuthentifie}`) {
+        if (dossier.chemindaccesdossier === '.corbeille') {
             return res.status(400).json({ error: 'Impossible de supprimer la corbeille' });
         }
 
