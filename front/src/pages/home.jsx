@@ -48,7 +48,7 @@ function Home() {
                         
                         <div className="hero-features">
                             <div className="feature">
-                                <span className="feature-icon">🔒</span>
+                                <span className="feature-icon">🛡️</span>
                                 <h3>Sécurisé</h3>
                                 <p>Vos fichiers sont protégés avec le chiffrement</p>
                             </div>
@@ -58,7 +58,7 @@ function Home() {
                                 <p>Uploads et downloads ultra-rapides</p>
                             </div>
                             <div className="feature">
-                                <span className="feature-icon">🌍</span>
+                                <span className="feature-icon">🌐</span>
                                 <h3>Accessible</h3>
                                 <p>Accédez à vos fichiers de partout</p>
                             </div>
