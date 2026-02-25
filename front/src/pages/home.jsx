@@ -20,7 +20,7 @@ function Home() {
         <div className="home-container">
             {isAuthenticated ? (
                 <div className="dashboard-quick">
-                    <h1>Bienvenue {username} !</h1>
+                    <h1>Bienvenue, {username} !</h1>
                     <p>Gérez vos fichiers en toute sécurité</p>
                     <div className="quick-actions">
                         <Link to="/dashboard" className="action-card">

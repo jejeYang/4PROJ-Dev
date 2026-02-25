@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 
 function Login() {
     const [formData, setFormData] = useState({ email: '', mdp: '' });
-    const navigate = useNavigate();
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -20,7 +18,6 @@ function Login() {
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.utilisateur));
         
-        alert('Connexion réussie !');
         window.location.href = '/';
         } catch (error) {
         alert('Erreur de connexion : ' + (error.response?.data?.message || error.message));
