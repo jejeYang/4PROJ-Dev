@@ -13,6 +13,7 @@ const dossierRouter = express.Router();
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         // La destination sera déterminée dans le middleware
+        console.log('Chemin temporaire pour le fichier:', SERVER_FILES_PATH);
         cb(null, SERVER_FILES_PATH);
     },
     filename: (req, file, cb) => {
