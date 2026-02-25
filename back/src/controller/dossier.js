@@ -3,7 +3,8 @@ import ServiceDossier from '../metier/dossier.js';
 import { authentifierToken } from '../middleware/auth.js';
 import multer from 'multer';
 import path from 'node:path';
-import fs, { promises as fsPromises } from 'node:fs';
+import { promises as fsPromises } from 'node:fs';
+import fs from 'node:fs';
 import { SERVER_FILES_PATH } from '../global_properties.js';
 
 const dossierRouter = express.Router();
