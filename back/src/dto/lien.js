@@ -4,23 +4,18 @@ import { PG_CONFIG } from '../global_properties.js';
 
 // La class DTO pour le compte
 
-class DtoLienGenere {
+class DtoLienGenere{
     constructor(idCompte, cheminDaccesLienGenere, idLienGenere) {
         this.idCompte = idCompte;
         this.cheminDaccesLienGenere = cheminDaccesLienGenere;
         this.idLienGenere = idLienGenere;
     }
 
-    async creerLien(lien) {
-        try {
-            const req = `
-                INSERT INTO public.liengenere (idCompte, cheminDaccesLienGenere) 
-                VALUES ($1, $2) RETURNING *`;
-            return await db.one(req, [lien.idCompte, lien.cheminDaccesLienGenere]);
-        } catch (error) {
-            console.error('Erreur lors de la création du lien :', error);
-            throw error;
-        }
+    creerLien(lien) {
+    // Simuler la sauvegarde d'un lien dans une base de données
+    const req = `INSERT INTO public.liengenere (idCompte, cheminDaccesLienGenere) VALUES ('${lien.idCompte}', ${lien.cheminDaccesLienGenere}) RETURNING *`;
+    let result = db.one(req);
+    return result;
     }
 
     async recupererLiensCompte(lien) {
@@ -46,5 +41,4 @@ class DtoLienGenere {
         }
     }
 }
-
 export default DtoLienGenere;
