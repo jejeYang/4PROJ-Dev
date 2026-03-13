@@ -17,9 +17,7 @@ function Register() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            /*A MODIFIER*/
         await axios.post('http://localhost:3000/api/register', formData);
-        alert('Compte créé avec succès ! Veuillez vous connecter.');
         navigate('/login');
         } catch (error) {
         console.error(error);

@@ -1,20 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import '../styles/Dashboard.css';
 
 function Dashboard() {
     const [dossiers, setDossiers] = useState([]);
+    const [etat_survole_upload, setEtatSurvoleUpload] = useState(false);
+    const [dossier_survole_upload, setDossierSurvoleUpload] = useState(null);
+    const compteur_drag = useRef(0);
+
     const [loading, setLoading] = useState(true);
-    const [showCreateFolder, setShowCreateFolder] = useState(false);
     const [menu_nom_dossier, setChangeNomDossier] = useState('');
     const [creating, setCreating] = useState(false);
     const [error, setError] = useState('');
+    const [ouvre_modal, setOuvreModal] = useState({ type: null, data: null }); // Affichage type popup
+    const [nouveau_nom, setRenommeDossier] = useState('');
     
     // États pour la navigation dans les dossiers
     const [dossier_actuel, setDossierActuel] = useState(null);
     const [contenu_dossier, setContenuDossier] = useState([]);
     const [fil_ariane, setFilAriane] = useState([]);
+
     const [taille_dossiers, setTailleDossiers] = useState({});
     const [menu_options_dossier, setMenuOptionsDossier] = useState(null);
     const navigate = useNavigate();
@@ -36,7 +42,7 @@ function Dashboard() {
             
             setDossiers(response.data || []);
         } catch (error) {
-            console.error('Erreur lors de la récupération des données:', error);
+            console.error('Erreur lors de la récupération des données :', error);
         } finally {
             setLoading(false);
         }
@@ -80,14 +86,8 @@ function Dashboard() {
             
             // Récupérer les sous-dossiers et les fichiers
             const [dossiersResponse, fichiersResponse] = await Promise.all([
-                axios.get(
-                    `http://localhost:3000/api/dossiers/${dossier.iddossier}/sous-dossiers`,
-                    { headers: { Authorization: `Bearer ${token}` } }
-                ),
-                axios.get(
-                    `http://localhost:3000/api/dossiers/${dossier.iddossier}/fichiers`,
-                    { headers: { Authorization: `Bearer ${token}` } }
-                )
+                axios.get(`http://localhost:3000/api/dossiers/${dossier.iddossier}/sous-dossiers`, { headers: { Authorization: `Bearer ${token}` } }),
+                axios.get(`http://localhost:3000/api/dossiers/${dossier.iddossier}/fichiers`, { headers: { Authorization: `Bearer ${token}` } })
             ]);
             
             setDossierActuel(dossier);
@@ -97,7 +97,7 @@ function Dashboard() {
             });
             setFilAriane([...fil_ariane, dossier]);
         } catch (error) {
-            console.error('Erreur lors de la récupération du contenu du dossier:', error);
+            console.error('Erreur lors de la récupération du contenu du dossier :', error);
             setError('Erreur lors de l\'ouverture du dossier');
         }
     };
@@ -120,14 +120,8 @@ function Dashboard() {
                 
                 // Charger le contenu du dossier sélectionné
                 const [dossiersResponse, fichiersResponse] = await Promise.all([
-                    axios.get(
-                        `http://localhost:3000/api/dossiers/${selectedFolder.iddossier}/sous-dossiers`,
-                        { headers: { Authorization: `Bearer ${token}` } }
-                    ),
-                    axios.get(
-                        `http://localhost:3000/api/dossiers/${selectedFolder.iddossier}/fichiers`,
-                        { headers: { Authorization: `Bearer ${token}` } }
-                    )
+                    axios.get(`http://localhost:3000/api/dossiers/${selectedFolder.iddossier}/sous-dossiers`, { headers: { Authorization: `Bearer ${token}` } }),
+                    axios.get(`http://localhost:3000/api/dossiers/${selectedFolder.iddossier}/fichiers`, { headers: { Authorization: `Bearer ${token}` } })
                 ]);
                 
                 setFilAriane(newBreadcrumb);
@@ -138,11 +132,89 @@ function Dashboard() {
                 });
             }
         } catch (error) {
-            console.error('Erreur lors de la navigation:', error);
-            setError('Erreur lors de la navigation');
+            console.error('Erreur lors de la navigation :', error);
         }
     };
 
+    const naviguerVersUpload = () => {
+        // Passe l'état complet pour garder le dossier actuel dans la page Upload
+        navigate('/upload', { 
+            state: { 
+                folderId: dossier_actuel ? dossier_actuel.iddossier : "",
+                dossierActuel: dossier_actuel,
+                path: fil_ariane 
+            } 
+        });
+    };
+
+    const handleDragEnterGlobal = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        compteur_drag.current += 1;
+        if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+            setEtatSurvoleUpload(true);
+        }
+    };
+
+    const handleDragLeaveGlobal = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        compteur_drag.current -= 1;
+        // Si on a quitté tous les éléments enfants et qu'on sort du conteneur
+        if (compteur_drag.current === 0) {
+            setEtatSurvoleUpload(false);
+        }
+    };
+
+    const handleDragOverGlobal = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleDropGlobal = async (e, id_dossier_specifique = null) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setEtatSurvoleUpload(false);
+        setDossierSurvoleUpload(null);
+        compteur_drag.current = 0;
+
+        const files = Array.from(e.dataTransfer.files);
+        if (files.length === 0) return;
+
+        // cible_id = soit le dossier survolé, soit le dossier actuel ouvert
+        const cible_id = id_dossier_specifique || (dossier_actuel ? dossier_actuel.iddossier : null);
+        
+        if (!cible_id) {
+            console.error('Erreur lors de la recherche de dossiers :', error);
+            setError('Aucun dossier trouvé pour l\'upload.');
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('token');
+            const formData = new FormData();
+            files.forEach(file => formData.append('fichiers', file));
+
+            await axios.post(
+                `http://localhost:3000/api/dossiers/${cible_id}/televerser-multiple`,
+                formData,
+                { headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'multipart/form-data' } }
+            );
+
+            // Rafraîchir le contenu si on a déposé dans le dossier actuellement ouvert
+            if (cible_id === (dossier_actuel?.iddossier)) {
+                const resFichiers = await axios.get(
+                    `http://localhost:3000/api/dossiers/${cible_id}/fichiers`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
+                setContenuDossier(prev => ({ ...prev, fichiers: resFichiers.data || [] }));
+            }
+        } catch (err) {
+            setError('Erreur lors de l\'upload : ' + (err.response?.data?.error || err.message));
+        }
+    };
+
+    // Gestion de la création d'un dossier via le modale
     const gestionCreeDossier = async (e) => {
         e.preventDefault();
         
@@ -177,23 +249,28 @@ function Dashboard() {
             }
             
             setChangeNomDossier('');
-            setShowCreateFolder(false);
+            setOuvreModal({ type: null, data: null });
         } catch (err) {
             setError(err.response?.data?.error || 'Erreur lors de la création du dossier');
-            console.error('Erreur:', err);
+            console.error('Erreur lors de la création de dossier :', err);
         } finally {
             setCreating(false);
         }
     };
 
-    const gestionRenommeDossier = async (dossier) => {
-        const newName = window.prompt('Nouveau nom du dossier', dossier.chemindaccesdossier);
-        if (!newName || !newName.trim()) return setMenuOptionsDossier(null);
+    const ouvrirModalRenommer = (dossier) => {
+        setRenommeDossier(dossier.chemindaccesdossier);
+        setOuvreModal({ type: 'rename', data: dossier });
+        setMenuOptionsDossier(null);
+    };
+
+    const confirmerRenommage = async () => {
+        if (!nouveau_nom.trim()) return;
         try {
             const token = localStorage.getItem('token');
             const res = await axios.put(
-                `http://localhost:3000/api/dossiers/${dossier.iddossier}`,
-                { cheminDaccesDossier: newName.trim() },
+                `http://localhost:3000/api/dossiers/${ouvre_modal.data.iddossier}`,
+                { cheminDaccesDossier: nouveau_nom.trim() },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
@@ -201,22 +278,27 @@ function Dashboard() {
             if (dossier_actuel) {
                 setContenuDossier(prev => ({
                     ...prev,
-                    dossiers: prev.dossiers.map(d => d.iddossier === dossier.iddossier ? res.data : d)
+                    dossiers: prev.dossiers.map(d => d.iddossier === ouvre_modal.data.iddossier ? res.data : d)
                 }));
             } else {
-                setDossiers(prev => prev.map(d => d.iddossier === dossier.iddossier ? res.data : d));
+                setDossiers(prev => prev.map(d => d.iddossier === ouvre_modal.data.iddossier ? res.data : d));
             }
+            setOuvreModal({ type: null, data: null });
         } catch (err) {
-            console.error('Erreur lors du renommage:', err);
+            console.error('Erreur lors du renommage de dossier :', err);
             alert('Erreur lors du renommage');
-        } finally {
-            setMenuOptionsDossier(null);
         }
     };
 
-    const gestionSupprimeDossier = async (dossier) => {
-        const ok = window.confirm(`Êtes vous sur que vous voulez supprimer le dossier "${dossier.chemindaccesdossier}" ?`);
-        if (!ok) return setMenuOptionsDossier(null);
+    const ouvrirModalSuppression = (dossier) => {
+        setOuvreModal({ type: 'delete', data: dossier });
+        setMenuOptionsDossier(null);
+    };
+
+    const confirmerSuppression = async () => {
+        const dossier = ouvre_modal.data;
+        if (!dossier) return setOuvreModal({ type: null, data: null });
+
         try {
             const token = localStorage.getItem('token');
             await axios.delete(
@@ -233,10 +315,11 @@ function Dashboard() {
                 setDossiers(prev => prev.filter(d => d.iddossier !== dossier.iddossier));
             }
         } catch (err) {
-            console.error('Erreur lors de la suppression:', err);
+            console.error('Erreur lors de la suppression de dossier :', err);
             alert('Erreur lors de la suppression');
         } finally {
             setMenuOptionsDossier(null);
+            setOuvreModal({ type: null, data: null });
         }
     };
 
@@ -262,145 +345,183 @@ function Dashboard() {
     };
 
     const allItems = [...displayItems.dossiers, ...displayItems.fichiers];
-        // Récupere les dossiers visibles (sauf la corbeille) et la corbeille séparément
-        const dossiers_visible = (displayItems.dossiers || []).filter(d => d && !d.chemindaccesdossier.startsWith('.'));
-        const corbeille = (displayItems.dossiers || []).find(d => d && d.chemindaccesdossier === '.bin');
+    // Récupere les dossiers visibles (sauf la corbeille) et la corbeille séparément
+    const dossiers_visible = (displayItems.dossiers || []).filter(d => d && !d.chemindaccesdossier.startsWith('.'));
+    const corbeille = (displayItems.dossiers || []).find(d => d && d.chemindaccesdossier === '.bin');
 
     return (
-        <div className="dashboard-container">
+        <div 
+            className="dashboard-container"
+            onDragEnter={handleDragEnterGlobal}
+            onDragOver={handleDragOverGlobal}
+            onDragLeave={handleDragLeaveGlobal}
+            onDrop={(e) => handleDropGlobal(e)}
+        >
+            {/* Overlay visuel lors du drag global */}
+            {etat_survole_upload && !dossier_survole_upload && (
+                <div className="dashboard-drag-overlay">
+                </div>
+            )}
+
             <div className="dashboard-header">
                 <div>
                     <h1>Mon Espace</h1>
                     {fil_ariane.length > 0 && (
                         <nav className="breadcrumb" aria-label="Fil d'arianne">
-                            <button 
-                                className="breadcrumb-objet"
-                                onClick={() => gestionClicBreadcrumb(-1)}
-                            >
-                                Mon Espace
-                            </button>
+                            <button className="breadcrumb-objet" onClick={() => gestionClicBreadcrumb(-1)}>Mon Espace</button>
                             {fil_ariane.map((dossier, index) => (
                                 <React.Fragment key={dossier.iddossier}>
                                     <span className="breadcrumb-separateur">›</span>
-                                    <button 
-                                        className="breadcrumb-objet"
-                                        onClick={() => gestionClicBreadcrumb(index)}
-                                    >
+                                    <button className="breadcrumb-objet" onClick={() => gestionClicBreadcrumb(index)}>
                                         {dossier.chemindaccesdossier}
                                     </button>
                                 </React.Fragment>
                             ))}
                         </nav>
                     )}
-                    </div>
-                    <div className={`dashboard-header-actions ${dossier_actuel ? 'in-folder' : ''}`}>
-                        <button className="btn-publie-dashboard-header" onClick={() => navigate('/upload')}>
-                            Publier un fichier
-                        </button>
-                        <button className="btn-cree-dossier-dashboard-header" onClick={() => setShowCreateFolder(!showCreateFolder)}
-                            aria-pressed={showCreateFolder}
-                        >
-                            Créer un dossier
-                        </button>
-                    </div>
+                </div>
+                <div className={`dashboard-header-actions ${dossier_actuel ? 'in-folder' : ''}`}>
+                    <button className="btn-publie-dashboard-header" onClick={naviguerVersUpload}>
+                        Publier un fichier
+                    </button>
+                    <button className="btn-cree-dossier-dashboard-header" onClick={() => { setChangeNomDossier(''); setError(''); setOuvreModal({ type: 'create', data: null }); }}>
+                        Créer un dossier
+                    </button>
+                </div>
             </div>
 
-            {showCreateFolder && (
-                <div className="menu-cree-dossier">
-                    <form onSubmit={gestionCreeDossier}>
-                        <input
-                            type="text"
-                            placeholder="Nom du dossier"
-                            value={menu_nom_dossier}
-                            onChange={(e) => setChangeNomDossier(e.target.value)}
-                            disabled={creating}
-                        />
-                        <button type="submit" disabled={creating}>
-                            {creating ? 'Création...' : 'Créer'}
-                        </button>
-                        <button 
-                            type="button" 
-                            onClick={() => {
-                                setShowCreateFolder(false);
-                                setError('');
-                                setChangeNomDossier('');
-                            }}
-                            disabled={creating}
-                        >
-                            Annuler
-                        </button>
-                    </form>
-                    {error && <p className="error-message">{error}</p>}
+            {ouvre_modal.type && (
+                <div className="modal-overlay" onClick={() => !creating && setOuvreModal({ type: null, data: null })}>
+                    <div className="modal-contenu" onClick={e => e.stopPropagation()}>
+                        {ouvre_modal.type === 'create' && (
+                            <form onSubmit={gestionCreeDossier}>
+                                <h3>Nouveau dossier</h3>
+                                <input 
+                                    type="text" 
+                                    placeholder="Nom du dossier" 
+                                    value={menu_nom_dossier} 
+                                    onChange={(e) => setChangeNomDossier(e.target.value)} 
+                                    disabled={creating}
+                                    autoFocus
+                                />
+                                {error && <p className="error-message" style={{color: 'red', marginTop: '-10px', marginBottom: '10px'}}>{error}</p>}
+                                <div className="modal-bouttons">
+                                    <button type="button" className="btn-annuler" onClick={() => setOuvreModal({ type: null, data: null })} disabled={creating}>Annuler</button>
+                                    <button type="submit" className="btn-confirmer" disabled={creating}>{creating ? 'Création...' : 'Créer'}</button>
+                                </div>
+                            </form>
+                        )}
+                        {ouvre_modal.type === 'rename' && (
+                            <div>
+                                <h3>Renommer le dossier</h3>
+                                <input 
+                                    type="text" 
+                                    value={nouveau_nom} 
+                                    onChange={(e) => setRenommeDossier(e.target.value)} 
+                                    autoFocus
+                                    onKeyDown={(e) => e.key === 'Enter' && confirmerRenommage()}
+                                />
+                                <div className="modal-bouttons">
+                                    <button className="btn-annuler" onClick={() => setOuvreModal({ type: null, data: null })}>Annuler</button>
+                                    <button className="btn-confirmer" onClick={confirmerRenommage}>Sauvegarder</button>
+                                </div>
+                            </div>
+                        )}
+                        {ouvre_modal.type === 'delete' && (
+                            <div>
+                                <h3>Supprimer le dossier</h3>
+                                <p>Êtes-vous sûr de vouloir supprimer le dossier « {ouvre_modal.data?.chemindaccesdossier} » ?</p>
+                                <div className="modal-bouttons">
+                                    <button className="btn-annuler" onClick={() => setOuvreModal({ type: null, data: null })}>Annuler</button>
+                                    <button className="btn-confirmer" onClick={confirmerSuppression}>Supprimer</button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
 
             <div className="dossiers-section">
-                <h2>
-                    {dossier_actuel ? `Contenu de ${dossier_actuel.chemindaccesdossier}` : 'Mes dossiers'}
-                </h2>
+                <h2>{dossier_actuel ? `Contenu de ${dossier_actuel.chemindaccesdossier}` : 'Mes dossiers'}</h2>
+                
                 {allItems.length === 0 ? (
                     <div className="dossier-vide">
                         <p>Aucun dossier ou fichier pour le moment</p>
-                        <p className="hint">
-                            {dossier_actuel 
-                                ? 'Cliquez sur "Créer un dossier" pour en ajouter un' 
-                                : 'Cliquez sur "Créer un dossier" pour commencer'}
-                        </p>
+                        <p className="hint">Cliquez sur "Créer un dossier" ou "Publier un fichier"</p>
                     </div>
                 ) : (
                     <div className="dossiers-liste">
                         {dossiers_visible.map((dossier) => (
-                            <div
-                                key={dossier.iddossier}
-                                className="dossier-ligne"
+                            <div 
+                                key={dossier.iddossier} 
+                                className={`dossier-ligne ${dossier_survole_upload === dossier.iddossier ? 'drag-over' : ''}`} 
                                 onClick={() => gestionClicDossier(dossier)}
+                                // gestion supplémentaires du drag&drop pour éviter un conflit entre le drag global et le drag sur un dossier spécifique
+                                onDragEnter={(e) => { 
+                                    e.preventDefault(); 
+                                    e.stopPropagation(); 
+                                    setDossierSurvoleUpload(dossier.iddossier); 
+                                }}
+                                onDragOver={(e) => { 
+                                    e.preventDefault(); 
+                                    e.stopPropagation(); 
+                                }}
+                                onDragLeave={(e) => { 
+                                    e.preventDefault(); 
+                                    e.stopPropagation();
+                                    if (!e.currentTarget.contains(e.relatedTarget)) {
+                                        setDossierSurvoleUpload(null);
+                                    }
+                                }}
+                                onDrop={(e) => { 
+                                    e.stopPropagation(); 
+                                    handleDropGlobal(e, dossier.iddossier); 
+                                }}
                             >
                                 <div className="col-nom">
-                                    <span className="dossier-name">{dossier.chemindaccesdossier}</span>
+                                    <span style={{marginRight: '10px', fontSize: '1.2rem'}}>📁</span>
+                                    <span className="dossier-nom">{dossier.chemindaccesdossier}</span>
                                 </div>
                                 <div className="col-id">ID: {dossier.iddossier}</div>
-                                <div className="col-taille">{taille_dossiers[dossier.iddossier] !== undefined ? formatFileSize(taille_dossiers[dossier.iddossier]) : 'Calcul...'}</div>
+                                <div className="col-taille">{taille_dossiers[dossier.iddossier] !== undefined ? formatFileSize(taille_dossiers[dossier.iddossier]) : '...'}</div>
                                 <div className="col-actions">
-                                    <button
-                                        className="options-btn"
-                                        onClick={(e) => { e.stopPropagation(); setMenuOptionsDossier(menu_options_dossier === dossier.iddossier ? null : dossier.iddossier); }}
-                                        aria-haspopup="true"
-                                        aria-expanded={menu_options_dossier === dossier.iddossier}
+                                    {menu_options_dossier === dossier.iddossier && (
+                                        <div className="actions-rapides" onClick={(e) => e.stopPropagation()}>
+                                            <button className="action-icon-btn" onClick={() => ouvrirModalRenommer(dossier)} title="Renommer">✏️</button>
+                                            <button className="action-icon-btn" onClick={() => ouvrirModalSuppression(dossier)} title="Supprimer">🗑️</button>
+                                        </div>
+                                    )}
+                                    <button 
+                                        className="options-btn" 
+                                        onClick={(e) => { 
+                                            e.stopPropagation(); 
+                                            setMenuOptionsDossier(menu_options_dossier === dossier.iddossier ? null : dossier.iddossier); 
+                                        }}
+                                        title="Options"
                                     >
                                         ⋮
                                     </button>
-                                    {menu_options_dossier === dossier.iddossier && (
-                                        <div className="options-menu" onClick={(e) => e.stopPropagation()}>
-                                            <button onClick={() => gestionRenommeDossier(dossier)}>Renommer</button>
-                                            <button onClick={() => gestionSupprimeDossier(dossier)}>Supprimer</button>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         ))}
+                        
                         {displayItems.fichiers.map((fichier, index) => (
-                            <div key={`file-${index}`} className="bloc-fichier">
-                                <h3>{fichier.nom}</h3>
-                                <p className="fichier-taille">{formatFileSize(fichier.taille)}</p>
-                                <p className="fichier-date">
-                                    {new Date(fichier.dateModification).toLocaleDateString('fr-FR')}
-                                </p>
-                                <div className="fichier-actions">
-                                    <button className="btn-fichier-telecharge">
-                                        Télécharger
-                                    </button>
-                                    <button className="btn-fichier-renomme">
-                                        Renommer
-                                    </button>
-                                    <button className="btn-fichier-supprime">
-                                        Supprimer
-                                    </button>
+                            <div key={`file-${index}`} className="dossier-ligne fichier-ligne">
+                                <div className="col-nom">
+                                    <span style={{marginRight: '10px', fontSize: '1.2rem'}}>📄</span>
+                                    <span className="dossier-nom">{fichier.nom}</span>
+                                </div>
+                                <div className="col-id">{new Date(fichier.dateModification).toLocaleDateString('fr-FR')}</div>
+                                <div className="col-taille">{formatFileSize(fichier.taille)}</div>
+                                <div className="col-actions">
+                                    <button className="options-btn" onClick={(e) => { e.stopPropagation(); alert('Fonctionnalités fichier à implémenter'); }}>⋮</button>
                                 </div>
                             </div>
                         ))}
                     </div>
                 )}
             </div>
+
             {corbeille && (
                 <div className="section-corbeille">
                     <h2>Corbeille</h2>
@@ -412,7 +533,7 @@ function Dashboard() {
                         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') gestionClicDossier(corbeille); }}
                         aria-label="Ouvrir la corbeille"
                     >
-                        <div className="trash-icon">🗑️</div>
+                        <div className="icone-corbeille">🗑️</div>
                         <h3>Corbeille</h3>
                         <p className="taille-dossier">{taille_dossiers[corbeille.iddossier] !== undefined ? formatFileSize(taille_dossiers[corbeille.iddossier]) : 'Calcul...'}</p>
                     </div>

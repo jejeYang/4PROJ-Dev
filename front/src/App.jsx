@@ -11,20 +11,16 @@ import logo from './assets/logo.png';
 import { ThemeProvider } from './context/theme_context';
 
 function AppContent() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [username, setUsername] = useState('');
+  const token = localStorage.getItem('token');
+  const user = localStorage.getItem('user');
+  const initialAuth = !!(token && user);
+  const initialUsername = user ? (JSON.parse(user).nom || JSON.parse(user).email || 'User') : '';
+  const [isAuthenticated, setIsAuthenticated] = useState(initialAuth);
+  const [username, setUsername] = useState(initialUsername);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
-    
-    if (token && user) {
-      setIsAuthenticated(true);
-      const userData = JSON.parse(user);
-      setUsername(userData.nom || userData.email || 'User');
-    }
   }, []);
 
   const handleLogout = () => {

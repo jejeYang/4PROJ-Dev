@@ -1,3 +1,8 @@
+::-webkit-scrollbar {
+  width: 0px;
+  height: 0px;
+}
+
 body {
   margin: 0;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -98,8 +103,10 @@ body {
 
 .sidebar-content h3 {
   color: var(--btn-color);
-  margin: 0 0 1.5rem 0;
-  font-size: 1.1rem;
+  margin: 0;
+  font-size: 1.6rem;
+  padding: 0.8rem 1rem;
+  border-left: 4px solid transparent;
 }
 
 .sidebar-link {
@@ -153,6 +160,8 @@ body {
   position: relative;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  width: 100%;
 }
 
 .main-content.auth-page {

@@ -1,6 +1,13 @@
-- Remplacer les popup par des popup graphique
-- Lier la publication de fichiers à leur dossier correspondant
 - Mettre à jour le système de la corbeille (corbeille n'est plus à la racine mais dans le dossier original)
 - Ajouter dans le dashboard une indication de la taille utilisée / taille restante
-- Modifier les petits menu des dossiers
-- Modifier menu de création de dossier
+- Fonction de filtre (type de fichier, taille, nom...)
+- Implémenter fonctionnalités fichiers
+- Visualiseur des fichiers (pdf / image)
+- Page de base : Taille utilisée / Taille restante ; Derniers fichiers publiés ; Derniers fichiers visionnés / téléchargés
+- Gestion mode clair / sombre en cookie
+- Modifier affichage des paramètres (améliorer esthétique)
+- Selection de plusieurs fichier/dossiers en même temps
+- Gestion clic droit des dossiers & fichiers
+
+BACK :
+- Modifier l'API qui récupère la taille des dossiers pour comprendre la taille des sous-dossiers dans le dossier en question
