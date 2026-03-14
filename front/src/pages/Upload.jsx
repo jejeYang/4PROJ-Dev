@@ -23,7 +23,7 @@ function Upload() {
                 const utilisateur = JSON.parse(localStorage.getItem('user'));
                 
                 let url_api = dossier_actuel 
-                    ? `http://localhost:3000/api/dossiers/${dossier_actuel.iddossier}/sous-dossiers`
+                    ? `http://localhost:3000/api/dossiers/${dossier_actuel.idDossier}/sous-dossiers`
                     : `http://localhost:3000/api/comptes/${utilisateur.id}/dossiers`;
 
                 const reponse = await axios.get(url_api, { headers: { Authorization: `Bearer ${token}` } });
@@ -82,7 +82,7 @@ function Upload() {
             return;
         }
         
-        if (!dossier_actuel || !dossier_actuel.iddossier) {
+        if (!dossier_actuel || !dossier_actuel.idDossier) {
             alert('Veuillez d\'abord sélectionner un dossier de destination.');
             return;
         }
@@ -97,7 +97,7 @@ function Upload() {
             });
 
             await axios.post(
-                `http://localhost:3000/api/dossiers/${dossier_actuel.iddossier}/televerser-multiple`,
+                `http://localhost:3000/api/dossiers/${dossier_actuel.idDossier}/televerser-multiple`,
                 donnees_formulaire,
                 {
                     headers: {
@@ -132,10 +132,10 @@ function Upload() {
                             <div className="upload-fil-ariane">
                                 <span className="upload-lien-ariane" onClick={() => naviguer_dans_dossier(null)}>Racine</span>
                                 {chemin_acces.map((dossier, index) => (
-                                    <React.Fragment key={dossier.iddossier}>
+                                    <React.Fragment key={dossier.idDossier}>
                                         <span className="separateur">/</span>
                                         <span className="upload-lien-ariane" onClick={() => naviguer_dans_dossier(dossier, index)}>
-                                            {dossier.chemindaccesdossier}
+                                            {dossier.cheminDaccesDossier}
                                         </span>
                                     </React.Fragment>
                                 ))}
@@ -145,14 +145,14 @@ function Upload() {
                                 <select 
                                     className="upload-select"
                                     onChange={(event) => {
-                                        const dossier_trouve = sous_dossiers_affiches.find(d => d.iddossier == event.target.value);
+                                        const dossier_trouve = sous_dossiers_affiches.find(d => d.idDossier == event.target.value);
                                         if(dossier_trouve) naviguer_dans_dossier(dossier_trouve);
                                         event.target.value = ""; // Réinitialise le select après le clic sinon il reste sur le dernier dossier sélectionné et déclenche pas l'événement si on clique à nouveau dessus
                                     }}
                                 >
                                     <option value="">+ Aller dans un sous-dossier...</option>
                                     {sous_dossiers_affiches.map(d => (
-                                        <option key={d.iddossier} value={d.iddossier}>{d.chemindaccesdossier}</option>
+                                        <option key={d.idDossier} value={d.idDossier}>{d.cheminDaccesDossier}</option>
                                     ))}
                                 </select>
                             )}

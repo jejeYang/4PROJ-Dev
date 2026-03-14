@@ -54,17 +54,17 @@ function Dashboard() {
             if (!list || list.length === 0) return;
             const token = localStorage.getItem('token');
             const promises = list.map(async (dossier) => {
-                if (!dossier || taille_dossiers[dossier.iddossier] !== undefined) return null;
+                if (!dossier || taille_dossiers[dossier.idDossier] !== undefined) return null;
                 try {
                     const res = await axios.get(
-                        `http://localhost:3000/api/dossiers/${dossier.iddossier}/fichiers`,
+                        `http://localhost:3000/api/dossiers/${dossier.idDossier}/fichiers`,
                         { headers: { Authorization: `Bearer ${token}` } }
                     );
                     const sum = (res.data || []).reduce((acc, f) => acc + (f.taille || 0), 0);
-                    return { id: dossier.iddossier, size: sum };
+                    return { id: dossier.idDossier, size: sum };
                 } catch (err) {
                     alert('Erreur :'+err);
-                    return { id: dossier.iddossier, size: 0 };
+                    return { id: dossier.idDossier, size: 0 };
                 }
             });
 
@@ -85,15 +85,15 @@ function Dashboard() {
             const token = localStorage.getItem('token');
             
             // Récupérer les sous-dossiers et les fichiers
-            const [dossiersResponse, fichiersResponse] = await Promise.all([
-                axios.get(`http://localhost:3000/api/dossiers/${dossier.iddossier}/sous-dossiers`, { headers: { Authorization: `Bearer ${token}` } }),
-                axios.get(`http://localhost:3000/api/dossiers/${dossier.iddossier}/fichiers`, { headers: { Authorization: `Bearer ${token}` } })
+            const [response_dossiers, response_fichiers] = await Promise.all([
+                axios.get(`http://localhost:3000/api/dossiers/${dossier.idDossier}/sous-dossiers`, { headers: { Authorization: `Bearer ${token}` } }),
+                axios.get(`http://localhost:3000/api/dossiers/${dossier.idDossier}/fichiers`, { headers: { Authorization: `Bearer ${token}` } })
             ]);
             
             setDossierActuel(dossier);
             setContenuDossier({
-                dossiers: dossiersResponse.data || [],
-                fichiers: fichiersResponse.data || []
+                dossiers: response_dossiers.data || [],
+                fichiers: response_fichiers.data || []
             });
             setFilAriane([...fil_ariane, dossier]);
         } catch (error) {
@@ -115,20 +115,20 @@ function Dashboard() {
                 setFilAriane([]);
             } else {
                 // Clic sur un dossier du fil d'Ariane
-                const newBreadcrumb = fil_ariane.slice(0, index + 1);
-                const selectedFolder = newBreadcrumb[index];
+                const nouveau_breadcrumb = fil_ariane.slice(0, index + 1);
+                const dossier_selectionne = nouveau_breadcrumb[index];
                 
                 // Charger le contenu du dossier sélectionné
-                const [dossiersResponse, fichiersResponse] = await Promise.all([
-                    axios.get(`http://localhost:3000/api/dossiers/${selectedFolder.iddossier}/sous-dossiers`, { headers: { Authorization: `Bearer ${token}` } }),
-                    axios.get(`http://localhost:3000/api/dossiers/${selectedFolder.iddossier}/fichiers`, { headers: { Authorization: `Bearer ${token}` } })
+                const [response_dossiers, response_fichiers] = await Promise.all([
+                    axios.get(`http://localhost:3000/api/dossiers/${dossier_selectionne.idDossier}/sous-dossiers`, { headers: { Authorization: `Bearer ${token}` } }),
+                    axios.get(`http://localhost:3000/api/dossiers/${dossier_selectionne.idDossier}/fichiers`, { headers: { Authorization: `Bearer ${token}` } })
                 ]);
                 
-                setFilAriane(newBreadcrumb);
-                setDossierActuel(selectedFolder);
+                setFilAriane(nouveau_breadcrumb);
+                setDossierActuel(dossier_selectionne);
                 setContenuDossier({
-                    dossiers: dossiersResponse.data || [],
-                    fichiers: fichiersResponse.data || []
+                    dossiers: response_dossiers.data || [],
+                    fichiers: response_fichiers.data || []
                 });
             }
         } catch (error) {
@@ -140,7 +140,7 @@ function Dashboard() {
         // Passe l'état complet pour garder le dossier actuel dans la page Upload
         navigate('/upload', { 
             state: { 
-                folderId: dossier_actuel ? dossier_actuel.iddossier : "",
+                folderId: dossier_actuel ? dossier_actuel.idDossier : "",
                 dossierActuel: dossier_actuel,
                 path: fil_ariane 
             } 
@@ -182,7 +182,7 @@ function Dashboard() {
         if (files.length === 0) return;
 
         // cible_id = soit le dossier survolé, soit le dossier actuel ouvert
-        const cible_id = id_dossier_specifique || (dossier_actuel ? dossier_actuel.iddossier : null);
+        const cible_id = id_dossier_specifique || (dossier_actuel ? dossier_actuel.idDossier : null);
         
         if (!cible_id) {
             console.error('Erreur lors de la recherche de dossiers :', error);
@@ -202,7 +202,7 @@ function Dashboard() {
             );
 
             // Rafraîchir le contenu si on a déposé dans le dossier actuellement ouvert
-            if (cible_id === (dossier_actuel?.iddossier)) {
+            if (cible_id === (dossier_actuel?.idDossier)) {
                 const resFichiers = await axios.get(
                     `http://localhost:3000/api/dossiers/${cible_id}/fichiers`,
                     { headers: { Authorization: `Bearer ${token}` } }
@@ -233,7 +233,7 @@ function Dashboard() {
                 'http://localhost:3000/api/dossiers',
                 {
                     cheminDaccesDossier: menu_nom_dossier.trim(),
-                    idDossierParent: dossier_actuel ? dossier_actuel.iddossier : null
+                    idDossierParent: dossier_actuel ? dossier_actuel.idDossier : null
                 },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -259,7 +259,7 @@ function Dashboard() {
     };
 
     const ouvrirModalRenommer = (dossier) => {
-        setRenommeDossier(dossier.chemindaccesdossier);
+        setRenommeDossier(dossier.cheminDaccesDossier);
         setOuvreModal({ type: 'rename', data: dossier });
         setMenuOptionsDossier(null);
     };
@@ -269,7 +269,7 @@ function Dashboard() {
         try {
             const token = localStorage.getItem('token');
             const res = await axios.put(
-                `http://localhost:3000/api/dossiers/${ouvre_modal.data.iddossier}`,
+                `http://localhost:3000/api/dossiers/${ouvre_modal.data.idDossier}`,
                 { cheminDaccesDossier: nouveau_nom.trim() },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -278,10 +278,10 @@ function Dashboard() {
             if (dossier_actuel) {
                 setContenuDossier(prev => ({
                     ...prev,
-                    dossiers: prev.dossiers.map(d => d.iddossier === ouvre_modal.data.iddossier ? res.data : d)
+                    dossiers: prev.dossiers.map(d => d.idDossier === ouvre_modal.data.idDossier ? res.data : d)
                 }));
             } else {
-                setDossiers(prev => prev.map(d => d.iddossier === ouvre_modal.data.iddossier ? res.data : d));
+                setDossiers(prev => prev.map(d => d.idDossier === ouvre_modal.data.idDossier ? res.data : d));
             }
             setOuvreModal({ type: null, data: null });
         } catch (err) {
@@ -302,17 +302,17 @@ function Dashboard() {
         try {
             const token = localStorage.getItem('token');
             await axios.delete(
-                `http://localhost:3000/api/dossiers/${dossier.iddossier}`,
+                `http://localhost:3000/api/dossiers/${dossier.idDossier}`,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
             if (dossier_actuel) {
                 setContenuDossier(prev => ({
                     ...prev,
-                    dossiers: prev.dossiers.filter(d => d.iddossier !== dossier.iddossier)
+                    dossiers: prev.dossiers.filter(d => d.idDossier !== dossier.idDossier)
                 }));
             } else {
-                setDossiers(prev => prev.filter(d => d.iddossier !== dossier.iddossier));
+                setDossiers(prev => prev.filter(d => d.idDossier !== dossier.idDossier));
             }
         } catch (err) {
             console.error('Erreur lors de la suppression de dossier :', err);
@@ -346,8 +346,8 @@ function Dashboard() {
 
     const allItems = [...displayItems.dossiers, ...displayItems.fichiers];
     // Récupere les dossiers visibles (sauf la corbeille) et la corbeille séparément
-    const dossiers_visible = (displayItems.dossiers || []).filter(d => d && !d.chemindaccesdossier.startsWith('.'));
-    const corbeille = (displayItems.dossiers || []).find(d => d && d.chemindaccesdossier === '.bin');
+    const dossiers_visible = (displayItems.dossiers || []).filter(d => d && !d.cheminDaccesDossier.startsWith('.'));
+    const corbeille = (displayItems.dossiers || []).find(d => d && d.cheminDaccesDossier === '.bin');
 
     return (
         <div 
@@ -370,10 +370,10 @@ function Dashboard() {
                         <nav className="breadcrumb" aria-label="Fil d'arianne">
                             <button className="breadcrumb-objet" onClick={() => gestionClicBreadcrumb(-1)}>Mon Espace</button>
                             {fil_ariane.map((dossier, index) => (
-                                <React.Fragment key={dossier.iddossier}>
+                                <React.Fragment key={dossier.idDossier}>
                                     <span className="breadcrumb-separateur">›</span>
                                     <button className="breadcrumb-objet" onClick={() => gestionClicBreadcrumb(index)}>
-                                        {dossier.chemindaccesdossier}
+                                        {dossier.cheminDaccesDossier}
                                     </button>
                                 </React.Fragment>
                             ))}
@@ -430,7 +430,7 @@ function Dashboard() {
                         {ouvre_modal.type === 'delete' && (
                             <div>
                                 <h3>Supprimer le dossier</h3>
-                                <p>Êtes-vous sûr de vouloir supprimer le dossier « {ouvre_modal.data?.chemindaccesdossier} » ?</p>
+                                <p>Êtes-vous sûr de vouloir supprimer le dossier « {ouvre_modal.data?.cheminDaccesDossier} » ?</p>
                                 <div className="modal-bouttons">
                                     <button className="btn-annuler" onClick={() => setOuvreModal({ type: null, data: null })}>Annuler</button>
                                     <button className="btn-confirmer" onClick={confirmerSuppression}>Supprimer</button>
@@ -442,7 +442,7 @@ function Dashboard() {
             )}
 
             <div className="dossiers-section">
-                <h2>{dossier_actuel ? `Contenu de ${dossier_actuel.chemindaccesdossier}` : 'Mes dossiers'}</h2>
+                <h2>{dossier_actuel ? `Contenu de ${dossier_actuel.cheminDaccesDossier}` : 'Mes dossiers'}</h2>
                 
                 {allItems.length === 0 ? (
                     <div className="dossier-vide">
@@ -453,14 +453,14 @@ function Dashboard() {
                     <div className="dossiers-liste">
                         {dossiers_visible.map((dossier) => (
                             <div 
-                                key={dossier.iddossier} 
-                                className={`dossier-ligne ${dossier_survole_upload === dossier.iddossier ? 'drag-over' : ''}`} 
+                                key={dossier.idDossier} 
+                                className={`dossier-ligne ${dossier_survole_upload === dossier.idDossier ? 'drag-over' : ''}`} 
                                 onClick={() => gestionClicDossier(dossier)}
                                 // gestion supplémentaires du drag&drop pour éviter un conflit entre le drag global et le drag sur un dossier spécifique
                                 onDragEnter={(e) => { 
                                     e.preventDefault(); 
                                     e.stopPropagation(); 
-                                    setDossierSurvoleUpload(dossier.iddossier); 
+                                    setDossierSurvoleUpload(dossier.idDossier); 
                                 }}
                                 onDragOver={(e) => { 
                                     e.preventDefault(); 
@@ -475,17 +475,17 @@ function Dashboard() {
                                 }}
                                 onDrop={(e) => { 
                                     e.stopPropagation(); 
-                                    handleDropGlobal(e, dossier.iddossier); 
+                                    handleDropGlobal(e, dossier.idDossier); 
                                 }}
                             >
                                 <div className="col-nom">
                                     <span style={{marginRight: '10px', fontSize: '1.2rem'}}>📁</span>
-                                    <span className="dossier-nom">{dossier.chemindaccesdossier}</span>
+                                    <span className="dossier-nom">{dossier.cheminDaccesDossier}</span>
                                 </div>
-                                <div className="col-id">ID: {dossier.iddossier}</div>
-                                <div className="col-taille">{taille_dossiers[dossier.iddossier] !== undefined ? formatFileSize(taille_dossiers[dossier.iddossier]) : '...'}</div>
+                                <div className="col-id">ID: {dossier.idDossier}</div>
+                                <div className="col-taille">{taille_dossiers[dossier.idDossier] !== undefined ? formatFileSize(taille_dossiers[dossier.idDossier]) : '...'}</div>
                                 <div className="col-actions">
-                                    {menu_options_dossier === dossier.iddossier && (
+                                    {menu_options_dossier === dossier.idDossier && (
                                         <div className="actions-rapides" onClick={(e) => e.stopPropagation()}>
                                             <button className="action-icon-btn" onClick={() => ouvrirModalRenommer(dossier)} title="Renommer">✏️</button>
                                             <button className="action-icon-btn" onClick={() => ouvrirModalSuppression(dossier)} title="Supprimer">🗑️</button>
@@ -495,7 +495,7 @@ function Dashboard() {
                                         className="options-btn" 
                                         onClick={(e) => { 
                                             e.stopPropagation(); 
-                                            setMenuOptionsDossier(menu_options_dossier === dossier.iddossier ? null : dossier.iddossier); 
+                                            setMenuOptionsDossier(menu_options_dossier === dossier.idDossier ? null : dossier.idDossier); 
                                         }}
                                         title="Options"
                                     >
@@ -535,7 +535,7 @@ function Dashboard() {
                     >
                         <div className="icone-corbeille">🗑️</div>
                         <h3>Corbeille</h3>
-                        <p className="taille-dossier">{taille_dossiers[corbeille.iddossier] !== undefined ? formatFileSize(taille_dossiers[corbeille.iddossier]) : 'Calcul...'}</p>
+                        <p className="taille-dossier">{taille_dossiers[corbeille.idDossier] !== undefined ? formatFileSize(taille_dossiers[corbeille.idDossier]) : 'Calcul...'}</p>
                     </div>
                 </div>
             )}

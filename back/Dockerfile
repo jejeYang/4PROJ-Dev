@@ -1,15 +1,17 @@
 FROM node:22-alpine
 
-# Install postgresql-client for psql commands used in server.js
-RUN apk add --no-cache postgresql-client
+RUN apk add --no-cache openssl
 
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm install
+
+COPY prisma ./prisma
+RUN npx prisma generate
 
 COPY . .
 
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node prisma/seed.js && node server.js"]

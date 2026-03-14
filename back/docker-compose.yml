@@ -23,15 +23,11 @@ services:
     restart: unless-stopped
     environment:
       PORT: 3000
-      PG_HOST: postgres
-      PG_PORT: 5432
-      PG_DATABASE: supfile
-      PG_USER: postgres
-      PG_PASSWORD: root
+      DATABASE_URL: postgresql://postgres:root@postgres:5432/supfile
       FILES_PATH: /app/files
       JWT_SECRET: change-me-in-production
     volumes:
-      - ./storage/files:/app/files   # Les fichiers uploadés sont accessibles dans ./storage/files/ sur l'hôte
+      - ./storage/files:/app/files
     ports:
       - "3000:3000"
     depends_on:
