@@ -1,4 +1,3 @@
-- Mettre à jour le système de la corbeille (corbeille n'est plus à la racine mais dans le dossier original)
 - Ajouter dans le dashboard une indication de la taille utilisée / taille restante
 - Fonction de filtre (type de fichier, taille, nom...)
 - Implémenter fonctionnalités fichiers
@@ -11,3 +10,5 @@
 
 BACK :
 - Modifier l'API qui récupère la taille des dossiers pour comprendre la taille des sous-dossiers dans le dossier en question
+- Vérification de la validité du register (pas de limitations)
+- Il n'y a pas de dossier personnel par défaut donc créer un dossier à la racine le place dans la corbeille

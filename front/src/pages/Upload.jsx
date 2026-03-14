@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import '../styles/Upload.css';
 
 function Upload() {
@@ -9,7 +9,6 @@ function Upload() {
     const [en_cours_de_televersement, setEnCoursDeTeleversement] = useState(false);
     
     const url_localisation = useLocation();
-    const naviguer = useNavigate();
 
     const [dossier_actuel, setDossierActuel] = useState(url_localisation.state?.dossierActuel || null);
     const [chemin_acces, setCheminAcces] = useState(url_localisation.state?.path || []);
@@ -108,7 +107,6 @@ function Upload() {
             );
 
             setFichiers([]);
-            naviguer('/dashboard');
         } catch (error) {
             alert('erreur lors du téléversement : ' + (error.response?.data?.error || error.message));
         } finally {
@@ -127,12 +125,12 @@ function Upload() {
                 
                 <form onSubmit={gestion_televersement}>
                     <div className="groupe-formulaire">
-                        <label>Dossier de destination</label>
+                        <div>Dossier de destination</div>
                         <div className="upload-navigateur">
                             <div className="upload-fil-ariane">
                                 <span className="upload-lien-ariane" onClick={() => naviguer_dans_dossier(null)}>Racine</span>
                                 {chemin_acces.map((dossier, index) => (
-                                    <React.Fragment key={dossier.idDossier}>
+                                    <React.Fragment key={dossier.idDossier || `breadcrumb-${index}`}>
                                         <span className="separateur">/</span>
                                         <span className="upload-lien-ariane" onClick={() => naviguer_dans_dossier(dossier, index)}>
                                             {dossier.cheminDaccesDossier}
@@ -143,6 +141,8 @@ function Upload() {
                             
                             {sous_dossiers_affiches.length > 0 && (
                                 <select 
+                                    id="dossier-select"
+                                    name="dossier_select"
                                     className="upload-select"
                                     onChange={(event) => {
                                         const dossier_trouve = sous_dossiers_affiches.find(d => d.idDossier == event.target.value);
@@ -151,8 +151,13 @@ function Upload() {
                                     }}
                                 >
                                     <option value="">+ Aller dans un sous-dossier...</option>
-                                    {sous_dossiers_affiches.map(d => (
-                                        <option key={d.idDossier} value={d.idDossier}>{d.cheminDaccesDossier}</option>
+                                    {sous_dossiers_affiches.map((d, index) => (
+                                        <option 
+                                            key={d.idDossier || `select-${index}`} 
+                                            value={d.idDossier}
+                                        >
+                                            {d.cheminDaccesDossier || 'Dossier sans nom'}
+                                        </option>
                                     ))}
                                 </select>
                             )}

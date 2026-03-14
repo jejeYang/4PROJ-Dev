@@ -185,8 +185,8 @@ function Dashboard() {
         const cible_id = id_dossier_specifique || (dossier_actuel ? dossier_actuel.idDossier : null);
         
         if (!cible_id) {
-            console.error('Erreur lors de la recherche de dossiers :', error);
-            setError('Aucun dossier trouvé pour l\'upload.');
+            setEtatSurvoleUpload(false);
+            setError("Impossible de publier à la racine.");
             return;
         }
 
@@ -346,8 +346,12 @@ function Dashboard() {
 
     const allItems = [...displayItems.dossiers, ...displayItems.fichiers];
     // Récupere les dossiers visibles (sauf la corbeille) et la corbeille séparément
-    const dossiers_visible = (displayItems.dossiers || []).filter(d => d && !d.cheminDaccesDossier.startsWith('.'));
-    const corbeille = (displayItems.dossiers || []).find(d => d && d.cheminDaccesDossier === '.bin');
+    const dossiers_visible = (displayItems.dossiers || []).filter(d => 
+        d && d.cheminDaccesDossier && !d.cheminDaccesDossier.startsWith('.')
+    );
+    const corbeille = (displayItems.dossiers || []).find(d => 
+        d && d.cheminDaccesDossier && (d.cheminDaccesDossier === '.corbeille')
+    );
 
     return (
         <div 
