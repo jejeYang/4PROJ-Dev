@@ -319,21 +319,15 @@ function Dashboard() {
         }
     };
 
-    const ouvrirModalSuppression = (dossier) => {
+    const ouvrirModalSuppression = async (dossier) => {
         setError('');
         setOuvreModal({ type: 'delete', data: dossier });
         setMenuOptionsDossier(null);
-    };
-
-    const confirmerSuppression = async () => {
-        const dossier = ouvre_modal.data;
-        if (!dossier) return setOuvreModal({ type: null, data: null });
-        setError('');
 
         try {
             const token = localStorage.getItem('token');
             await axios.delete(
-                `http://localhost:3000/api/dossiers/${dossier.idDossier}`,
+                `http://localhost:3000/api/dossiers/${dossier.idDossier}/vers-corbeille`,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
@@ -345,12 +339,16 @@ function Dashboard() {
             } else {
                 setDossiers(prev => prev.filter(d => d.idDossier !== dossier.idDossier));
             }
+            if (!dossier_actuel) fetchData();
 
             setMenuOptionsDossier(null);
-            setOuvreModal({ type: null, data: null });
+            setOuvreModal({ type: 'delete_success', data: dossier });
+            setTimeout(() => setOuvreModal({ type: null, data: null }), 2000);
+            
         } catch (err) {
-            console.error('Erreur lors de la suppression de dossier :', err);
-            setError(err.response?.data?.error || 'Erreur lors de la suppression');
+            console.error('Erreur lors du déplacement vers la corbeille :', err);
+            setOuvreModal({ type: null, data: null });
+            setError(err.response?.data?.error || 'Erreur lors du déplacement vers la corbeille');
         }
     };
 
@@ -392,7 +390,6 @@ function Dashboard() {
             onDragLeave={handleDragLeaveGlobal}
             onDrop={(e) => handleDropGlobal(e)}
         >
-            {/* Overlay visuel lors du drag global */}
             {etat_survole_upload && !dossier_survole_upload && (
                 <div className="dashboard-drag-overlay">
                 </div>
@@ -475,15 +472,19 @@ function Dashboard() {
                                 </div>
                             </div>
                         )}
+                        {ouvre_modal.type === 'delete_success' && (
+                            <div>
+                                <h3>Dossier déplacé</h3>
+                                <p>Dossier "{ouvre_modal.data?.cheminDaccesDossier}" déplacé vers la corbeille</p>
+                                <div className="modal-bouttons">
+                                    <button className="btn-confirmer" onClick={() => setOuvreModal({ type: null, data: null })}>OK</button>
+                                </div>
+                            </div>
+                        )}
                         {ouvre_modal.type === 'delete' && (
                             <div>
-                                <h3>Supprimer le dossier</h3>
-                                <p>Êtes-vous sûr de vouloir supprimer le dossier « {ouvre_modal.data?.cheminDaccesDossier} » ?</p>
-                                {error && <p className="erreur-modale suppression">{error}</p>}
-                                <div className="modal-bouttons">
-                                    <button className="btn-annuler" onClick={() => setOuvreModal({ type: null, data: null })}>Annuler</button>
-                                    <button className="btn-confirmer" onClick={confirmerSuppression}>Supprimer</button>
-                                </div>
+                                <h3>Déplacement en cours...</h3>
+                                <p>Déplacement du dossier "{ouvre_modal.data?.cheminDaccesDossier}" vers la corbeille</p>
                             </div>
                         )}
                     </div>
@@ -537,7 +538,7 @@ function Dashboard() {
                                     {menu_options_dossier === dossier.idDossier && (
                                         <div className="actions-rapides" onClick={(e) => e.stopPropagation()}>
                                             <button className="action-icon-btn" onClick={() => ouvrirModalRenommer(dossier)} title="Renommer">✏️</button>
-                                            <button className="action-icon-btn" onClick={() => ouvrirModalSuppression(dossier)} title="Supprimer">🗑️</button>
+                                            <button className="action-icon-btn" onClick={() => ouvrirModalSuppression(dossier)} title="Déplacer vers la corbeille">🗑️</button>
                                         </div>
                                     )}
                                     <button 

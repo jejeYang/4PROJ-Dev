@@ -354,6 +354,7 @@ dossierRouter.post('/api/dossiers/:dossierId/televerser-multiple', authentifierT
         console.error('Erreur lors du téléversement multiple :', error);
         res.status(500).json({ error: error.message || 'Erreur lors du téléversement' });
     }
+});
 
 // ===== GESTION DE LA CORBEILLE =====
 
@@ -390,7 +391,7 @@ dossierRouter.delete('/api/dossiers/:dossierId/vers-corbeille', authentifierToke
             return res.status(400).json({ error: 'Impossible de supprimer la corbeille' });
         }
 
-        const resultat = await service_dossier.deplacerVerCorbeille(dossierId, idUtilisateurAuthentifie);
+        const resultat = await service_dossier.deplacerVersCorbeille(dossierId, idUtilisateurAuthentifie);
         res.json({ message: 'Dossier déplacé à la corbeille', dossier: resultat });
     } catch (error) {
         console.error('Erreur lors du déplacement vers la corbeille :', error);
@@ -438,9 +439,6 @@ dossierRouter.delete('/api/corbeille/vider', authentifierToken, async (req, res)
         console.error('Erreur lors du vidage de la corbeille :', error);
         res.status(500).json({ error: error.message || 'Erreur lors du vidage' });
     }
-});
-
-    
 });
 
 export default dossierRouter;
