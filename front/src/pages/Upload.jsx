@@ -13,6 +13,7 @@ function Upload() {
     const [dossier_actuel, setDossierActuel] = useState(url_localisation.state?.dossierActuel || null);
     const [chemin_acces, setCheminAcces] = useState(url_localisation.state?.path || []);
     const [sous_dossiers_affiches, setSousDossiersAffiches] = useState([]);
+    const [erreur_upload, setErreurUpload] = useState('');
 
     useEffect(() => {
         // Charge les sous-dossiers du dossier actuellement sélectionné
@@ -62,27 +63,29 @@ function Upload() {
         event.stopPropagation();
         setGlisserActif(false);
         
-        if (event.dataTransfer.fichiers && event.dataTransfer.fichiers[0]) {
-            setFichiers(Array.from(event.dataTransfer.fichiers));
+        if (event.dataTransfer.files && event.dataTransfer.files[0]) {
+            setFichiers(Array.from(event.dataTransfer.files));
         }
     };
 
     const gestion_changement_fichier = (event) => {
         if (event.target.files && event.target.files[0]) {
             setFichiers(Array.from(event.target.files));
+            event.target.value = '';
         }
     };
 
     const gestion_televersement = async (event) => {
         event.preventDefault();
+        setErreurUpload('');
         
         if (fichiers.length === 0) {
-            alert('Veuillez sélectionner au moins un fichier');
+            setErreurUpload('Veuillez sélectionner au moins un fichier');
             return;
         }
         
         if (!dossier_actuel || !dossier_actuel.idDossier) {
-            alert('Veuillez d\'abord sélectionner un dossier de destination.');
+            setErreurUpload('Veuillez d\'abord sélectionner un dossier de destination.');
             return;
         }
 
@@ -108,7 +111,7 @@ function Upload() {
 
             setFichiers([]);
         } catch (error) {
-            alert('erreur lors du téléversement : ' + (error.response?.data?.error || error.message));
+            setErreurUpload(error.response?.data?.error || 'Erreur lors du téléversement');
         } finally {
             setEnCoursDeTeleversement(false);
         }
@@ -215,6 +218,11 @@ function Upload() {
                     >
                         {en_cours_de_televersement ? 'Upload en cours...' : 'Uploader'}
                     </button>
+                    {erreur_upload && (
+                        <div className="upload-message-erreur">
+                            {erreur_upload}
+                        </div>
+                    )}
                 </form>
             </div>
         </div>

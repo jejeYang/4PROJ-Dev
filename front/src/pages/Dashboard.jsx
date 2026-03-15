@@ -218,8 +218,19 @@ function Dashboard() {
     const gestionCreeDossier = async (e) => {
         e.preventDefault();
         
-        if (!menu_nom_dossier.trim()) {
+        const nom_dossier = menu_nom_dossier.trim();
+        
+        if (!nom_dossier) {
             setError('Le nom du dossier ne peut pas être vide');
+            return;
+        }
+
+        const liste_dossiers_actuels = dossier_actuel ? contenu_dossier.dossiers : dossiers;
+        const nom_existe_deja = liste_dossiers_actuels.some(
+            d => d.cheminDaccesDossier.toLowerCase() === nom_dossier.toLowerCase()
+        );
+        if (nom_existe_deja) {
+            setError('Un dossier portant ce nom existe déjà à cet emplacement.');
             return;
         }
 
@@ -232,7 +243,7 @@ function Dashboard() {
             const response = await axios.post(
                 'http://localhost:3000/api/dossiers',
                 {
-                    cheminDaccesDossier: menu_nom_dossier.trim(),
+                    cheminDaccesDossier: nom_dossier,
                     idDossierParent: dossier_actuel ? dossier_actuel.idDossier : null
                 },
                 { headers: { Authorization: `Bearer ${token}` } }
@@ -260,21 +271,39 @@ function Dashboard() {
 
     const ouvrirModalRenommer = (dossier) => {
         setRenommeDossier(dossier.cheminDaccesDossier);
+        setError('');
         setOuvreModal({ type: 'rename', data: dossier });
         setMenuOptionsDossier(null);
     };
 
     const confirmerRenommage = async () => {
-        if (!nouveau_nom.trim()) return;
+        const nouveau_nom_dossier = nouveau_nom.trim();
+        
+        if (!nouveau_nom_dossier) {
+            setError('Le nom du dossier ne peut pas être vide');
+            return;
+        }
+
+        const liste_dossiers_actuels = dossier_actuel ? contenu_dossier.dossiers : dossiers;
+        const nom_existe_deja = liste_dossiers_actuels.some(
+            d => d.cheminDaccesDossier.toLowerCase() === nouveau_nom_dossier.toLowerCase() 
+            && d.idDossier !== ouvre_modal.data.idDossier
+        );
+        if (nom_existe_deja) {
+            setError('Un dossier portant ce nom existe déjà à cet emplacement.');
+            return;
+        }
+        setError('');
+
         try {
             const token = localStorage.getItem('token');
             const res = await axios.put(
                 `http://localhost:3000/api/dossiers/${ouvre_modal.data.idDossier}`,
-                { cheminDaccesDossier: nouveau_nom.trim() },
+                { cheminDaccesDossier: nouveau_nom_dossier },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
-            // Mets à jour
+            // Mise à jour de l'affichage
             if (dossier_actuel) {
                 setContenuDossier(prev => ({
                     ...prev,
@@ -286,11 +315,12 @@ function Dashboard() {
             setOuvreModal({ type: null, data: null });
         } catch (err) {
             console.error('Erreur lors du renommage de dossier :', err);
-            alert('Erreur lors du renommage');
+            setError(err.response?.data?.error || 'Erreur lors du renommage');
         }
     };
 
     const ouvrirModalSuppression = (dossier) => {
+        setError('');
         setOuvreModal({ type: 'delete', data: dossier });
         setMenuOptionsDossier(null);
     };
@@ -298,6 +328,7 @@ function Dashboard() {
     const confirmerSuppression = async () => {
         const dossier = ouvre_modal.data;
         if (!dossier) return setOuvreModal({ type: null, data: null });
+        setError('');
 
         try {
             const token = localStorage.getItem('token');
@@ -314,12 +345,12 @@ function Dashboard() {
             } else {
                 setDossiers(prev => prev.filter(d => d.idDossier !== dossier.idDossier));
             }
-        } catch (err) {
-            console.error('Erreur lors de la suppression de dossier :', err);
-            alert('Erreur lors de la suppression');
-        } finally {
+
             setMenuOptionsDossier(null);
             setOuvreModal({ type: null, data: null });
+        } catch (err) {
+            console.error('Erreur lors de la suppression de dossier :', err);
+            setError(err.response?.data?.error || 'Erreur lors de la suppression');
         }
     };
 
@@ -394,6 +425,13 @@ function Dashboard() {
                 </div>
             </div>
 
+            {error && !ouvre_modal.type && (
+                <div className="dashboard-erreur-globale">
+                    <span>{error}</span>
+                    <button className="btn-fermer-erreur" onClick={() => setError('')} title="Fermer">✕</button>
+                </div>
+            )}
+
             {ouvre_modal.type && (
                 <div className="modal-overlay" onClick={() => !creating && setOuvreModal({ type: null, data: null })}>
                     <div className="modal-contenu" onClick={e => e.stopPropagation()}>
@@ -408,7 +446,7 @@ function Dashboard() {
                                     disabled={creating}
                                     autoFocus
                                 />
-                                {error && <p className="error-message" style={{color: 'red', marginTop: '-10px', marginBottom: '10px'}}>{error}</p>}
+                                {error && <p className="erreur-modale">{error}</p>}
                                 <div className="modal-bouttons">
                                     <button type="button" className="btn-annuler" onClick={() => setOuvreModal({ type: null, data: null })} disabled={creating}>Annuler</button>
                                     <button type="submit" className="btn-confirmer" disabled={creating}>{creating ? 'Création...' : 'Créer'}</button>
@@ -423,8 +461,14 @@ function Dashboard() {
                                     value={nouveau_nom} 
                                     onChange={(e) => setRenommeDossier(e.target.value)} 
                                     autoFocus
-                                    onKeyDown={(e) => e.key === 'Enter' && confirmerRenommage()}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            confirmerRenommage();
+                                        }
+                                    }}
                                 />
+                                {error && <p className="erreur-modale">{error}</p>}
                                 <div className="modal-bouttons">
                                     <button className="btn-annuler" onClick={() => setOuvreModal({ type: null, data: null })}>Annuler</button>
                                     <button className="btn-confirmer" onClick={confirmerRenommage}>Sauvegarder</button>
@@ -435,6 +479,7 @@ function Dashboard() {
                             <div>
                                 <h3>Supprimer le dossier</h3>
                                 <p>Êtes-vous sûr de vouloir supprimer le dossier « {ouvre_modal.data?.cheminDaccesDossier} » ?</p>
+                                {error && <p className="erreur-modale suppression">{error}</p>}
                                 <div className="modal-bouttons">
                                     <button className="btn-annuler" onClick={() => setOuvreModal({ type: null, data: null })}>Annuler</button>
                                     <button className="btn-confirmer" onClick={confirmerSuppression}>Supprimer</button>
@@ -483,7 +528,7 @@ function Dashboard() {
                                 }}
                             >
                                 <div className="col-nom">
-                                    <span style={{marginRight: '10px', fontSize: '1.2rem'}}>📁</span>
+                                    <span>📁</span>
                                     <span className="dossier-nom">{dossier.cheminDaccesDossier}</span>
                                 </div>
                                 <div className="col-id">ID: {dossier.idDossier}</div>
@@ -512,7 +557,7 @@ function Dashboard() {
                         {displayItems.fichiers.map((fichier, index) => (
                             <div key={`file-${index}`} className="dossier-ligne fichier-ligne">
                                 <div className="col-nom">
-                                    <span style={{marginRight: '10px', fontSize: '1.2rem'}}>📄</span>
+                                    <span>📄</span>
                                     <span className="dossier-nom">{fichier.nom}</span>
                                 </div>
                                 <div className="col-id">{new Date(fichier.dateModification).toLocaleDateString('fr-FR')}</div>

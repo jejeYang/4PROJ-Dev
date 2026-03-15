@@ -1,4 +1,5 @@
 .dashboard-container {
+    height: -webkit-fill-available;
     max-width: 1400px;
     margin: 0 auto;
     background: var(--bg-primary-color);
@@ -209,6 +210,11 @@
     border-left: 4px solid var(--btn-color);
 }
 
+.col-nom {
+    margin-right: '10px';
+    font-size: '1.2rem';
+}
+
 .dossier-nom {
     font-weight: 600;
     color: var(--text-primary-color);
@@ -308,6 +314,45 @@
     color: var(--text-primary-color);
     margin: 0;
     font-weight: 600;
+}
+
+.dashboard-erreur-globale {
+    background: var(--bg-secondary-color);
+    color: var(--error-color);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid var(--error-color);
+}
+
+.btn-fermer-erreur {
+    background: none;
+    border: none;
+    color: var(--error-color);
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 0 5px;
+    transition: transform 0.2s;
+}
+
+.btn-fermer-erreur:hover {
+    transform: scale(1.2);
+}
+
+.erreur-modale {
+    color: var(--error-color);
+    margin-top: -10px;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.erreur-modale.suppression {
+    margin-top: 10px;
+    margin-bottom: 0;
 }
 
 @media (max-width: 768px) {

@@ -51,4 +51,5 @@ model Dossier {
   sousDossiers         Dossier[] @relation("SousDossiers")
 
   @@map("dossier")
+  @@unique([idDossierParent, cheminDaccesDossier])
 }
