@@ -9,6 +9,18 @@
 - Gestion clic droit des dossiers & fichiers
 
 BACK :
-- Modifier l'API qui récupère la taille des dossiers pour comprendre la taille des sous-dossiers dans le dossier en question
-- Vérification de la validité du register (pas de limitations)
 - Il n'y a pas de dossier personnel par défaut donc créer un dossier à la racine le place dans la corbeille
+- La classe ServiceDossier manque des méthodes pour faire fonctionner les routes de la corbeille :
+    - deplacerVersCorbeille
+    - recupererCorbeille
+    - restaurerDossier
+    - viderCorbeille
+- Vérification de la validité du register :
+    - actuellement il n'y a pas de vérification de la validité du mot de passe
+    - return une erreur quand une adresse mail est déjà utilisée
+- Modifier l'API qui récupère la taille des dossiers pour comprendre la taille des sous-dossiers dans le dossier en question
+- Créer les routes :
+    - PUT /api/users/:id (Mise à jour du profil avec utilisateur et mail)
+    - POST /api/change-password (Change mdt)
+    - DELETE /api/users (Suppression du compte)
+- date de création & de dernier accès dans la table dossier pour filtres
