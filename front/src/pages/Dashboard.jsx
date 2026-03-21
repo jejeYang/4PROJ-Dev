@@ -352,6 +352,80 @@ function Dashboard() {
         }
     };
 
+    const ouvrirModalSuppressionDefinitive = (dossier) => {
+        setError('');
+        setOuvreModal({ type: 'delete_permanent', data: dossier });
+        setMenuOptionsDossier(null);
+    };
+
+    const confirmerSuppressionDefinitive = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            await axios.delete(
+                `http://localhost:3000/api/dossiers/${ouvre_modal.data.idDossier}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            setContenuDossier(prev => ({
+                ...prev,
+                dossiers: prev.dossiers.filter(d => d.idDossier !== ouvre_modal.data.idDossier)
+            }));
+            
+            setOuvreModal({ type: null, data: null });
+        } catch (err) {
+            setError(err.response?.data?.error || 'Erreur lors de la suppression définitive');
+        }
+    };
+
+    const ouvrirModalViderCorbeille = () => {
+        setError('');
+        setOuvreModal({ type: 'empty_trash', data: null });
+    };
+
+    const confirmerViderCorbeille = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            await axios.delete(
+                `http://localhost:3000/api/corbeille/vider`,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            setContenuDossier({ dossiers: [], fichiers: [] });
+            setOuvreModal({ type: null, data: null });
+        } catch (err) {
+            setError(err.response?.data?.error || 'Erreur lors du vidage de la corbeille');
+        }
+    };
+
+    const ouvrirModalRestauration = (dossier) => {
+        setError('');
+        setOuvreModal({ type: 'restore', data: dossier });
+        setMenuOptionsDossier(null);
+    };
+
+    const confirmerRestauration = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            await axios.post(
+                `http://localhost:3000/api/dossiers/${ouvre_modal.data.idDossier}/restaurer`,
+                {}, 
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            setContenuDossier(prev => ({
+                ...prev,
+                dossiers: prev.dossiers.filter(d => d.idDossier !== ouvre_modal.data.idDossier)
+            }));
+            
+            setOuvreModal({ type: 'restore_success', data: ouvre_modal.data });
+            setTimeout(() => setOuvreModal({ type: null, data: null }), 2000);
+            
+        } catch (err) {
+            console.error('Erreur lors de la restauration :', err);
+            setError(err.response?.data?.error || 'Erreur lors de la restauration');
+        }
+    };
+
     const formatFileSize = (bytes) => {
         if (bytes === 0) return '0 B';
         const k = 1024;
@@ -381,6 +455,7 @@ function Dashboard() {
     const corbeille = (displayItems.dossiers || []).find(d => 
         d && d.cheminDaccesDossier && (d.cheminDaccesDossier === '.corbeille')
     );
+    const estDansCorbeille = fil_ariane.some(dossier => dossier.cheminDaccesDossier === '.corbeille');
 
     return (
         <div 
@@ -412,13 +487,25 @@ function Dashboard() {
                         </nav>
                     )}
                 </div>
-                <div className={`dashboard-header-actions ${dossier_actuel ? 'in-folder' : ''}`}>
-                    <button className="btn-publie-dashboard-header" onClick={naviguerVersUpload}>
-                        Publier un fichier
-                    </button>
-                    <button className="btn-cree-dossier-dashboard-header" onClick={() => { setChangeNomDossier(''); setError(''); setOuvreModal({ type: 'create', data: null }); }}>
-                        Créer un dossier
-                    </button>
+<               div className={`dashboard-header-actions ${dossier_actuel ? 'in-folder' : ''}`}>
+                    {!estDansCorbeille ? (
+                        <>
+                            <button className="btn-publie-dashboard-header" onClick={naviguerVersUpload}>
+                                Publier un fichier
+                            </button>
+                            <button className="btn-cree-dossier-dashboard-header" onClick={() => { setChangeNomDossier(''); setError(''); setOuvreModal({ type: 'create', data: null }); }}>
+                                Créer un dossier
+                            </button>
+                        </>
+                    ) : (
+                        <button 
+                            className="btn-cree-dossier-dashboard-header" 
+                            style={{ backgroundColor: 'var(--error-color)' }} 
+                            onClick={ouvrirModalViderCorbeille}
+                        >
+                            Vider la corbeille
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -487,6 +574,48 @@ function Dashboard() {
                                 <p>Déplacement du dossier "{ouvre_modal.data?.cheminDaccesDossier}" vers la corbeille</p>
                             </div>
                         )}
+                        {ouvre_modal.type === 'delete_permanent' && (
+                            <div>
+                                <h3>Supprimer définitivement ?</h3>
+                                <p>Voulez-vous vraiment supprimer le dossier "{ouvre_modal.data?.cheminDaccesDossier}" ? Cette action est irréversible.</p>
+                                {error && <p className="erreur-modale suppression">{error}</p>}
+                                <div className="modal-bouttons">
+                                    <button className="btn-annuler" onClick={() => setOuvreModal({ type: null, data: null })}>Annuler</button>
+                                    <button className="btn-confirmer" style={{ backgroundColor: 'var(--error-color)' }} onClick={confirmerSuppressionDefinitive}>Supprimer</button>
+                                </div>
+                            </div>
+                        )}
+                        {ouvre_modal.type === 'empty_trash' && (
+                            <div>
+                                <h3>Vider la corbeille ?</h3>
+                                <p>Tous les éléments présents dans la corbeille seront définitivement supprimés.</p>
+                                {error && <p className="erreur-modale suppression">{error}</p>}
+                                <div className="modal-bouttons">
+                                    <button className="btn-annuler" onClick={() => setOuvreModal({ type: null, data: null })}>Annuler</button>
+                                    <button className="btn-confirmer" style={{ backgroundColor: 'var(--error-color)' }} onClick={confirmerViderCorbeille}>Vider</button>
+                                </div>
+                            </div>
+                        )}
+                        {ouvre_modal.type === 'restore' && (
+                            <div>
+                                <h3>Restaurer le dossier ?</h3>
+                                <p>Voulez-vous restaurer le dossier "{ouvre_modal.data?.cheminDaccesDossier}" à son emplacement d'origine ?</p>
+                                {error && <p className="erreur-modale">{error}</p>}
+                                <div className="modal-bouttons">
+                                    <button className="btn-annuler" onClick={() => setOuvreModal({ type: null, data: null })}>Annuler</button>
+                                    <button className="btn-confirmer" style={{ backgroundColor: '#10b981' }} onClick={confirmerRestauration}>Restaurer</button>
+                                </div>
+                            </div>
+                        )}
+                        {ouvre_modal.type === 'restore_success' && (
+                            <div>
+                                <h3>Dossier restauré ♻️</h3>
+                                <p>Le dossier "{ouvre_modal.data?.cheminDaccesDossier}" a bien été remis à sa place d'origine.</p>
+                                <div className="modal-bouttons">
+                                    <button className="btn-confirmer" onClick={() => setOuvreModal({ type: null, data: null })}>OK</button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -537,8 +666,17 @@ function Dashboard() {
                                 <div className="col-actions">
                                     {menu_options_dossier === dossier.idDossier && (
                                         <div className="actions-rapides" onClick={(e) => e.stopPropagation()}>
-                                            <button className="action-icon-btn" onClick={() => ouvrirModalRenommer(dossier)} title="Renommer">✏️</button>
-                                            <button className="action-icon-btn" onClick={() => ouvrirModalSuppression(dossier)} title="Déplacer vers la corbeille">🗑️</button>
+                                            {!estDansCorbeille ? (
+                                                <>
+                                                    <button className="action-icon-btn" onClick={() => ouvrirModalRenommer(dossier)} title="Renommer">✏️</button>
+                                                    <button className="action-icon-btn" onClick={() => ouvrirModalSuppression(dossier)} title="Déplacer vers la corbeille">🗑️</button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <button className="action-icon-btn" onClick={() => ouvrirModalRestauration(dossier)} title="Restaurer le dossier">♻️</button>
+                                                    <button className="action-icon-btn" onClick={() => ouvrirModalSuppressionDefinitive(dossier)} title="Supprimer définitivement">❌</button>
+                                                </>
+                                            )}
                                         </div>
                                     )}
                                     <button 

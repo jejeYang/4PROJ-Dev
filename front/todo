@@ -4,7 +4,10 @@
 - Visualiseur des fichiers (pdf / image)
 - Page de base : Taille utilisée / Taille restante ; Derniers fichiers publiés ; Derniers fichiers visionnés / téléchargés
 - Modifier affichage des paramètres (améliorer esthétique)
-- Selection de plusieurs fichier/dossiers en même temps
+- Gestion déplacement d'un dossier
+- Selection de plusieurs fichier/dossiers en même temps :
+    - Déplacer en masse
+    - Supprimer en masse
 - Gestion clic droit des dossiers & fichiers
 
 BACK :
