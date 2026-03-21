@@ -119,7 +119,7 @@
 
 .btn-confirmer {
     background: var(--btn-color);
-    color: var(--text-primary-color);
+    color: var(--btn-text);
     border: none;
     padding: 0.6rem 1.2rem;
     border-radius: 6px;

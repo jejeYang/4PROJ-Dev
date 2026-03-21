@@ -450,7 +450,7 @@ function Dashboard() {
     const allItems = [...displayItems.dossiers, ...displayItems.fichiers];
     // Récupere les dossiers visibles (sauf la corbeille) et la corbeille séparément
     const dossiers_visible = (displayItems.dossiers || []).filter(d => 
-        d && d.cheminDaccesDossier && !d.cheminDaccesDossier.startsWith('.')
+        d && d.cheminDaccesDossier && d.cheminDaccesDossier !== '.corbeille'
     );
     const corbeille = (displayItems.dossiers || []).find(d => 
         d && d.cheminDaccesDossier && (d.cheminDaccesDossier === '.corbeille')
@@ -498,13 +498,7 @@ function Dashboard() {
                             </button>
                         </>
                     ) : (
-                        <button 
-                            className="btn-cree-dossier-dashboard-header" 
-                            style={{ backgroundColor: 'var(--error-color)' }} 
-                            onClick={ouvrirModalViderCorbeille}
-                        >
-                            Vider la corbeille
-                        </button>
+                        <button className="btn-cree-dossier-dashboard-header" onClick={ouvrirModalViderCorbeille}>Vider la corbeille</button>
                     )}
                 </div>
             </div>
@@ -581,7 +575,7 @@ function Dashboard() {
                                 {error && <p className="erreur-modale suppression">{error}</p>}
                                 <div className="modal-bouttons">
                                     <button className="btn-annuler" onClick={() => setOuvreModal({ type: null, data: null })}>Annuler</button>
-                                    <button className="btn-confirmer" style={{ backgroundColor: 'var(--error-color)' }} onClick={confirmerSuppressionDefinitive}>Supprimer</button>
+                                    <button className="btn-confirmer" onClick={confirmerSuppressionDefinitive}>Supprimer</button>
                                 </div>
                             </div>
                         )}
@@ -592,7 +586,7 @@ function Dashboard() {
                                 {error && <p className="erreur-modale suppression">{error}</p>}
                                 <div className="modal-bouttons">
                                     <button className="btn-annuler" onClick={() => setOuvreModal({ type: null, data: null })}>Annuler</button>
-                                    <button className="btn-confirmer" style={{ backgroundColor: 'var(--error-color)' }} onClick={confirmerViderCorbeille}>Vider</button>
+                                    <button className="btn-confirmer" onClick={confirmerViderCorbeille}>Vider</button>
                                 </div>
                             </div>
                         )}
@@ -603,7 +597,7 @@ function Dashboard() {
                                 {error && <p className="erreur-modale">{error}</p>}
                                 <div className="modal-bouttons">
                                     <button className="btn-annuler" onClick={() => setOuvreModal({ type: null, data: null })}>Annuler</button>
-                                    <button className="btn-confirmer" style={{ backgroundColor: '#10b981' }} onClick={confirmerRestauration}>Restaurer</button>
+                                    <button className="btn-confirmer" onClick={confirmerRestauration}>Restaurer</button>
                                 </div>
                             </div>
                         )}
