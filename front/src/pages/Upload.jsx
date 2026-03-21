@@ -7,6 +7,7 @@ function Upload() {
     const [glisser_actif, setGlisserActif] = useState(false);
     const [fichiers, setFichiers] = useState([]);
     const [en_cours_de_televersement, setEnCoursDeTeleversement] = useState(false);
+    const [barre_de_progression, setBarreProgression] = useState(0); 
     
     const url_localisation = useLocation();
 
@@ -90,6 +91,7 @@ function Upload() {
         }
 
         setEnCoursDeTeleversement(true);
+        setBarreProgression(0);
         try {
             const token = localStorage.getItem('token');
             const donnees_formulaire = new FormData();
@@ -105,6 +107,10 @@ function Upload() {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'multipart/form-data'
+                    },
+                    onUploadProgress: (progressEvent) => {
+                        const pourcentage = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                        setBarreProgression(pourcentage);
                     }
                 }
             );
@@ -114,6 +120,7 @@ function Upload() {
             setErreurUpload(error.response?.data?.error || error.response?.data?.message || 'Erreur lors du téléversement');
         } finally {
             setEnCoursDeTeleversement(false);
+            setTimeout(() => setBarreProgression(0), 1000);
         }
     };
 
@@ -208,6 +215,17 @@ function Upload() {
                                     </button>
                                 </div>
                             ))}
+                        </div>
+                    )}
+
+                    {en_cours_de_televersement && (
+                        <div className="conteneur-progression">
+                            <div 
+                                className="barre-progression" 
+                                style={{ width: `${barre_de_progression}%` }}
+                            >
+                                {barre_de_progression > 5 ? `${barre_de_progression}%` : ''}
+                            </div>
                         </div>
                     )}
 
