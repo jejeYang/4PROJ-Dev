@@ -1,22 +1,28 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 
-const ThemeContext = React.createContext(false);
+const ThemeContext = React.createContext();
 
 const ThemeProvider = ({ children }) => {
-    const [toggle, setToggle] = React.useState(false);
+    const [themeSombre, setThemeSombre] = useState(() => {
+        const themeSauvegarde = localStorage.getItem('themeSombre');
+        return themeSauvegarde === 'true';
+    });
 
-    const toggleFunction = () => {
-        setToggle(prev => !prev);
+    const basculerTheme = () => {
+        setThemeSombre(themePrecedent => {
+            const nouveauTheme = !themePrecedent;
+            localStorage.setItem('themeSombre', nouveauTheme);
+            return nouveauTheme;
+        });
     };
 
     useEffect(() => {
-        document.documentElement.setAttribute('data-theme', toggle ? 'dark' : 'light');
-    }, [toggle]);
-
+        document.documentElement.setAttribute('data-theme', themeSombre ? 'dark' : 'light');
+    }, [themeSombre]);
 
     return (
-        <ThemeContext.Provider value={{ toggle, toggleFunction }}>
-        {children}
+        <ThemeContext.Provider value={{ toggle: themeSombre, toggleFunction: basculerTheme }}>
+            {children}
         </ThemeContext.Provider>
     );
 };

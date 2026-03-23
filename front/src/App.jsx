@@ -1,14 +1,36 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import axios from 'axios';
 import './App.css';
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Register from './pages/Register';
+import Home from './pages/home';
+import Login from './pages/login';
+import Register from './pages/register';
 import Dashboard from './pages/Dashboard';
 import Upload from './pages/Upload';
 import Settings from './pages/Settings';
 import logo from './assets/logo.png';
 import { ThemeProvider } from './context/theme_context';
+
+axios.interceptors.response.use(
+    (response) => {
+        return response;
+    },
+    (error) => {
+      // Redirection (token expiré ou invalide)
+        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+            console.warn("Token expiré ou invalide. Déconnexion automatique.");
+            
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            
+            if (window.location.pathname !== '/login') {
+                window.location.href = '/login';
+            }
+        }
+        
+        return Promise.reject(error);
+    }
+);
 
 function AppContent() {
   const token = localStorage.getItem('token');

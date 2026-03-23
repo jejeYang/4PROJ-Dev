@@ -7,6 +7,7 @@ function Upload() {
     const [glisser_actif, setGlisserActif] = useState(false);
     const [fichiers, setFichiers] = useState([]);
     const [en_cours_de_televersement, setEnCoursDeTeleversement] = useState(false);
+    const [barre_de_progression, setBarreProgression] = useState(0); 
     
     const url_localisation = useLocation();
 
@@ -17,7 +18,7 @@ function Upload() {
 
     useEffect(() => {
         // Charge les sous-dossiers du dossier actuellement sélectionné
-        const recuperer_dossiers = async () => {
+        const recupererDossiers = async () => {
             try {
                 const token = localStorage.getItem('token');
                 const utilisateur = JSON.parse(localStorage.getItem('user'));
@@ -32,10 +33,10 @@ function Upload() {
                 console.error('Erreur :', error);
             }
         };
-        recuperer_dossiers();
+        recupererDossiers();
     }, [dossier_actuel]);
 
-    const naviguer_dans_dossier = (dossier_cible, index = null) => {
+    const naviguerDansDossier = (dossier_cible, index = null) => {
         setDossierActuel(dossier_cible);
         if (dossier_cible === null) {
             setCheminAcces([]);
@@ -48,7 +49,7 @@ function Upload() {
         }
     };
 
-    const gestion_survol_glisser = (event) => {
+    const gestionSurvolGlisser = (event) => {
         event.preventDefault();
         event.stopPropagation();
         if (event.type === "dragenter" || event.type === "dragover") {
@@ -58,7 +59,7 @@ function Upload() {
         }
     };
 
-    const gestion_depot = (event) => {
+    const gestionDepot = (event) => {
         event.preventDefault();
         event.stopPropagation();
         setGlisserActif(false);
@@ -68,14 +69,14 @@ function Upload() {
         }
     };
 
-    const gestion_changement_fichier = (event) => {
+    const gestionChangementFichier = (event) => {
         if (event.target.files && event.target.files[0]) {
             setFichiers(Array.from(event.target.files));
             event.target.value = '';
         }
     };
 
-    const gestion_televersement = async (event) => {
+    const gestionTeleversement = async (event) => {
         event.preventDefault();
         setErreurUpload('');
         
@@ -90,6 +91,7 @@ function Upload() {
         }
 
         setEnCoursDeTeleversement(true);
+        setBarreProgression(0);
         try {
             const token = localStorage.getItem('token');
             const donnees_formulaire = new FormData();
@@ -105,19 +107,24 @@ function Upload() {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'multipart/form-data'
+                    },
+                    onUploadProgress: (progressEvent) => {
+                        const pourcentage = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                        setBarreProgression(pourcentage);
                     }
                 }
             );
 
             setFichiers([]);
         } catch (error) {
-            setErreurUpload(error.response?.data?.error || 'Erreur lors du téléversement');
+            setErreurUpload(error.response?.data?.error || error.response?.data?.message || 'Erreur lors du téléversement');
         } finally {
             setEnCoursDeTeleversement(false);
+            setTimeout(() => setBarreProgression(0), 1000);
         }
     };
 
-    const supprimer_fichier = (index) => {
+    const supprimerFichier = (index) => {
         setFichiers(fichiers.filter((_, i) => i !== index));
     };
 
@@ -126,16 +133,16 @@ function Upload() {
             <div className="carte-upload">
                 <h2>Uploader des fichiers</h2>
                 
-                <form onSubmit={gestion_televersement}>
+                <form onSubmit={gestionTeleversement}>
                     <div className="groupe-formulaire">
                         <div>Dossier de destination</div>
                         <div className="upload-navigateur">
                             <div className="upload-fil-ariane">
-                                <span className="upload-lien-ariane" onClick={() => naviguer_dans_dossier(null)}>Racine</span>
+                                <span className="upload-lien-ariane" onClick={() => naviguerDansDossier(null)}>Racine</span>
                                 {chemin_acces.map((dossier, index) => (
                                     <React.Fragment key={dossier.idDossier || `breadcrumb-${index}`}>
                                         <span className="separateur">/</span>
-                                        <span className="upload-lien-ariane" onClick={() => naviguer_dans_dossier(dossier, index)}>
+                                        <span className="upload-lien-ariane" onClick={() => naviguerDansDossier(dossier, index)}>
                                             {dossier.cheminDaccesDossier}
                                         </span>
                                     </React.Fragment>
@@ -149,7 +156,7 @@ function Upload() {
                                     className="upload-select"
                                     onChange={(event) => {
                                         const dossier_trouve = sous_dossiers_affiches.find(d => d.idDossier == event.target.value);
-                                        if(dossier_trouve) naviguer_dans_dossier(dossier_trouve);
+                                        if(dossier_trouve) naviguerDansDossier(dossier_trouve);
                                         event.target.value = ""; // Réinitialise le select après le clic sinon il reste sur le dernier dossier sélectionné et déclenche pas l'événement si on clique à nouveau dessus
                                     }}
                                 >
@@ -169,10 +176,10 @@ function Upload() {
 
                     <div 
                         className={`zone-glisser-deposer ${glisser_actif ? 'active' : ''}`}
-                        onDragEnter={gestion_survol_glisser}
-                        onDragLeave={gestion_survol_glisser}
-                        onDragOver={gestion_survol_glisser}
-                        onDrop={gestion_depot}
+                        onDragEnter={gestionSurvolGlisser}
+                        onDragLeave={gestionSurvolGlisser}
+                        onDragOver={gestionSurvolGlisser}
+                        onDrop={gestionDepot}
                     >
                         <div className="contenu-glisser-deposer">
                             <span className="icone-upload">📁</span>
@@ -184,7 +191,7 @@ function Upload() {
                                 id="entree-fichier"
                                 type="file"
                                 multiple
-                                onChange={gestion_changement_fichier}
+                                onChange={gestionChangementFichier}
                                 style={{ display: 'none' }}
                             />
                         </div>
@@ -201,13 +208,24 @@ function Upload() {
                                     </span>
                                     <button
                                         type="button"
-                                        onClick={() => supprimer_fichier(index)}
+                                        onClick={() => supprimerFichier(index)}
                                         className="bouton-supprimer"
                                     >
                                         ✕
                                     </button>
                                 </div>
                             ))}
+                        </div>
+                    )}
+
+                    {en_cours_de_televersement && (
+                        <div className="conteneur-progression">
+                            <div 
+                                className="barre-progression" 
+                                style={{ width: `${barre_de_progression}%` }}
+                            >
+                                {barre_de_progression > 5 ? `${barre_de_progression}%` : ''}
+                            </div>
                         </div>
                     )}
 

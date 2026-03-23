@@ -265,6 +265,17 @@ dossierRouter.post('/api/dossiers/:dossierId/televerser', authentifierToken, ver
             return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
         }
 
+        const service_dossier = new ServiceDossier();
+        // Vérification fichiers ayant le même nom dans le même dossier
+        const fichiersExistants = await service_dossier.recupererFichiersDossier(dossierId);
+        const nomExiste = fichiersExistants.some(f => f.nom.toLowerCase() === req.file.originalname.toLowerCase());
+
+        if (nomExiste) {
+            // S'il y a un conflit, on supprime le fichier temporaire de Multer
+            await fsPromises.unlink(req.file.path).catch(() => {});
+            return res.status(409).json({ error: `Le fichier "${req.file.originalname}" existe déjà dans ce dossier.` });
+        }
+
         // Déplacer le fichier vers le dossier correct
         // Structure: user_{idCompte}/chemin-du-dossier
         const cheminDossierPhysique = path.join(SERVER_FILES_PATH, `user_${req.idCompteCreateur}`, req.cheminDossier);
@@ -282,16 +293,6 @@ dossierRouter.post('/api/dossiers/:dossierId/televerser', authentifierToken, ver
         // Mettre à jour le chemin du fichier dans l'objet req.file
         req.file.path = nouveauChemin;
 
-        const service_dossier = new ServiceDossier();
-
-        // Vérification fichiers ayant le même nom dans le même dossier
-        const fichiersExistants = await service_dossier.recupererFichiersDossier(dossierId);
-        const nomExiste = fichiersExistants.some(f => f.nom.toLowerCase() === req.file.originalname.toLowerCase());
-
-        if (nomExiste) {
-            await fsPromises.unlink(req.file.path).catch(() => {});
-            return res.status(409).json({ error: `Le fichier "${req.file.originalname}" existe déjà dans ce dossier.` });
-        }
         const resultat = await service_dossier.televerserFichier(dossierId, req.file);
         res.status(201).json(resultat);
     } catch (error) {
@@ -317,6 +318,20 @@ dossierRouter.post('/api/dossiers/:dossierId/televerser-multiple', authentifierT
             return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
         }
 
+        const service_dossier = new ServiceDossier();
+        // Vérification fichiers ayant le même nom dans le même dossier
+        const fichiersExistants = await service_dossier.recupererFichiersDossier(dossierId);
+        const nomsFichiersExistants = fichiersExistants.map(f => f.nom.toLowerCase());
+        
+        const fichiersEnConflit = req.files.filter(f => nomsFichiersExistants.includes(f.originalname.toLowerCase()));
+
+        if (fichiersEnConflit.length > 0) {
+            // S'il y a conflit, on supprime les fichiers temporaires uploadés par Multer
+            await Promise.all(req.files.map(f => fsPromises.unlink(f.path).catch(() => {})));
+            const nomsConflits = fichiersEnConflit.map(f => f.originalname).join(', ');
+            return res.status(409).json({ error: `Ce(s) fichier(s) existe(nt) déjà dans ce dossier : ${nomsConflits}` });
+        }
+
         // Déplacer les fichiers vers le dossier correct
         // Structure: user_{idCompte}/chemin-du-dossier
         const cheminDossierPhysique = path.join(SERVER_FILES_PATH, `user_${req.idCompteCreateur}`, req.cheminDossier);
@@ -334,18 +349,6 @@ dossierRouter.post('/api/dossiers/:dossierId/televerser-multiple', authentifierT
             return file;
         });
 
-        const service_dossier = new ServiceDossier();
-
-        // Vérification fichiers ayant le même nom dans le même dossier
-        const fichiersExistants = await service_dossier.recupererFichiersDossier(dossierId);
-        const nomsFichiersExistants = fichiersExistants.map(f => f.nom.toLowerCase());
-        const fichiersEnConflit = req.files.filter(f => nomsFichiersExistants.includes(f.originalname.toLowerCase()));
-
-        if (fichiersEnConflit.length > 0) {
-            await Promise.all(req.files.map(f => fsPromises.unlink(f.path).catch(() => {})));
-            const nomsConflits = fichiersEnConflit.map(f => f.originalname).join(', ');
-            return res.status(409).json({ error: `Ce(s) fichier(s) existe(nt) déjà dans ce dossier : ${nomsConflits}` });
-        }
         const resultats = await Promise.all(
             fichiersDeplaces.map(file => service_dossier.televerserFichier(dossierId, file))
         );

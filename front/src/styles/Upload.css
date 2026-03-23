@@ -188,6 +188,29 @@
     border: 1px solid var(--border-color);
 }
 
+.conteneur-progression {
+    width: 100%;
+    background-color: var(--bg-tertiary-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    height: 24px;
+}
+
+.barre-progression {
+    height: 100%;
+    background-color: var(--btn-color);
+    color: var(--btn-text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: bold;
+    transition: width 0.3s ease;
+    white-space: nowrap;
+}
+
 .bouton-televerser {
     width: 100%;
     padding: 1rem;
