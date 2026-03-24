@@ -248,6 +248,32 @@ dossierRouter.delete('/api/dossiers/:dossierId', authentifierToken, async (req, 
 
 // ===== GESTION DES FICHIERS =====
 
+// Récupérer / Voir le contenu d'un fichier
+dossierRouter.get('/api/dossiers/:dossierId/fichiers/:nomFichier', authentifierToken, verifierDossierExiste, async (req, res) => {
+    try {
+        const { nomFichier } = req.params;
+        const idUtilisateurAuthentifie = +req.utilisateur.id;
+
+        // Vérifier que le dossier appartient à l'utilisateur
+        if (req.idCompteCreateur !== idUtilisateurAuthentifie) {
+            return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
+        }
+
+        const cheminDossierPhysique = path.join(SERVER_FILES_PATH, `user_${req.idCompteCreateur}`, req.cheminDossier);
+        const cheminFichierPhysique = path.join(cheminDossierPhysique, nomFichier);
+
+        if (!fs.existsSync(cheminFichierPhysique)) {
+            return res.status(404).json({ error: 'Fichier introuvable sur le serveur' });
+        }
+
+        // Express envoie le fichier et gère automatiquement le type et le streaming basique
+        res.sendFile(cheminFichierPhysique);
+    } catch (error) {
+        console.error('Erreur lors de la récupération du fichier :', error);
+        res.status(500).json({ error: 'Erreur lors de la lecture du fichier' });
+    }
+});
+
 // Téléversement d'un fichier dans un dossier
 dossierRouter.post('/api/dossiers/:dossierId/televerser', authentifierToken, verifierDossierExiste, upload.single('fichier'), async (req, res) => {
     try {

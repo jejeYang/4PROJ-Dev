@@ -23,6 +23,8 @@ function Dashboard() {
 
     const [taille_dossiers, setTailleDossiers] = useState({});
     const [menu_options_dossier, setMenuOptionsDossier] = useState(null);
+    const [fichier_preview, setFichierPreview] = useState(null);
+    const [chargement_preview, setChargementPreview] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -434,6 +436,61 @@ function Dashboard() {
         return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
     };
 
+    const obtenirTypeFichier = (nomFichier) => {
+        const ext = nomFichier.split('.').pop().toLowerCase();
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'jfif'].includes(ext)) return 'image';
+        if (['mp4', 'webm'].includes(ext)) return 'video';
+        if (['mp3', 'wav', 'm4a', 'ogg'].includes(ext)) return 'audio';
+        if (['document', 'txt', 'md', 'html', 'js', 'json', 'yml', 'xml'].includes(ext)) return 'document';
+        return 'inconnu';
+    };
+
+    const ouvrirApercu = async (fichier) => {
+        const type = obtenirTypeFichier(fichier.nom);
+
+        if (type === 'inconnu') {
+            setFichierPreview({
+                nom: fichier.nom,
+                url: null,
+                type: 'unsupported',
+                message: "L'affichage de ce type de dossier n'est pas supporté."
+            });
+            setError('');
+            return;
+        }
+
+        setChargementPreview(true);
+        setError('');
+
+        try {
+            const token = localStorage.getItem('token');
+            // Récupère le fichier Blob (données brutes)
+            const response = await axios.get(
+                `http://localhost:3000/api/dossiers/${dossier_actuel.idDossier}/fichiers/${encodeURIComponent(fichier.nom)}`,
+                { 
+                    headers: { Authorization: `Bearer ${token}` },
+                    responseType: 'blob'
+                }
+            );
+
+            // Création d'une URL locale éphémère à partir du Blob
+            const url = URL.createObjectURL(response.data);
+            setFichierPreview({ nom: fichier.nom, url, type });
+        } catch (err) {
+            console.error('Erreur de prévisualisation:', err);
+            setError("Erreur lors du chargement de l'aperçu du fichier.");
+        } finally {
+            setChargementPreview(false);
+        }
+    };
+
+    const fermerApercu = () => {
+        if (fichier_preview && fichier_preview.url) {
+            URL.revokeObjectURL(fichier_preview.url);
+        }
+        setFichierPreview(null);
+    };
+
     if (loading) {
         return <div className="dashboard-container">Chargement...</div>;
     }
@@ -688,9 +745,14 @@ function Dashboard() {
                         ))}
                         
                         {displayItems.fichiers.map((fichier, index) => (
-                            <div key={`file-${index}`} className="dossier-ligne fichier-ligne">
+                            <div 
+                                key={`file-${index}`} 
+                                className="dossier-ligne fichier-ligne"
+                                onClick={() => ouvrirApercu(fichier)}
+                                style={{ cursor: chargement_preview ? 'wait' : 'pointer' }}
+                            >
                                 <div className="col-nom">
-                                    <span>📄</span>
+                                    <span></span>
                                     <span className="dossier-nom">{fichier.nom}</span>
                                 </div>
                                 <div className="col-id">{new Date(fichier.dateModification).toLocaleDateString('fr-FR')}</div>
@@ -718,6 +780,38 @@ function Dashboard() {
                         <div className="icone-corbeille">🗑️</div>
                         <h3>Corbeille</h3>
                         <p className="taille-dossier">{taille_dossiers[corbeille.idDossier] !== undefined ? formatFileSize(taille_dossiers[corbeille.idDossier]) : 'Calcul...'}</p>
+                    </div>
+                </div>
+            )}
+
+            {fichier_preview && (
+                <div className="modal-overlay" onClick={fermerApercu}>
+                    <div className="modal-preview-contenu" onClick={e => e.stopPropagation()}>
+                        <div className="preview-header">
+                            <h3>{fichier_preview.nom}</h3>
+                            <button className="btn-fermer-preview" onClick={fermerApercu}>✕</button>
+                        </div>
+                        
+                        <div className="preview-body">
+                            {fichier_preview.type === 'image' && (
+                                <img src={fichier_preview.url} alt={fichier_preview.nom} />
+                            )}
+                            {fichier_preview.type === 'video' && (
+                                <video controls autoPlay src={fichier_preview.url} />
+                            )}
+                            {fichier_preview.type === 'audio' && (
+                                <audio controls autoPlay src={fichier_preview.url} />
+                            )}
+                            {fichier_preview.type === 'document' && (
+                                <iframe src={fichier_preview.url} title={fichier_preview.nom} />
+                            )}
+                            
+                            {fichier_preview.type === 'unsupported' && (
+                                <div style={{ padding: '1rem', color: 'var(--text-primary-color)', textAlign: 'center' }}>
+                                    {fichier_preview.message || "L'affichage de ce type de dossier n'est pas supporté."}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}

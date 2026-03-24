@@ -1,7 +1,7 @@
 - Ajouter dans le dashboard une indication de la taille utilisée / taille restante
 - Fonction de filtre (type de fichier, taille, nom...)
 - Implémenter fonctionnalités fichiers
-- Visualiseur des fichiers (pdf / image)
+- Affichage de la taille dossiers & fichiers en KO si <0MB
 - Page de base : Taille utilisée / Taille restante ; Derniers fichiers publiés ; Derniers fichiers visionnés / téléchargés
 - Modifier affichage des paramètres (améliorer esthétique)
 - Gestion déplacement d'un dossier
@@ -11,7 +11,6 @@
 - Gestion clic droit des dossiers & fichiers
 
 BACK :
-- Il n'y a pas de dossier personnel par défaut donc créer un dossier à la racine le place dans la corbeille
 - La classe ServiceDossier manque des méthodes pour faire fonctionner les routes de la corbeille :
     - deplacerVersCorbeille
     - recupererCorbeille
