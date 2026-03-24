@@ -5,6 +5,10 @@ import '../styles/Dashboard.css';
 
 function Dashboard() {
     const [dossiers, setDossiers] = useState([]);
+    const [fichiers_base, setFichiersBase] = useState([]);
+    const [dossier_racine, setDossierRacine] = useState(null);
+    const [corbeille_info, setCorbeilleInfo] = useState(null);
+
     const [etat_survole_upload, setEtatSurvoleUpload] = useState(false);
     const [dossier_survole_upload, setDossierSurvoleUpload] = useState(null);
     const compteur_drag = useRef(0);
@@ -18,7 +22,7 @@ function Dashboard() {
     
     // États pour la navigation dans les dossiers
     const [dossier_actuel, setDossierActuel] = useState(null);
-    const [contenu_dossier, setContenuDossier] = useState([]);
+    const [contenu_dossier, setContenuDossier] = useState({ dossiers: [], fichiers: [] });
     const [fil_ariane, setFilAriane] = useState([]);
 
     const [taille_dossiers, setTailleDossiers] = useState({});
@@ -42,9 +46,29 @@ function Dashboard() {
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             
-            setDossiers(response.data || []);
-        } catch (error) {
-            console.error('Erreur lors de la récupération des données :', error);
+            const allRoots = response.data || [];
+            
+            const dossier_racine = allRoots.find(d => d.cheminDaccesDossier === `user_${user.id}`);
+            const dossier_corbeille = allRoots.find(d => d.cheminDaccesDossier === '.corbeille');
+
+            if (dossier_corbeille) setCorbeilleInfo(dossier_corbeille);
+
+            if (dossier_racine) {
+                setDossierRacine(dossier_racine);
+                const [resDossiers, resFichiers] = await Promise.all([
+                    axios.get(`http://localhost:3000/api/dossiers/${dossier_racine.idDossier}/sous-dossiers`, { headers: { Authorization: `Bearer ${token}` } }),
+                    axios.get(`http://localhost:3000/api/dossiers/${dossier_racine.idDossier}/fichiers`, { headers: { Authorization: `Bearer ${token}` } })
+                ]);
+                
+                setDossiers(resDossiers.data || []);
+                setFichiersBase(resFichiers.data || []);
+            } else {
+                setDossiers([]);
+                setFichiersBase([]);
+            }
+        } catch (erreur) {
+            console.error('Erreur lors de la récupération des données :', erreur);
+            setError('Erreur lors du chargement des données.', erreur);
         } finally {
             setLoading(false);
         }
@@ -64,8 +88,8 @@ function Dashboard() {
                     );
                     const sum = (res.data || []).reduce((acc, f) => acc + (f.taille || 0), 0);
                     return { id: dossier.idDossier, size: sum };
-                } catch (err) {
-                    alert('Erreur :'+err);
+                } catch (erreur) {
+                    console.error('Erreur lors de la récupération du contenu du dossier :', erreur);
                     return { id: dossier.idDossier, size: 0 };
                 }
             });
@@ -76,10 +100,12 @@ function Dashboard() {
             if (Object.keys(updates).length > 0) setTailleDossiers(prev => ({ ...prev, ...updates }));
         };
 
-        recupereTaille(dossiers);
+        const listToProcess = [...dossiers];
+        if (corbeille_info) listToProcess.push(corbeille_info);
+
+        recupereTaille(listToProcess);
         if (contenu_dossier && contenu_dossier.dossiers) recupereTaille(contenu_dossier.dossiers);
-    }, [dossiers, contenu_dossier, taille_dossiers]);
-    
+    }, [dossiers, contenu_dossier, taille_dossiers, corbeille_info]);
 
     // Accede au dossier et récupère son contenu (sous-dossiers + fichiers)
     const gestionClicDossier = async (dossier) => {
@@ -98,8 +124,8 @@ function Dashboard() {
                 fichiers: response_fichiers.data || []
             });
             setFilAriane([...fil_ariane, dossier]);
-        } catch (error) {
-            console.error('Erreur lors de la récupération du contenu du dossier :', error);
+        } catch (erreur) {
+            console.error('Erreur lors de la récupération du contenu du dossier :', erreur);
             setError('Erreur lors de l\'ouverture du dossier');
         }
     };
@@ -113,7 +139,7 @@ function Dashboard() {
             if (index === -1) {
                 // Clic sur "Mon Espace" - retour à la racine
                 setDossierActuel(null);
-                setContenuDossier([]);
+                setContenuDossier({ dossiers: [], fichiers: [] });
                 setFilAriane([]);
             } else {
                 // Clic sur un dossier du fil d'Ariane
@@ -133,16 +159,15 @@ function Dashboard() {
                     fichiers: response_fichiers.data || []
                 });
             }
-        } catch (error) {
-            console.error('Erreur lors de la navigation :', error);
+        } catch (erreur) {
+            console.error('Erreur lors de la navigation :', erreur);
         }
     };
 
     const naviguerVersUpload = () => {
         // Passe l'état complet pour garder le dossier actuel dans la page Upload
         navigate('/upload', { 
-            state: { 
-                folderId: dossier_actuel ? dossier_actuel.idDossier : "",
+            state: {
                 dossierActuel: dossier_actuel,
                 path: fil_ariane 
             } 
@@ -183,12 +208,11 @@ function Dashboard() {
         const files = Array.from(e.dataTransfer.files);
         if (files.length === 0) return;
 
-        // cible_id = soit le dossier survolé, soit le dossier actuel ouvert
-        const cible_id = id_dossier_specifique || (dossier_actuel ? dossier_actuel.idDossier : null);
+        //  Le dossier cible est soit spécifique, soit le dossier actuel, soit la base (user_id)
+        const cible_id = id_dossier_specifique || (dossier_actuel ? dossier_actuel.idDossier : dossier_racine?.idDossier);
         
         if (!cible_id) {
-            setEtatSurvoleUpload(false);
-            setError("Impossible de publier à la racine.");
+            setError("Impossible de déterminer le dossier de destination.");
             return;
         }
 
@@ -210,9 +234,13 @@ function Dashboard() {
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
                 setContenuDossier(prev => ({ ...prev, fichiers: resFichiers.data || [] }));
+            } else if (!dossier_actuel && cible_id === dossier_racine?.idDossier) {
+                const resFichiersBase = await axios.get(`http://localhost:3000/api/dossiers/${cible_id}/fichiers`, { headers: { Authorization: `Bearer ${token}` } });
+                setFichiersBase(resFichiersBase.data || []);
             }
-        } catch (err) {
-            setError('Erreur lors de l\'upload : ' + (err.response?.data?.error || err.message));
+        } catch (erreur) {
+            console.error('Erreur lors de l\'upload :', erreur);
+            setError('Erreur lors de l\'upload : ' + (erreur.response?.data?.error || erreur.message));
         }
     };
 
@@ -238,6 +266,7 @@ function Dashboard() {
 
         setCreating(true);
         setError('');
+        const id_dossier_parent = dossier_actuel ? dossier_actuel.idDossier : dossier_racine?.idDossier;
 
         try {
             const token = localStorage.getItem('token');
@@ -246,7 +275,7 @@ function Dashboard() {
                 'http://localhost:3000/api/dossiers',
                 {
                     cheminDaccesDossier: nom_dossier,
-                    idDossierParent: dossier_actuel ? dossier_actuel.idDossier : null
+                    idDossierParent: id_dossier_parent
                 },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -263,9 +292,9 @@ function Dashboard() {
             
             setChangeNomDossier('');
             setOuvreModal({ type: null, data: null });
-        } catch (err) {
-            setError(err.response?.data?.error || 'Erreur lors de la création du dossier');
-            console.error('Erreur lors de la création de dossier :', err);
+        } catch (erreur) {
+            setError(erreur.response?.data?.error || 'Erreur lors de la création du dossier');
+            console.error('Erreur lors de la création de dossier :', erreur);
         } finally {
             setCreating(false);
         }
@@ -315,9 +344,9 @@ function Dashboard() {
                 setDossiers(prev => prev.map(d => d.idDossier === ouvre_modal.data.idDossier ? res.data : d));
             }
             setOuvreModal({ type: null, data: null });
-        } catch (err) {
-            console.error('Erreur lors du renommage de dossier :', err);
-            setError(err.response?.data?.error || 'Erreur lors du renommage');
+        } catch (erreur) {
+            console.error('Erreur lors du renommage de dossier :', erreur);
+            setError(erreur.response?.data?.error || 'Erreur lors du renommage');
         }
     };
 
@@ -341,16 +370,15 @@ function Dashboard() {
             } else {
                 setDossiers(prev => prev.filter(d => d.idDossier !== dossier.idDossier));
             }
-            if (!dossier_actuel) fetchData();
 
             setMenuOptionsDossier(null);
             setOuvreModal({ type: 'delete_success', data: dossier });
             setTimeout(() => setOuvreModal({ type: null, data: null }), 2000);
             
-        } catch (err) {
-            console.error('Erreur lors du déplacement vers la corbeille :', err);
+        } catch (erreur) {
+            console.error('Erreur lors du déplacement vers la corbeille :', erreur);
             setOuvreModal({ type: null, data: null });
-            setError(err.response?.data?.error || 'Erreur lors du déplacement vers la corbeille');
+            setError(erreur.response?.data?.error || 'Erreur lors du déplacement vers la corbeille');
         }
     };
 
@@ -374,8 +402,9 @@ function Dashboard() {
             }));
             
             setOuvreModal({ type: null, data: null });
-        } catch (err) {
-            setError(err.response?.data?.error || 'Erreur lors de la suppression définitive');
+        } catch (erreur) {
+            console.error('Erreur lors de la suppression définitive :', erreur);
+            setError(erreur.response?.data?.error || 'Erreur lors de la suppression définitive');
         }
     };
 
@@ -394,8 +423,9 @@ function Dashboard() {
 
             setContenuDossier({ dossiers: [], fichiers: [] });
             setOuvreModal({ type: null, data: null });
-        } catch (err) {
-            setError(err.response?.data?.error || 'Erreur lors du vidage de la corbeille');
+        } catch (erreur) {
+            console.error('Erreur lors du vidage de la corbeille :', erreur);
+            setError(erreur.response?.data?.error || 'Erreur lors du vidage de la corbeille');
         }
     };
 
@@ -419,18 +449,20 @@ function Dashboard() {
                 dossiers: prev.dossiers.filter(d => d.idDossier !== ouvre_modal.data.idDossier)
             }));
             
-            setOuvreModal({ type: 'restore_success', data: ouvre_modal.data });
             setTimeout(() => setOuvreModal({ type: null, data: null }), 2000);
             
-        } catch (err) {
-            console.error('Erreur lors de la restauration :', err);
-            setError(err.response?.data?.error || 'Erreur lors de la restauration');
+            // On refresh la base si on n'est pas dans un dossier
+            if (!dossier_actuel) fetchData();
+        } catch (erreur) {
+            console.error('Erreur lors de la restauration :', erreur);
+            setError(erreur.response?.data?.error || 'Erreur lors de la restauration');
         }
     };
 
     const supprimerFichier = async (fichier) => {
-        if (!dossier_actuel) {
-            setError('Aucun dossier n’est ouvert pour supprimer un fichier.');
+        const id_dossier_actuel = dossier_actuel ? dossier_actuel.idDossier : dossier_racine?.idDossier;
+        if (!id_dossier_actuel) {
+            setError('Erreur d\'identification du dossier.');
             return;
         }
 
@@ -440,18 +472,22 @@ function Dashboard() {
         try {
             const token = localStorage.getItem('token');
             await axios.delete(
-                `http://localhost:3000/api/dossiers/${dossier_actuel.idDossier}/fichiers/${encodeURIComponent(fichier.nom)}`,
+                `http://localhost:3000/api/dossiers/${id_dossier_actuel}/fichiers/${encodeURIComponent(fichier.nom)}`,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
-            setContenuDossier(prev => ({
-                ...prev,
-                fichiers: prev.fichiers.filter(f => f.nom !== fichier.nom)
-            }));
+            if (dossier_actuel) {
+                setContenuDossier(prev => ({
+                    ...prev,
+                    fichiers: prev.fichiers.filter(f => f.nom !== fichier.nom)
+                }));
+            } else {
+                setFichiersBase(prev => prev.filter(f => f.nom !== fichier.nom));
+            }
             setError('');
-        } catch (err) {
-            console.error('Erreur lors de la suppression du fichier :', err);
-            setError(err.response?.data?.error || 'Erreur lors de la suppression de fichier');
+        } catch (erreur) {
+            console.error('Erreur lors de la suppression du fichier :', erreur);
+            setError(erreur.response?.data?.error || 'Erreur lors de la suppression de fichier');
         }
     };
 
@@ -468,7 +504,7 @@ function Dashboard() {
         if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'jfif'].includes(ext)) return 'image';
         if (['mp4', 'webm'].includes(ext)) return 'video';
         if (['mp3', 'wav', 'm4a', 'ogg'].includes(ext)) return 'audio';
-        if (['document', 'txt', 'md', 'html', 'js', 'json', 'yml', 'xml'].includes(ext)) return 'document';
+        if (['pdf', 'txt', 'md', 'html', 'js', 'json', 'yml', 'xml'].includes(ext)) return 'document';
         return 'inconnu';
     };
 
@@ -489,11 +525,13 @@ function Dashboard() {
         setChargementPreview(true);
         setError('');
 
+        const id_dossier_actuel = dossier_actuel ? dossier_actuel.idDossier : dossier_racine?.idDossier;
+
         try {
             const token = localStorage.getItem('token');
             // Récupère le fichier Blob (données brutes)
             const response = await axios.get(
-                `http://localhost:3000/api/dossiers/${dossier_actuel.idDossier}/fichiers/${encodeURIComponent(fichier.nom)}`,
+                `http://localhost:3000/api/dossiers/${id_dossier_actuel}/fichiers/${encodeURIComponent(fichier.nom)}`,
                 { 
                     headers: { Authorization: `Bearer ${token}` },
                     responseType: 'blob'
@@ -503,8 +541,8 @@ function Dashboard() {
             // Création d'une URL locale éphémère à partir du Blob
             const url = URL.createObjectURL(response.data);
             setFichierPreview({ nom: fichier.nom, url, type });
-        } catch (err) {
-            console.error('Erreur de prévisualisation:', err);
+        } catch (erreur) {
+            console.error('Erreur de prévisualisation:', erreur);
             setError("Erreur lors du chargement de l'aperçu du fichier.");
         } finally {
             setChargementPreview(false);
@@ -528,17 +566,10 @@ function Dashboard() {
         fichiers: contenu_dossier.fichiers || []
     } : {
         dossiers: dossiers,
-        fichiers: []
+        fichiers: fichiers_base
     };
 
     const allItems = [...displayItems.dossiers, ...displayItems.fichiers];
-    // Récupere les dossiers visibles (sauf la corbeille) et la corbeille séparément
-    const dossiers_visible = (displayItems.dossiers || []).filter(d => 
-        d && d.cheminDaccesDossier && d.cheminDaccesDossier !== '.corbeille'
-    );
-    const corbeille = (displayItems.dossiers || []).find(d => 
-        d && d.cheminDaccesDossier && (d.cheminDaccesDossier === '.corbeille')
-    );
     const estDansCorbeille = fil_ariane.some(dossier => dossier.cheminDaccesDossier === '.corbeille');
 
     return (
@@ -571,7 +602,7 @@ function Dashboard() {
                         </nav>
                     )}
                 </div>
-<               div className={`dashboard-header-actions ${dossier_actuel ? 'in-folder' : ''}`}>
+                <div className={`dashboard-header-actions ${dossier_actuel ? 'in-folder' : ''}`}>
                     {!estDansCorbeille ? (
                         <>
                             <button className="btn-publie-dashboard-header" onClick={naviguerVersUpload}>
@@ -685,15 +716,6 @@ function Dashboard() {
                                 </div>
                             </div>
                         )}
-                        {ouvre_modal.type === 'restore_success' && (
-                            <div>
-                                <h3>Dossier restauré ♻️</h3>
-                                <p>Le dossier "{ouvre_modal.data?.cheminDaccesDossier}" a bien été remis à sa place d'origine.</p>
-                                <div className="modal-bouttons">
-                                    <button className="btn-confirmer" onClick={() => setOuvreModal({ type: null, data: null })}>OK</button>
-                                </div>
-                            </div>
-                        )}
                     </div>
                 </div>
             )}
@@ -708,7 +730,7 @@ function Dashboard() {
                     </div>
                 ) : (
                     <div className="dossiers-liste">
-                        {dossiers_visible.map((dossier) => (
+                        {displayItems.dossiers.map((dossier) => (
                             <div 
                                 key={dossier.idDossier} 
                                 className={`dossier-ligne ${dossier_survole_upload === dossier.idDossier ? 'drag-over' : ''}`} 
@@ -793,20 +815,20 @@ function Dashboard() {
                 )}
             </div>
 
-            {corbeille && (
+            {corbeille_info && !dossier_actuel && (
                 <div className="section-corbeille">
                     <h2>Corbeille</h2>
                     <div
                         className="bloc-corbeille"
                         role="button"
                         tabIndex={0}
-                        onClick={() => gestionClicDossier(corbeille)}
-                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') gestionClicDossier(corbeille); }}
+                        onClick={() => gestionClicDossier(corbeille_info)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') gestionClicDossier(corbeille_info); }}
                         aria-label="Ouvrir la corbeille"
                     >
                         <div className="icone-corbeille">🗑️</div>
                         <h3>Corbeille</h3>
-                        <p className="taille-dossier">{taille_dossiers[corbeille.idDossier] !== undefined ? formatFileSize(taille_dossiers[corbeille.idDossier]) : 'Calcul...'}</p>
+                        <p className="taille-dossier">{taille_dossiers[corbeille_info.idDossier] !== undefined ? formatFileSize(taille_dossiers[corbeille_info.idDossier]) : 'Calcul...'}</p>
                     </div>
                 </div>
             )}
@@ -834,8 +856,8 @@ function Dashboard() {
                             )}
                             
                             {fichier_preview.type === 'unsupported' && (
-                                <div style={{ padding: '1rem', color: 'var(--text-primary-color)', textAlign: 'center' }}>
-                                    {fichier_preview.message || "L'affichage de ce type de dossier n'est pas supporté."}
+                                <div>
+                                    L'affichage de ce type de fichier n'est pas supporté.
                                 </div>
                             )}
                         </div>
