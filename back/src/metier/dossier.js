@@ -67,7 +67,21 @@ class ServiceDossier {
         return await this.dto_dossier.recupererDossierRacineParCompte(idCompteCreateur);
     }
 
+    async deplacerVersCorbeille(dossierId, idCompteCreateur) {
+        return await this.dto_dossier.deplacerVersCorbeille(dossierId, idCompteCreateur);
+    }
 
+    async restaurerDossier(dossierId) {
+        return await this.dto_dossier.restaurerDossier(dossierId);
+    }
+
+    async viderCorbeille(idCompteCreateur) {
+        return await this.dto_dossier.viderCorbeille(idCompteCreateur);
+    }
+
+    async recupererTailleDossier(dossierId) {
+        return await this.dto_dossier.recupererTailleDossier(dossierId);
+    }
 
 }
 

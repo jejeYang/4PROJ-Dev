@@ -171,6 +171,19 @@ dossierRouter.get('/api/dossiers/:dossierId/fichiers', authentifierToken, async 
     }
 });
 
+// READ - Récupérer la taille d'un dossier (incluant sous-dossiers)
+dossierRouter.get('/api/dossiers/:dossierId/taille', authentifierToken, async (req, res) => {
+    try {
+        const { dossierId } = req.params;
+        const service_dossier = new ServiceDossier();
+        const taille = await service_dossier.recupererTailleDossier(dossierId);
+        res.json({ dossierId, taille });
+    } catch (error) {
+        console.error('Erreur lors de la récupération de la taille :', error);
+        res.status(500).json({ error: error.message || 'Erreur lors de la récupération' });
+    }
+});
+
 // UPDATE - Mettre à jour un dossier
 dossierRouter.put('/api/dossiers/:dossierId', authentifierToken, async (req, res) => {
     try {
