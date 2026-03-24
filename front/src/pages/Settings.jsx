@@ -1,53 +1,68 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import '../styles/Settings.css';
+import { ThemeContext } from '../context/theme_context';
 
 function Settings() {
-    const [user, setUser] = useState(null);
-    const [formData, setFormData] = useState({ nom: '', email: '' });
-    const [passwordData, setPasswordData] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
-    const [loading, setLoading] = useState(true);
-    const [message, setMessage] = useState('');
-    const navigate = useNavigate();
+    const [utilisateur, setUtilisateur] = useState(() => {
+        const donneesSauvegardees = localStorage.getItem('user');
+        return donneesSauvegardees ? JSON.parse(donneesSauvegardees) : null;
+    });
 
-    useEffect(() => {
-        const userData = JSON.parse(localStorage.getItem('user'));
-        if (userData) {
-            setUser(userData);
-            setFormData({ nom: userData.nom, email: userData.email });
-            setLoading(false);
+    const [donneesFormulaire, setDonneesFormulaire] = useState(() => {
+        const donneesSauvegardees = localStorage.getItem('user');
+        if (donneesSauvegardees) {
+            const parsed = JSON.parse(donneesSauvegardees);
+            return { nom: parsed.nom, email: parsed.email };
         }
-    }, []);
+        return { nom: '', email: '' };
+    });
 
-    const handleProfileChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+    const [donneesMotDePasse, setDonneesMotDePasse] = useState({ 
+        ancienMotDePasse: '', 
+        nouveauMotDePasse: '', 
+        confirmerMotDePasse: '' 
+    });
+    
+    const [messageNotification, setMessageNotification] = useState('');
+    const naviguer = useNavigate();
+    const { toggle, toggleFunction } = useContext(ThemeContext);
+
+    const gestionChangementProfil = (e) => {
+        setDonneesFormulaire({ ...donneesFormulaire, [e.target.name]: e.target.value });
     };
 
-    const handlePasswordChange = (e) => {
-        setPasswordData({ ...passwordData, [e.target.name]: e.target.value });
+    const gestionChangementMotDePasse = (e) => {
+        setDonneesMotDePasse({ ...donneesMotDePasse, [e.target.name]: e.target.value });
     };
 
-    const handleUpdateProfile = async (e) => {
+    const mettreAJourProfil = async (e) => {
         e.preventDefault();
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.put(
-                `http://localhost:3000/api/users/${user.id}`,
-                formData,
+            // Correction ESLint : on utilise await sans assigner à 'response' car on ne s'en sert pas
+            await axios.put(
+                `http://localhost:3000/api/users/${utilisateur.id}`,
+                donneesFormulaire,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
-            setMessage('Profil mis à jour avec succès');
-            setTimeout(() => setMessage(''), 3000);
-        } catch (error) {
-            setMessage('Erreur: ' + (error.response?.data?.message || error.message));
+            
+            const utilisateurMisAJour = { ...utilisateur, ...donneesFormulaire };
+            localStorage.setItem('user', JSON.stringify(utilisateurMisAJour));
+            setUtilisateur(utilisateurMisAJour);
+
+            setMessageNotification('Profil mis à jour avec succès');
+            setTimeout(() => setMessageNotification(''), 3000);
+        } catch (erreur) {
+            setMessageNotification('Erreur: ' + (erreur.response?.data?.message || erreur.message));
         }
     };
 
-    const handleChangePassword = async (e) => {
+    const changerMotDePasse = async (e) => {
         e.preventDefault();
-        if (passwordData.newPassword !== passwordData.confirmPassword) {
-            setMessage('Les mots de passe ne correspondent pas');
+        if (donneesMotDePasse.nouveauMotDePasse !== donneesMotDePasse.confirmerMotDePasse) {
+            setMessageNotification('Les mots de passe ne correspondent pas');
             return;
         }
         try {
@@ -55,20 +70,20 @@ function Settings() {
             await axios.post(
                 'http://localhost:3000/api/change-password',
                 {
-                    oldPassword: passwordData.oldPassword,
-                    newPassword: passwordData.newPassword
+                    oldPassword: donneesMotDePasse.ancienMotDePasse,
+                    newPassword: donneesMotDePasse.nouveauMotDePasse
                 },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
-            setMessage('Mot de passe changé avec succès');
-            setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
-            setTimeout(() => setMessage(''), 3000);
-        } catch (error) {
-            setMessage('Erreur: ' + (error.response?.data?.message || error.message));
+            setMessageNotification('Mot de passe changé avec succès');
+            setDonneesMotDePasse({ ancienMotDePasse: '', nouveauMotDePasse: '', confirmerMotDePasse: '' });
+            setTimeout(() => setMessageNotification(''), 3000);
+        } catch (erreur) {
+            setMessageNotification('Erreur: ' + (erreur.response?.data?.message || erreur.message));
         }
     };
 
-    const handleDeleteAccount = () => {
+    const supprimerCompte = () => {
         if (window.confirm('Êtes-vous sûr ? Cette action est irréversible.')) {
             if (window.confirm('Êtes-vous vraiment sûr ?')) {
                 try {
@@ -78,15 +93,15 @@ function Settings() {
                     });
                     localStorage.removeItem('token');
                     localStorage.removeItem('user');
-                    navigate('/');
-                } catch (error) {
-                    setMessage('Erreur lors de la suppression');
+                    naviguer('/');
+                } catch { 
+                    setMessageNotification('Erreur lors de la suppression');
                 }
             }
         }
     };
 
-    if (loading) return <div>Chargement...</div>;
+    if (!utilisateur) return <div>Vous n'êtes pas connecté.</div>;
 
     return (
         <div className="settings-container">
@@ -94,20 +109,20 @@ function Settings() {
                 <h1>Paramètres</h1>
             </div>
 
-            {message && <div className="message">{message}</div>}
+            {messageNotification && <div className="message">{messageNotification}</div>}
 
             <div className="settings-grid">
-                {/* Profile Settings */}
+                {/* Paramètres du profil */}
                 <div className="settings-card">
                     <h2>Informations du profil</h2>
-                    <form onSubmit={handleUpdateProfile}>
+                    <form onSubmit={mettreAJourProfil}>
                         <div className="form-group">
                             <label>Nom d'utilisateur</label>
                             <input
                                 type="text"
                                 name="nom"
-                                value={formData.nom}
-                                onChange={handleProfileChange}
+                                value={donneesFormulaire.nom}
+                                onChange={gestionChangementProfil}
                                 required
                             />
                         </div>
@@ -116,8 +131,8 @@ function Settings() {
                             <input
                                 type="email"
                                 name="email"
-                                value={formData.email}
-                                onChange={handleProfileChange}
+                                value={donneesFormulaire.email}
+                                onChange={gestionChangementProfil}
                                 required
                             />
                         </div>
@@ -127,17 +142,16 @@ function Settings() {
                     </form>
                 </div>
 
-                {/* Password Settings */}
                 <div className="settings-card">
                     <h2>Changer le mot de passe</h2>
-                    <form onSubmit={handleChangePassword}>
+                    <form onSubmit={changerMotDePasse}>
                         <div className="form-group">
                             <label>Ancien mot de passe</label>
                             <input
                                 type="password"
-                                name="oldPassword"
-                                value={passwordData.oldPassword}
-                                onChange={handlePasswordChange}
+                                name="ancienMotDePasse"
+                                value={donneesMotDePasse.ancienMotDePasse}
+                                onChange={gestionChangementMotDePasse}
                                 required
                             />
                         </div>
@@ -145,9 +159,9 @@ function Settings() {
                             <label>Nouveau mot de passe</label>
                             <input
                                 type="password"
-                                name="newPassword"
-                                value={passwordData.newPassword}
-                                onChange={handlePasswordChange}
+                                name="nouveauMotDePasse"
+                                value={donneesMotDePasse.nouveauMotDePasse}
+                                onChange={gestionChangementMotDePasse}
                                 required
                             />
                         </div>
@@ -155,9 +169,9 @@ function Settings() {
                             <label>Confirmer le mot de passe</label>
                             <input
                                 type="password"
-                                name="confirmPassword"
-                                value={passwordData.confirmPassword}
-                                onChange={handlePasswordChange}
+                                name="confirmerMotDePasse"
+                                value={donneesMotDePasse.confirmerMotDePasse}
+                                onChange={gestionChangementMotDePasse}
                                 required
                             />
                         </div>
@@ -167,12 +181,18 @@ function Settings() {
                     </form>
                 </div>
 
-                {/* Danger Zone */}
                 <div className="settings-card danger">
                     <h2>Zone de danger</h2>
                     <p>Supprimer votre compte supprimera tous vos fichiers et données.</p>
-                    <button onClick={handleDeleteAccount} className="btn-danger">
+                    <button onClick={supprimerCompte} className="btn-danger">
                         Supprimer le compte
+                    </button>
+                </div>
+
+                <div className="settings-card">
+                    <h2>Thème</h2>
+                    <button onClick={toggleFunction} className="btn-primary">
+                        {toggle ? 'Passer au thème clair' : 'Passer au thème sombre'}
                     </button>
                 </div>
             </div>

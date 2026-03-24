@@ -93,6 +93,20 @@ dossierRouter.post('/api/dossiers', authentifierToken, async (req, res) => {
             dossierParentId = idDossierParent;
         }
 
+        // Vérifier qu'il n'existe pas déjà un dossier avec le même nom dans le même dossier parent
+        let dossiersExistants = [];
+        if (dossierParentId) {
+            dossiersExistants = await service_dossier.recupererSousDossiers(dossierParentId);
+        } else {
+            dossiersExistants = await service_dossier.recupererDossierRacineParCompte(idUtilisateurAuthentifie);
+        }
+        const nomExisteDeja = dossiersExistants.some(
+            d => d.cheminDaccesDossier.toLowerCase() === cheminDaccesDossier.trim().toLowerCase()
+        );
+        if (nomExisteDeja) {
+            return res.status(409).json({ error: 'Un dossier portant ce nom existe déjà à cet emplacement.' });
+        }
+
         const dossier = { 
             idCompteCreateur: idUtilisateurAuthentifie, 
             cheminDaccesDossier, 
@@ -191,7 +205,7 @@ dossierRouter.put('/api/dossiers/:dossierId', authentifierToken, async (req, res
         const { cheminDaccesDossier } = req.body;
         const idUtilisateurAuthentifie = +req.utilisateur.id;
 
-         if (!cheminDaccesDossier) {
+        if (!cheminDaccesDossier) {
             return res.status(400).json({ error: 'cheminDaccesDossier est requis' });
         }
 
@@ -202,7 +216,21 @@ dossierRouter.put('/api/dossiers/:dossierId', authentifierToken, async (req, res
             return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
         }
 
-        const resultat = await service_dossier.mettreAJourDossier(dossierId, cheminDaccesDossier);
+        // Vérifier qu'il n'existe pas déjà un dossier avec le même nom dans le même dossier parent
+        let dossiersExistants = [];
+        if (dossier.idDossierParent) {
+            dossiersExistants = await service_dossier.recupererSousDossiers(dossier.idDossierParent);
+        } else {
+            dossiersExistants = await service_dossier.recupererDossierRacineParCompte(idUtilisateurAuthentifie);
+        }
+        const nomExisteDeja = dossiersExistants.some(
+            d => d.cheminDaccesDossier.toLowerCase() === cheminDaccesDossier.trim().toLowerCase() && d.idDossier !== Number(dossierId)
+        );
+        if (nomExisteDeja) {
+            return res.status(409).json({ error: 'Un dossier portant ce nom existe déjà à cet emplacement.' });
+        }
+
+        const resultat = await service_dossier.mettreAJourDossier(dossierId, cheminDaccesDossier.trim());
         res.json(resultat);
     } catch (error) {
         console.error('Erreur lors de la mise à jour du dossier :', error);
@@ -250,6 +278,17 @@ dossierRouter.post('/api/dossiers/:dossierId/televerser', authentifierToken, ver
             return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
         }
 
+        const service_dossier = new ServiceDossier();
+        // Vérification fichiers ayant le même nom dans le même dossier
+        const fichiersExistants = await service_dossier.recupererFichiersDossier(dossierId);
+        const nomExiste = fichiersExistants.some(f => f.nom.toLowerCase() === req.file.originalname.toLowerCase());
+
+        if (nomExiste) {
+            // S'il y a un conflit, on supprime le fichier temporaire de Multer
+            await fsPromises.unlink(req.file.path).catch(() => {});
+            return res.status(409).json({ error: `Le fichier "${req.file.originalname}" existe déjà dans ce dossier.` });
+        }
+
         // Déplacer le fichier vers le dossier correct
         // Structure: user_{idCompte}/chemin-du-dossier
         const cheminDossierPhysique = path.join(SERVER_FILES_PATH, `user_${req.idCompteCreateur}`, req.cheminDossier);
@@ -267,7 +306,6 @@ dossierRouter.post('/api/dossiers/:dossierId/televerser', authentifierToken, ver
         // Mettre à jour le chemin du fichier dans l'objet req.file
         req.file.path = nouveauChemin;
 
-        const service_dossier = new ServiceDossier();
         const resultat = await service_dossier.televerserFichier(dossierId, req.file);
         res.status(201).json(resultat);
     } catch (error) {
@@ -293,6 +331,20 @@ dossierRouter.post('/api/dossiers/:dossierId/televerser-multiple', authentifierT
             return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
         }
 
+        const service_dossier = new ServiceDossier();
+        // Vérification fichiers ayant le même nom dans le même dossier
+        const fichiersExistants = await service_dossier.recupererFichiersDossier(dossierId);
+        const nomsFichiersExistants = fichiersExistants.map(f => f.nom.toLowerCase());
+        
+        const fichiersEnConflit = req.files.filter(f => nomsFichiersExistants.includes(f.originalname.toLowerCase()));
+
+        if (fichiersEnConflit.length > 0) {
+            // S'il y a conflit, on supprime les fichiers temporaires uploadés par Multer
+            await Promise.all(req.files.map(f => fsPromises.unlink(f.path).catch(() => {})));
+            const nomsConflits = fichiersEnConflit.map(f => f.originalname).join(', ');
+            return res.status(409).json({ error: `Ce(s) fichier(s) existe(nt) déjà dans ce dossier : ${nomsConflits}` });
+        }
+
         // Déplacer les fichiers vers le dossier correct
         // Structure: user_{idCompte}/chemin-du-dossier
         const cheminDossierPhysique = path.join(SERVER_FILES_PATH, `user_${req.idCompteCreateur}`, req.cheminDossier);
@@ -310,7 +362,6 @@ dossierRouter.post('/api/dossiers/:dossierId/televerser-multiple', authentifierT
             return file;
         });
 
-        const service_dossier = new ServiceDossier();
         const resultats = await Promise.all(
             fichiersDeplaces.map(file => service_dossier.televerserFichier(dossierId, file))
         );
@@ -319,6 +370,7 @@ dossierRouter.post('/api/dossiers/:dossierId/televerser-multiple', authentifierT
         console.error('Erreur lors du téléversement multiple :', error);
         res.status(500).json({ error: error.message || 'Erreur lors du téléversement' });
     }
+});
 
 // ===== GESTION DE LA CORBEILLE =====
 
@@ -355,7 +407,7 @@ dossierRouter.delete('/api/dossiers/:dossierId/vers-corbeille', authentifierToke
             return res.status(400).json({ error: 'Impossible de supprimer la corbeille' });
         }
 
-        const resultat = await service_dossier.deplacerVerCorbeille(dossierId, idUtilisateurAuthentifie);
+        const resultat = await service_dossier.deplacerVersCorbeille(dossierId, idUtilisateurAuthentifie);
         res.json({ message: 'Dossier déplacé à la corbeille', dossier: resultat });
     } catch (error) {
         console.error('Erreur lors du déplacement vers la corbeille :', error);
@@ -403,9 +455,6 @@ dossierRouter.delete('/api/corbeille/vider', authentifierToken, async (req, res)
         console.error('Erreur lors du vidage de la corbeille :', error);
         res.status(500).json({ error: error.message || 'Erreur lors du vidage' });
     }
-});
-
-    
 });
 
 export default dossierRouter;

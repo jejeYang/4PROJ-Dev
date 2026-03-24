@@ -84,14 +84,17 @@ class DtoDossier {
     async supprimerDossier(dossierId) {
         const dossier = await this.recupererDossierParId(dossierId);
 
+        const cheminRelatif = await this.construireCheminComplet(dossierId);
         const chemin = path.join(
             SERVER_FILES_PATH,
             `user_${dossier.idCompteCreateur}`,
-            dossier.cheminDaccesDossier
+            cheminRelatif
         );
 
         try {
-            await fs.rm(chemin, { recursive: true, force: true });
+            if (fs.existsSync(chemin)) {
+                fs.rmSync(chemin, { recursive: true, force: true });
+            }
         } catch (e) {
             console.error("Erreur suppression dossier physique", e);
         }
