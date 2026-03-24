@@ -39,3 +39,4 @@ coverage/
 
 # Storage files
 .back/storage/
+/back/storage/

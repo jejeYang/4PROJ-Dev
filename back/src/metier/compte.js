@@ -45,6 +45,18 @@ class ServiceCompte {
         return null;
     }
 
+    async mettreAJourCompte(idCompte, donnees) {
+        return await this.dto_compte.mettreAJourCompte(idCompte, donnees);
+    }
+
+    async changerMotDePasse(idCompte, ancienMdp, nouveauMdp) {
+        return await this.dto_compte.changerMotDePasse(idCompte, ancienMdp, nouveauMdp);
+    }
+
+    async supprimerCompte(idCompte) {
+        return await this.dto_compte.supprimerCompte(idCompte);
+    }
+
     verifierToken(token) {
         try {
             return jwt.verify(token, this.jwtSecret);

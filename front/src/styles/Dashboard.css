@@ -355,6 +355,69 @@
     margin-bottom: 0;
 }
 
+.modal-preview-contenu {
+    background: var(--bg-primary-color);
+    padding: 1.5rem;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 1000px;
+    height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 25px var(--btn-shadow);
+}
+
+.preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+}
+
+.preview-header h3 {
+    margin: 0;
+    color: var(--text-primary-color);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.btn-fermer-preview {
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-primary-color);
+    cursor: pointer;
+}
+
+.preview-body {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: var(--bg-secondary-color);
+    border-radius: 8px;
+}
+
+.preview-body img, .preview-body video {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.preview-body iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+.preview-body audio {
+    width: 80%;
+}
+
 @media (max-width: 768px) {
     .dossier-ligne {
         grid-template-columns: 1fr;
