@@ -52,6 +52,15 @@ class DtoCompte {
             const cheminDossierUtilisateur = path.join(SERVER_FILES_PATH, `user_${created.idCompte}`);
             await fs.mkdir(cheminDossierUtilisateur, { recursive: true });
 
+            // Créer une entrée dossier pour le dossier utilisateur (base + idDossierParent null)
+            await tx.dossier.create({
+                data: {
+                    idCompteCreateur: created.idCompte,
+                    cheminDaccesDossier: `user_${created.idCompte}`,
+                    idDossierParent: null,
+                },
+            });
+
             return created;
         });
 

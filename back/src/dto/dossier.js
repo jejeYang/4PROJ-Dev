@@ -119,7 +119,25 @@ class DtoDossier {
         };
     }
 
-    async supprimerFichier(dossierId, filePath) {}
+    async supprimerFichier(dossierId, fileName) {
+        const dossier = await this.recupererDossierParId(dossierId);
+
+        const cheminComplet = await this.construireCheminComplet(dossierId);
+        const cheminPhysique = path.join(SERVER_FILES_PATH, `user_${dossier.idCompteCreateur}`, cheminComplet, fileName);
+
+        if (!fs.existsSync(cheminPhysique)) {
+            throw new Error(`Fichier "${fileName}" introuvable dans le dossier id ${dossierId}`);
+        }
+
+        const stat = fs.statSync(cheminPhysique);
+        if (!stat.isFile()) {
+            throw new Error(`Cible "${fileName}" n'est pas un fichier`);
+        }
+
+        fs.unlinkSync(cheminPhysique);
+        return { message: `Fichier '${fileName}' supprimé`, dossierId, fileName };
+    }
+
     async recupererEndpoints(dossierId) {}
 
     async construireCheminComplet(dossierId) {
@@ -229,12 +247,11 @@ class DtoDossier {
             return [];
         }
 
-        // Récupérer tous les dossiers de la corbeille
+        // Supprimer tous les dossiers de la corbeille
         const dossiersCorbeille = await prisma.dossier.findMany({
             where: { idDossierParent: corbeille.idDossier },
         });
 
-        // Supprimer tous les dossiers de la corbeille
         const dossiersSupprimes = [];
         for (const dossier of dossiersCorbeille) {
             try {
@@ -243,6 +260,27 @@ class DtoDossier {
             } catch (error) {
                 console.error(`Erreur lors de la suppression du dossier ${dossier.idDossier}:`, error);
             }
+        }
+
+        // Supprimer les fichiers directement présents dans le dossier .corbeille
+        try {
+            const cheminCorbeillePhysique = path.join(SERVER_FILES_PATH, `user_${idCompteCreateur}`, corbeille.cheminDaccesDossier);
+            if (fs.existsSync(cheminCorbeillePhysique)) {
+                const elements = fs.readdirSync(cheminCorbeillePhysique);
+                for (const elt of elements) {
+                    const eltPath = path.join(cheminCorbeillePhysique, elt);
+                    if (fs.existsSync(eltPath)) {
+                        const stats = fs.statSync(eltPath);
+                        if (stats.isDirectory()) {
+                            fs.rmSync(eltPath, { recursive: true, force: true });
+                        } else {
+                            fs.unlinkSync(eltPath);
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Erreur lors du nettoyage des fichiers de la corbeille :', error);
         }
 
         return dossiersSupprimes;
