@@ -428,6 +428,33 @@ function Dashboard() {
         }
     };
 
+    const supprimerFichier = async (fichier) => {
+        if (!dossier_actuel) {
+            setError('Aucun dossier n’est ouvert pour supprimer un fichier.');
+            return;
+        }
+
+        const confirm = window.confirm(`Supprimer définitivement le fichier "${fichier.nom}" ?`);
+        if (!confirm) return;
+
+        try {
+            const token = localStorage.getItem('token');
+            await axios.delete(
+                `http://localhost:3000/api/dossiers/${dossier_actuel.idDossier}/fichiers/${encodeURIComponent(fichier.nom)}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            setContenuDossier(prev => ({
+                ...prev,
+                fichiers: prev.fichiers.filter(f => f.nom !== fichier.nom)
+            }));
+            setError('');
+        } catch (err) {
+            console.error('Erreur lors de la suppression du fichier :', err);
+            setError(err.response?.data?.error || 'Erreur lors de la suppression de fichier');
+        }
+    };
+
     const formatFileSize = (bytes) => {
         if (bytes === 0) return '0 B';
         const k = 1024;
@@ -758,7 +785,7 @@ function Dashboard() {
                                 <div className="col-id">{new Date(fichier.dateModification).toLocaleDateString('fr-FR')}</div>
                                 <div className="col-taille">{formatFileSize(fichier.taille)}</div>
                                 <div className="col-actions">
-                                    <button className="options-btn" onClick={(e) => { e.stopPropagation(); alert('Fonctionnalités fichier à implémenter'); }}>⋮</button>
+                                    <button className="options-btn" onClick={(e) => { e.stopPropagation(); supprimerFichier(fichier); }} title="Supprimer">⋮</button>
                                 </div>
                             </div>
                         ))}

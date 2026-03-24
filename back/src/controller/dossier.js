@@ -185,6 +185,40 @@ dossierRouter.get('/api/dossiers/:dossierId/fichiers', authentifierToken, async 
     }
 });
 
+// DELETE - Supprimer un fichier du dossier
+// (Suppression physique du fichier)
+dossierRouter.delete('/api/dossiers/:dossierId/fichiers/:fileName', authentifierToken, async (req, res) => {
+    try {
+        const { dossierId, fileName } = req.params;
+        const idUtilisateurAuthentifie = +req.utilisateur.id;
+
+        const service_dossier = new ServiceDossier();
+        const dossier = await service_dossier.recupererDossierParId(dossierId);
+        if (dossier.idCompteCreateur !== idUtilisateurAuthentifie) {
+            return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
+        }
+
+        const resultat = await service_dossier.supprimerFichier(dossierId, decodeURIComponent(fileName));
+        res.json(resultat);
+    } catch (error) {
+        console.error('Erreur lors de la suppression du fichier :', error);
+        res.status(500).json({ error: error.message || 'Erreur lors de la suppression du fichier' });
+    }
+});
+
+// READ - Récupérer la taille d'un dossier (incluant sous-dossiers)
+dossierRouter.get('/api/dossiers/:dossierId/taille', authentifierToken, async (req, res) => {
+    try {
+        const { dossierId } = req.params;
+        const service_dossier = new ServiceDossier();
+        const taille = await service_dossier.recupererTailleDossier(dossierId);
+        res.json({ dossierId, taille });
+    } catch (error) {
+        console.error('Erreur lors de la récupération de la taille :', error);
+        res.status(500).json({ error: error.message || 'Erreur lors de la récupération' });
+    }
+});
+
 // UPDATE - Mettre à jour un dossier
 dossierRouter.put('/api/dossiers/:dossierId', authentifierToken, async (req, res) => {
     try {
@@ -226,6 +260,7 @@ dossierRouter.put('/api/dossiers/:dossierId', authentifierToken, async (req, res
 });
 
 // DELETE - Supprimer un dossier
+// (Suppression définitive)
 dossierRouter.delete('/api/dossiers/:dossierId', authentifierToken, async (req, res) => {
     try {
         const { dossierId } = req.params;
@@ -243,6 +278,63 @@ dossierRouter.delete('/api/dossiers/:dossierId', authentifierToken, async (req, 
     } catch (error) {
         console.error('Erreur lors de la suppression du dossier :', error);
         res.status(500).json({ error: error.message || 'Erreur lors de la suppression' });
+    }
+});
+
+// DELETE - Déplacer un dossier vers la corbeille
+// (classement logiquement sous /vers-corbeille)
+dossierRouter.delete('/api/dossiers/:dossierId/vers-corbeille', authentifierToken, async (req, res) => {
+    try {
+        const { dossierId } = req.params;
+        const idUtilisateurAuthentifie = +req.utilisateur.id;
+
+        const service_dossier = new ServiceDossier();
+        const dossier = await service_dossier.recupererDossierParId(dossierId);
+        if (dossier.idCompteCreateur !== idUtilisateurAuthentifie) {
+            return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
+        }
+
+        const resultat = await service_dossier.deplacerVersCorbeille(dossierId, idUtilisateurAuthentifie);
+        res.json(resultat);
+    } catch (error) {
+        console.error('Erreur lors du déplacement vers la corbeille :', error);
+        res.status(500).json({ error: error.message || 'Erreur lors du déplacement vers la corbeille' });
+    }
+});
+
+// POST - Restaurer un dossier depuis la corbeille
+// (origine : /api/dossiers/:id/restaurer)
+dossierRouter.post('/api/dossiers/:dossierId/restaurer', authentifierToken, async (req, res) => {
+    try {
+        const { dossierId } = req.params;
+        const idUtilisateurAuthentifie = +req.utilisateur.id;
+
+        const service_dossier = new ServiceDossier();
+        const dossier = await service_dossier.recupererDossierParId(dossierId);
+        if (dossier.idCompteCreateur !== idUtilisateurAuthentifie) {
+            return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
+        }
+
+        const resultat = await service_dossier.restaurerDossier(dossierId);
+        res.json(resultat);
+    } catch (error) {
+        console.error('Erreur lors de la restauration du dossier :', error);
+        res.status(500).json({ error: error.message || 'Erreur lors de la restauration' });
+    }
+});
+
+// DELETE - Vider la corbeille de l'utilisateur
+// (origine : /api/corbeille/vider)
+dossierRouter.delete('/api/corbeille/vider', authentifierToken, async (req, res) => {
+    try {
+        const idUtilisateurAuthentifie = +req.utilisateur.id;
+
+        const service_dossier = new ServiceDossier();
+        const resultat = await service_dossier.viderCorbeille(idUtilisateurAuthentifie);
+        res.json(resultat);
+    } catch (error) {
+        console.error('Erreur lors du vidage de la corbeille :', error);
+        res.status(500).json({ error: error.message || 'Erreur lors du vidage de la corbeille' });
     }
 });
 
