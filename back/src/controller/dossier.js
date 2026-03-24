@@ -511,6 +511,21 @@ dossierRouter.post('/api/dossiers/:dossierId/restaurer', authentifierToken, asyn
     }
 });
 
+// POST - Restaurer un fichier depuis la corbeille
+dossierRouter.post('/api/corbeille/fichiers/:nomFichier/restaurer', authentifierToken, async (req, res) => {
+    try {
+        const { nomFichier } = req.params;
+        const idUtilisateurAuthentifie = +req.utilisateur.id;
+
+        const service_dossier = new ServiceDossier();
+        const resultat = await service_dossier.restaurerFichierDepuisCorbeille(idUtilisateurAuthentifie, decodeURIComponent(nomFichier));
+        res.json({ message: 'Fichier restauré avec succès', fichier: resultat });
+    } catch (error) {
+        console.error('Erreur lors de la restauration du fichier :', error);
+        res.status(500).json({ error: error.message || 'Erreur lors de la restauration du fichier' });
+    }
+});
+
 // DELETE - Vider complètement la corbeille
 dossierRouter.delete('/api/corbeille/vider', authentifierToken, async (req, res) => {
     try {

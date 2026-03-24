@@ -393,6 +393,71 @@ class DtoDossier {
         };
     }
 
+    async restaurerFichierDepuisCorbeille(idCompteCreateur, nomFichier) {
+        const corbeille = await this.recupererCorbeille(idCompteCreateur);
+
+        if (!corbeille) {
+            throw new Error('Corbeille non trouvée pour cet utilisateur');
+        }
+
+        const cheminSourcePhysique = path.join(
+            SERVER_FILES_PATH,
+            `user_${idCompteCreateur}`,
+            corbeille.cheminDaccesDossier,
+            nomFichier
+        );
+
+        if (!fs.existsSync(cheminSourcePhysique) || !fs.statSync(cheminSourcePhysique).isFile()) {
+            throw new Error(`Fichier '${nomFichier}' introuvable dans la corbeille`);
+        }
+
+        // Restaurer vers la racine de l'utilisateur (on pourrait améliorer pour restaurer à l'emplacement d'origine)
+        const dossierRacine = await prisma.dossier.findFirst({
+            where: {
+                idCompteCreateur: Number(idCompteCreateur),
+                idDossierParent: null,
+                cheminDaccesDossier: { not: '.corbeille' },
+            },
+        });
+
+        let cheminDestinationPhysique;
+        if (dossierRacine) {
+            const cheminRacinePhysique = path.join(
+                SERVER_FILES_PATH,
+                `user_${idCompteCreateur}`,
+                dossierRacine.cheminDaccesDossier
+            );
+
+            if (!fs.existsSync(cheminRacinePhysique)) {
+                await mkdir(cheminRacinePhysique, { recursive: true });
+            }
+
+            cheminDestinationPhysique = path.join(cheminRacinePhysique, nomFichier);
+        } else {
+            // Si pas de dossier racine, restaurer directement dans user_X/
+            const cheminUserPhysique = path.join(SERVER_FILES_PATH, `user_${idCompteCreateur}`);
+            if (!fs.existsSync(cheminUserPhysique)) {
+                await mkdir(cheminUserPhysique, { recursive: true });
+            }
+            cheminDestinationPhysique = path.join(cheminUserPhysique, nomFichier);
+        }
+
+        // Gérer les conflits de nom
+        if (fs.existsSync(cheminDestinationPhysique)) {
+            const ext = path.extname(nomFichier);
+            const base = path.basename(nomFichier, ext);
+            cheminDestinationPhysique = path.join(path.dirname(cheminDestinationPhysique), `${base}-restored-${Date.now()}${ext}`);
+        }
+
+        fs.renameSync(cheminSourcePhysique, cheminDestinationPhysique);
+
+        return {
+            message: `Fichier '${nomFichier}' restauré avec succès`,
+            source: cheminSourcePhysique,
+            destination: cheminDestinationPhysique,
+        };
+    }
+
     async supprimerContenuPhysique(cheminCorbeillePhysique) {
         if (!fs.existsSync(cheminCorbeillePhysique)) {
             return;

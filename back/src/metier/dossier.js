@@ -79,6 +79,10 @@ class ServiceDossier {
         return await this.dto_dossier.deplacerFichierVersCorbeille(dossierId, nomFichier);
     }
 
+    async restaurerFichierDepuisCorbeille(idCompteCreateur, nomFichier) {
+        return await this.dto_dossier.restaurerFichierDepuisCorbeille(idCompteCreateur, nomFichier);
+    }
+
     async recupererTailleDossier(dossierId) {
         return await this.dto_dossier.recupererTailleDossier(dossierId);
     }
