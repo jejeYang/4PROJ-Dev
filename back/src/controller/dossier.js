@@ -3,8 +3,7 @@ import ServiceDossier from '../metier/dossier.js';
 import { authentifierToken } from '../middleware/auth.js';
 import multer from 'multer';
 import path from 'node:path';
-import { promises as fsPromises } from 'node:fs';
-import fs from 'node:fs';
+import fs, { promises as fsPromises } from 'node:fs';
 import { SERVER_FILES_PATH } from '../global_properties.js';
 
 const dossierRouter = express.Router();
@@ -281,63 +280,6 @@ dossierRouter.delete('/api/dossiers/:dossierId', authentifierToken, async (req, 
     }
 });
 
-// DELETE - Déplacer un dossier vers la corbeille
-// (classement logiquement sous /vers-corbeille)
-dossierRouter.delete('/api/dossiers/:dossierId/vers-corbeille', authentifierToken, async (req, res) => {
-    try {
-        const { dossierId } = req.params;
-        const idUtilisateurAuthentifie = +req.utilisateur.id;
-
-        const service_dossier = new ServiceDossier();
-        const dossier = await service_dossier.recupererDossierParId(dossierId);
-        if (dossier.idCompteCreateur !== idUtilisateurAuthentifie) {
-            return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
-        }
-
-        const resultat = await service_dossier.deplacerVersCorbeille(dossierId, idUtilisateurAuthentifie);
-        res.json(resultat);
-    } catch (error) {
-        console.error('Erreur lors du déplacement vers la corbeille :', error);
-        res.status(500).json({ error: error.message || 'Erreur lors du déplacement vers la corbeille' });
-    }
-});
-
-// POST - Restaurer un dossier depuis la corbeille
-// (origine : /api/dossiers/:id/restaurer)
-dossierRouter.post('/api/dossiers/:dossierId/restaurer', authentifierToken, async (req, res) => {
-    try {
-        const { dossierId } = req.params;
-        const idUtilisateurAuthentifie = +req.utilisateur.id;
-
-        const service_dossier = new ServiceDossier();
-        const dossier = await service_dossier.recupererDossierParId(dossierId);
-        if (dossier.idCompteCreateur !== idUtilisateurAuthentifie) {
-            return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
-        }
-
-        const resultat = await service_dossier.restaurerDossier(dossierId);
-        res.json(resultat);
-    } catch (error) {
-        console.error('Erreur lors de la restauration du dossier :', error);
-        res.status(500).json({ error: error.message || 'Erreur lors de la restauration' });
-    }
-});
-
-// DELETE - Vider la corbeille de l'utilisateur
-// (origine : /api/corbeille/vider)
-dossierRouter.delete('/api/corbeille/vider', authentifierToken, async (req, res) => {
-    try {
-        const idUtilisateurAuthentifie = +req.utilisateur.id;
-
-        const service_dossier = new ServiceDossier();
-        const resultat = await service_dossier.viderCorbeille(idUtilisateurAuthentifie);
-        res.json(resultat);
-    } catch (error) {
-        console.error('Erreur lors du vidage de la corbeille :', error);
-        res.status(500).json({ error: error.message || 'Erreur lors du vidage de la corbeille' });
-    }
-});
-
 // ===== GESTION DES FICHIERS =====
 
 // Récupérer / Voir le contenu d'un fichier
@@ -439,9 +381,9 @@ dossierRouter.post('/api/dossiers/:dossierId/televerser-multiple', authentifierT
         const service_dossier = new ServiceDossier();
         // Vérification fichiers ayant le même nom dans le même dossier
         const fichiersExistants = await service_dossier.recupererFichiersDossier(dossierId);
-        const nomsFichiersExistants = fichiersExistants.map(f => f.nom.toLowerCase());
+        const nomsFichiersExistants = new Set(fichiersExistants.map(f => f.nom.toLowerCase()));
         
-        const fichiersEnConflit = req.files.filter(f => nomsFichiersExistants.includes(f.originalname.toLowerCase()));
+        const fichiersEnConflit = req.files.filter(f => nomsFichiersExistants.has(f.originalname.toLowerCase()));
 
         if (fichiersEnConflit.length > 0) {
             // S'il y a conflit, on supprime les fichiers temporaires uploadés par Multer
@@ -517,6 +459,27 @@ dossierRouter.delete('/api/dossiers/:dossierId/vers-corbeille', authentifierToke
     } catch (error) {
         console.error('Erreur lors du déplacement vers la corbeille :', error);
         res.status(500).json({ error: error.message || 'Erreur lors du déplacement' });
+    }
+});
+
+// DELETE - Déplacer un fichier vers la corbeille
+// (origine : /api/dossiers/:dossierId/fichiers/:nomFichier/vers-corbeille)
+dossierRouter.delete('/api/dossiers/:dossierId/fichiers/:nomFichier/vers-corbeille', authentifierToken, async (req, res) => {
+    try {
+        const { dossierId, nomFichier } = req.params;
+        const idUtilisateurAuthentifie = +req.utilisateur.id;
+
+        const service_dossier = new ServiceDossier();
+        const dossier = await service_dossier.recupererDossierParId(dossierId);
+        if (dossier.idCompteCreateur !== idUtilisateurAuthentifie) {
+            return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
+        }
+
+        const resultat = await service_dossier.deplacerFichierVersCorbeille(dossierId, decodeURIComponent(nomFichier));
+        res.json({ message: 'Fichier déplacé à la corbeille', fichier: resultat });
+    } catch (error) {
+        console.error('Erreur lors du déplacement du fichier vers la corbeille :', error);
+        res.status(500).json({ error: error.message || 'Erreur lors du déplacement du fichier vers la corbeille' });
     }
 });
 
