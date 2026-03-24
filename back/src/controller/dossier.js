@@ -24,7 +24,7 @@ const storage = multer.diskStorage({
 const upload = multer({ 
     storage: storage,
     limits: {
-        fileSize: 50 * 1024 * 1024 // 50 MB max
+        fileSize: 30000 * 1024 * 1024 // 30 GB max
     }
 });
 
@@ -362,7 +362,7 @@ dossierRouter.post('/api/dossiers/:dossierId/televerser', authentifierToken, ver
 });
 
 // Téléversement de plusieurs fichiers
-dossierRouter.post('/api/dossiers/:dossierId/televerser-multiple', authentifierToken, verifierDossierExiste, upload.array('fichiers', 10), async (req, res) => {
+dossierRouter.post('/api/dossiers/:dossierId/televerser-multiple', authentifierToken, verifierDossierExiste, upload.array('fichiers', 25), async (req, res) => {
     try {
         const { dossierId } = req.params;
         const idUtilisateurAuthentifie = +req.utilisateur.id;
@@ -370,7 +370,10 @@ dossierRouter.post('/api/dossiers/:dossierId/televerser-multiple', authentifierT
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({ error: 'Aucun fichier fourni' });
         }
-
+        // Vérifier le nombre maximum de fichiers (25 max)
+        if (req.files.length > 25) {
+            throw new Error('Le nombre maximum de fichiers autorisé est de 25');
+        }
         // Vérifier que l'utilisateur authentifié est le propriétaire du dossier
         if (req.idCompteCreateur !== idUtilisateurAuthentifie) {
             // Supprimer les fichiers uploadés
