@@ -12,6 +12,7 @@ function Upload() {
     const url_localisation = useLocation();
 
     const [dossier_actuel, setDossierActuel] = useState(url_localisation.state?.dossierActuel || null);
+    const [dossier_racine, setDossierRacine] = useState(null);
     const [chemin_acces, setCheminAcces] = useState(url_localisation.state?.path || []);
     const [sous_dossiers_affiches, setSousDossiersAffiches] = useState([]);
     const [erreur_upload, setErreurUpload] = useState('');
@@ -23,12 +24,24 @@ function Upload() {
                 const token = localStorage.getItem('token');
                 const utilisateur = JSON.parse(localStorage.getItem('user'));
                 
-                let url_api = dossier_actuel 
-                    ? `http://localhost:3000/api/dossiers/${dossier_actuel.idDossier}/sous-dossiers`
-                    : `http://localhost:3000/api/comptes/${utilisateur.id}/dossiers`;
-
-                const reponse = await axios.get(url_api, { headers: { Authorization: `Bearer ${token}` } });
-                setSousDossiersAffiches(reponse.data || []);
+                if (dossier_actuel) {// Si on est dans un sous-dossier, on charge ses enfants
+                    const url_api = `http://localhost:3000/api/dossiers/${dossier_actuel.idDossier}/sous-dossiers`;
+                    const reponse = await axios.get(url_api, { headers: { Authorization: `Bearer ${token}` } });
+                    setSousDossiersAffiches(reponse.data || []);
+                } else {// Si on est à la base, on cherche le dossier racine
+                    const url_api_racine = `http://localhost:3000/api/comptes/${utilisateur.id}/dossiers`;
+                    const reponse_racine = await axios.get(url_api_racine, { headers: { Authorization: `Bearer ${token}` } });
+                    
+                    const d_racine = (reponse_racine.data || []).find(d => d.cheminDaccesDossier === `user_${utilisateur.id}`);
+                    
+                    if (d_racine) {
+                        setDossierRacine(d_racine);
+                        // Charge les sous-dossiers de ce dossier racine pour le menu select
+                        const url_api_sous = `http://localhost:3000/api/dossiers/${d_racine.idDossier}/sous-dossiers`;
+                        const reponse_sous = await axios.get(url_api_sous, { headers: { Authorization: `Bearer ${token}` } });
+                        setSousDossiersAffiches(reponse_sous.data || []);
+                    }
+                }
             } catch (error) {
                 console.error('Erreur :', error);
             }
@@ -85,8 +98,11 @@ function Upload() {
             return;
         }
         
-        if (!dossier_actuel || !dossier_actuel.idDossier) {
-            setErreurUpload('Veuillez d\'abord sélectionner un dossier de destination.');
+        // On cible soit le dossier actuel, soit la base
+        const cible_id = dossier_actuel ? dossier_actuel.idDossier : dossier_racine?.idDossier;
+
+        if (!cible_id) {
+            setErreurUpload('Impossible d\'identifier le dossier de destination (Base introuvable).');
             return;
         }
 
@@ -101,7 +117,7 @@ function Upload() {
             });
 
             await axios.post(
-                `http://localhost:3000/api/dossiers/${dossier_actuel.idDossier}/televerser-multiple`,
+                `http://localhost:3000/api/dossiers/${cible_id}/televerser-multiple`,
                 donnees_formulaire,
                 {
                     headers: {
@@ -138,7 +154,7 @@ function Upload() {
                         <div>Dossier de destination</div>
                         <div className="upload-navigateur">
                             <div className="upload-fil-ariane">
-                                <span className="upload-lien-ariane" onClick={() => naviguerDansDossier(null)}>Racine</span>
+                                <span className="upload-lien-ariane" onClick={() => naviguerDansDossier(null)}>Base</span>
                                 {chemin_acces.map((dossier, index) => (
                                     <React.Fragment key={dossier.idDossier || `breadcrumb-${index}`}>
                                         <span className="separateur">/</span>
@@ -157,7 +173,9 @@ function Upload() {
                                     onChange={(event) => {
                                         const dossier_trouve = sous_dossiers_affiches.find(d => d.idDossier == event.target.value);
                                         if(dossier_trouve) naviguerDansDossier(dossier_trouve);
-                                        event.target.value = ""; // Réinitialise le select après le clic sinon il reste sur le dernier dossier sélectionné et déclenche pas l'événement si on clique à nouveau dessus
+                                        event.target.value = "";
+                                        // Réinitialise le select après le clic sinon il reste sur le dernier dossier sélectionné
+                                        // et déclenche pas l'événement si on clique à nouveau dessus
                                     }}
                                 >
                                     <option value="">+ Aller dans un sous-dossier...</option>
