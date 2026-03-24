@@ -105,7 +105,7 @@ function Dashboard() {
 
         recupereTaille(listToProcess);
         if (contenu_dossier && contenu_dossier.dossiers) recupereTaille(contenu_dossier.dossiers);
-    }, [dossiers, contenu_dossier, taille_dossiers, corbeille_info]);
+    }, [dossiers, contenu_dossier, corbeille_info]);
 
     // Accede au dossier et récupère son contenu (sous-dossiers + fichiers)
     const gestionClicDossier = async (dossier) => {
@@ -436,6 +436,8 @@ function Dashboard() {
     };
 
     const confirmerRestauration = async () => {
+        setCreating(true);
+        setError('');
         try {
             const token = localStorage.getItem('token');
             await axios.post(
@@ -449,13 +451,14 @@ function Dashboard() {
                 dossiers: prev.dossiers.filter(d => d.idDossier !== ouvre_modal.data.idDossier)
             }));
             
-            setTimeout(() => setOuvreModal({ type: null, data: null }), 2000);
+            await fetchData();
+            setOuvreModal({ type: null, data: null });
             
-            // On refresh la base si on n'est pas dans un dossier
-            if (!dossier_actuel) fetchData();
         } catch (erreur) {
             console.error('Erreur lors de la restauration :', erreur);
             setError(erreur.response?.data?.error || 'Erreur lors de la restauration');
+        } finally {
+            setCreating(false);
         }
     };
 
@@ -494,16 +497,16 @@ function Dashboard() {
     const formatFileSize = (bytes) => {
         if (bytes === 0) return '0 o';
         const k = 1024;
-        const sizes = ['o', 'Ko', 'Mo', 'Go'];
+        const tailles = ['o', 'Ko', 'Mo', 'Go'];
 
-        const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
+        const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), tailles.length - 1);
         const tailleCalculee = bytes / Math.pow(k, i);
 
         const formateur = new Intl.NumberFormat('fr-FR', {
             maximumFractionDigits: 2
         });
 
-        return `${formateur.format(tailleCalculee)} ${sizes[i]}`;
+        return `${formateur.format(tailleCalculee)} ${tailles[i]}`;
     };
 
     const obtenirTypeFichier = (nomFichier) => {
@@ -586,6 +589,7 @@ function Dashboard() {
             onDragOver={handleDragOverGlobal}
             onDragLeave={handleDragLeaveGlobal}
             onDrop={(e) => handleDropGlobal(e)}
+            onClick={() => setMenuOptionsDossier(null)}
         >
             {etat_survole_upload && !dossier_survole_upload && (
                 <div className="dashboard-drag-overlay">
@@ -718,8 +722,20 @@ function Dashboard() {
                                 <p>Voulez-vous restaurer le dossier "{ouvre_modal.data?.cheminDaccesDossier}" à son emplacement d'origine ?</p>
                                 {error && <p className="erreur-modale">{error}</p>}
                                 <div className="modal-bouttons">
-                                    <button className="btn-annuler" onClick={() => setOuvreModal({ type: null, data: null })}>Annuler</button>
-                                    <button className="btn-confirmer" onClick={confirmerRestauration}>Restaurer</button>
+                                    <button 
+                                        className="btn-annuler" 
+                                        onClick={() => setOuvreModal({ type: null, data: null })}
+                                        disabled={creating}
+                                    >
+                                        Annuler
+                                    </button>
+                                    <button 
+                                        className="btn-confirmer" 
+                                        onClick={confirmerRestauration}
+                                        disabled={creating}
+                                    >
+                                        {creating ? 'Restauration...' : 'Restaurer'}
+                                    </button>
                                 </div>
                             </div>
                         )}

@@ -144,6 +144,21 @@ function Upload() {
         setFichiers(fichiers.filter((_, i) => i !== index));
     };
 
+    const formatFileSize = (bytes) => {
+        if (bytes === 0) return '0 o';
+        const k = 1024;
+        const tailles = ['o', 'Ko', 'Mo', 'Go'];
+
+        const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), tailles.length - 1);
+        const tailleCalculee = bytes / Math.pow(k, i);
+
+        const formateur = new Intl.NumberFormat('fr-FR', {
+            maximumFractionDigits: 2
+        });
+
+        return `${formateur.format(tailleCalculee)} ${tailles[i]}`;
+    };
+
     return (
         <div className="conteneur-upload">
             <div className="carte-upload">
@@ -222,7 +237,7 @@ function Upload() {
                                 <div key={index} className="element-fichier">
                                     <span className="nom-fichier">{fichier.name}</span>
                                     <span className="taille-fichier">
-                                        {(fichier.size / 1024 / 1024).toFixed(2)} MB
+                                        {formatFileSize(fichier.size)}
                                     </span>
                                     <button
                                         type="button"
