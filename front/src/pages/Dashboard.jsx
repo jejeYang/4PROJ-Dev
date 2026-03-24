@@ -80,16 +80,16 @@ function Dashboard() {
             if (!list || list.length === 0) return;
             const token = localStorage.getItem('token');
             const promises = list.map(async (dossier) => {
-                if (!dossier || taille_dossiers[dossier.idDossier] !== undefined) return null;
+                
                 try {
                     const res = await axios.get(
-                        `http://localhost:3000/api/dossiers/${dossier.idDossier}/fichiers`,
+                        `http://localhost:3000/api/dossiers/${dossier.idDossier}/taille`,
                         { headers: { Authorization: `Bearer ${token}` } }
                     );
-                    const sum = (res.data || []).reduce((acc, f) => acc + (f.taille || 0), 0);
-                    return { id: dossier.idDossier, size: sum };
+                    
+                    return { id: dossier.idDossier, size: res.data.taille || 0 };
                 } catch (erreur) {
-                    console.error('Erreur lors de la récupération du contenu du dossier :', erreur);
+                    console.error(`Erreur lors de la récupération de la taille du dossier ${dossier.idDossier} :`, erreur);
                     return { id: dossier.idDossier, size: 0 };
                 }
             });
@@ -492,11 +492,18 @@ function Dashboard() {
     };
 
     const formatFileSize = (bytes) => {
-        if (bytes === 0) return '0 B';
+        if (bytes === 0) return '0 o';
         const k = 1024;
-        const sizes = ['B', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        const sizes = ['o', 'Ko', 'Mo', 'Go'];
+
+        const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
+        const tailleCalculee = bytes / Math.pow(k, i);
+
+        const formateur = new Intl.NumberFormat('fr-FR', {
+            maximumFractionDigits: 2
+        });
+
+        return `${formateur.format(tailleCalculee)} ${sizes[i]}`;
     };
 
     const obtenirTypeFichier = (nomFichier) => {
