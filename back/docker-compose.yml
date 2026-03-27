@@ -26,6 +26,7 @@ services:
       DATABASE_URL: postgresql://postgres:root@postgres:5432/supfile
       FILES_PATH: /app/files
       JWT_SECRET: change-me-in-production
+      GOOGLE_CLIENT_ID: 60122681226-56ehoh7uj46u1ot03dlct24srh1j83p0.apps.googleusercontent.com
     volumes:
       - ./storage/files:/app/files
     ports:

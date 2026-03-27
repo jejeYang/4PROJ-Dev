@@ -23,10 +23,6 @@ class ServiceDossier {
         return await this.dto_dossier.recupererDossierCompte(idCompteCreateurDossier);
     }
 
-    async recupererDossierRacineParCompte(idCompteCreateurDossier) {
-        return await this.dto_dossier.recupererDossierRacineParCompte(idCompteCreateurDossier);
-    }
-
     async recupererCorbeille(idCompteCreateur) {
         return await this.dto_dossier.recupererCorbeille(idCompteCreateur);
     }
@@ -67,7 +63,29 @@ class ServiceDossier {
         return await this.dto_dossier.recupererDossierRacineParCompte(idCompteCreateur);
     }
 
+    async deplacerVersCorbeille(dossierId, idCompteCreateur) {
+        return await this.dto_dossier.deplacerVersCorbeille(dossierId, idCompteCreateur);
+    }
 
+    async restaurerDossier(dossierId) {
+        return await this.dto_dossier.restaurerDossier(dossierId);
+    }
+
+    async viderCorbeille(idCompteCreateur) {
+        return await this.dto_dossier.viderCorbeille(idCompteCreateur);
+    }
+
+    async deplacerFichierVersCorbeille(dossierId, nomFichier) {
+        return await this.dto_dossier.deplacerFichierVersCorbeille(dossierId, nomFichier);
+    }
+
+    async restaurerFichierDepuisCorbeille(idCompteCreateur, nomFichier) {
+        return await this.dto_dossier.restaurerFichierDepuisCorbeille(idCompteCreateur, nomFichier);
+    }
+
+    async recupererTailleDossier(dossierId) {
+        return await this.dto_dossier.recupererTailleDossier(dossierId);
+    }
 
 }
 

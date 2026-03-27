@@ -3,8 +3,7 @@ import ServiceDossier from '../metier/dossier.js';
 import { authentifierToken } from '../middleware/auth.js';
 import multer from 'multer';
 import path from 'node:path';
-import { promises as fsPromises } from 'node:fs';
-import fs from 'node:fs';
+import fs, { promises as fsPromises } from 'node:fs';
 import { SERVER_FILES_PATH } from '../global_properties.js';
 
 const dossierRouter = express.Router();
@@ -185,6 +184,40 @@ dossierRouter.get('/api/dossiers/:dossierId/fichiers', authentifierToken, async 
     }
 });
 
+// DELETE - Supprimer un fichier du dossier
+// (Suppression physique du fichier)
+dossierRouter.delete('/api/dossiers/:dossierId/fichiers/:fileName', authentifierToken, async (req, res) => {
+    try {
+        const { dossierId, fileName } = req.params;
+        const idUtilisateurAuthentifie = +req.utilisateur.id;
+
+        const service_dossier = new ServiceDossier();
+        const dossier = await service_dossier.recupererDossierParId(dossierId);
+        if (dossier.idCompteCreateur !== idUtilisateurAuthentifie) {
+            return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
+        }
+
+        const resultat = await service_dossier.supprimerFichier(dossierId, decodeURIComponent(fileName));
+        res.json(resultat);
+    } catch (error) {
+        console.error('Erreur lors de la suppression du fichier :', error);
+        res.status(500).json({ error: error.message || 'Erreur lors de la suppression du fichier' });
+    }
+});
+
+// READ - Récupérer la taille d'un dossier (incluant sous-dossiers)
+dossierRouter.get('/api/dossiers/:dossierId/taille', authentifierToken, async (req, res) => {
+    try {
+        const { dossierId } = req.params;
+        const service_dossier = new ServiceDossier();
+        const taille = await service_dossier.recupererTailleDossier(dossierId);
+        res.json({ dossierId, taille });
+    } catch (error) {
+        console.error('Erreur lors de la récupération de la taille :', error);
+        res.status(500).json({ error: error.message || 'Erreur lors de la récupération' });
+    }
+});
+
 // UPDATE - Mettre à jour un dossier
 dossierRouter.put('/api/dossiers/:dossierId', authentifierToken, async (req, res) => {
     try {
@@ -226,6 +259,7 @@ dossierRouter.put('/api/dossiers/:dossierId', authentifierToken, async (req, res
 });
 
 // DELETE - Supprimer un dossier
+// (Suppression définitive)
 dossierRouter.delete('/api/dossiers/:dossierId', authentifierToken, async (req, res) => {
     try {
         const { dossierId } = req.params;
@@ -247,6 +281,32 @@ dossierRouter.delete('/api/dossiers/:dossierId', authentifierToken, async (req, 
 });
 
 // ===== GESTION DES FICHIERS =====
+
+// Récupérer / Voir le contenu d'un fichier
+dossierRouter.get('/api/dossiers/:dossierId/fichiers/:nomFichier', authentifierToken, verifierDossierExiste, async (req, res) => {
+    try {
+        const { nomFichier } = req.params;
+        const idUtilisateurAuthentifie = +req.utilisateur.id;
+
+        // Vérifier que le dossier appartient à l'utilisateur
+        if (req.idCompteCreateur !== idUtilisateurAuthentifie) {
+            return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
+        }
+
+        const cheminDossierPhysique = path.join(SERVER_FILES_PATH, `user_${req.idCompteCreateur}`, req.cheminDossier);
+        const cheminFichierPhysique = path.join(cheminDossierPhysique, nomFichier);
+
+        if (!fs.existsSync(cheminFichierPhysique)) {
+            return res.status(404).json({ error: 'Fichier introuvable sur le serveur' });
+        }
+
+        // Express envoie le fichier et gère automatiquement le type et le streaming basique
+        res.sendFile(cheminFichierPhysique);
+    } catch (error) {
+        console.error('Erreur lors de la récupération du fichier :', error);
+        res.status(500).json({ error: 'Erreur lors de la lecture du fichier' });
+    }
+});
 
 // Téléversement d'un fichier dans un dossier
 dossierRouter.post('/api/dossiers/:dossierId/televerser', authentifierToken, verifierDossierExiste, upload.single('fichier'), async (req, res) => {
@@ -321,9 +381,9 @@ dossierRouter.post('/api/dossiers/:dossierId/televerser-multiple', authentifierT
         const service_dossier = new ServiceDossier();
         // Vérification fichiers ayant le même nom dans le même dossier
         const fichiersExistants = await service_dossier.recupererFichiersDossier(dossierId);
-        const nomsFichiersExistants = fichiersExistants.map(f => f.nom.toLowerCase());
+        const nomsFichiersExistants = new Set(fichiersExistants.map(f => f.nom.toLowerCase()));
         
-        const fichiersEnConflit = req.files.filter(f => nomsFichiersExistants.includes(f.originalname.toLowerCase()));
+        const fichiersEnConflit = req.files.filter(f => nomsFichiersExistants.has(f.originalname.toLowerCase()));
 
         if (fichiersEnConflit.length > 0) {
             // S'il y a conflit, on supprime les fichiers temporaires uploadés par Multer
@@ -402,6 +462,27 @@ dossierRouter.delete('/api/dossiers/:dossierId/vers-corbeille', authentifierToke
     }
 });
 
+// DELETE - Déplacer un fichier vers la corbeille
+// (origine : /api/dossiers/:dossierId/fichiers/:nomFichier/vers-corbeille)
+dossierRouter.delete('/api/dossiers/:dossierId/fichiers/:nomFichier/vers-corbeille', authentifierToken, async (req, res) => {
+    try {
+        const { dossierId, nomFichier } = req.params;
+        const idUtilisateurAuthentifie = +req.utilisateur.id;
+
+        const service_dossier = new ServiceDossier();
+        const dossier = await service_dossier.recupererDossierParId(dossierId);
+        if (dossier.idCompteCreateur !== idUtilisateurAuthentifie) {
+            return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
+        }
+
+        const resultat = await service_dossier.deplacerFichierVersCorbeille(dossierId, decodeURIComponent(nomFichier));
+        res.json({ message: 'Fichier déplacé à la corbeille', fichier: resultat });
+    } catch (error) {
+        console.error('Erreur lors du déplacement du fichier vers la corbeille :', error);
+        res.status(500).json({ error: error.message || 'Erreur lors du déplacement du fichier vers la corbeille' });
+    }
+});
+
 // POST - Restaurer un dossier depuis la corbeille
 dossierRouter.post('/api/dossiers/:dossierId/restaurer', authentifierToken, async (req, res) => {
     try {
@@ -427,6 +508,21 @@ dossierRouter.post('/api/dossiers/:dossierId/restaurer', authentifierToken, asyn
     } catch (error) {
         console.error('Erreur lors de la restauration du dossier :', error);
         res.status(500).json({ error: error.message || 'Erreur lors de la restauration' });
+    }
+});
+
+// POST - Restaurer un fichier depuis la corbeille
+dossierRouter.post('/api/corbeille/fichiers/:nomFichier/restaurer', authentifierToken, async (req, res) => {
+    try {
+        const { nomFichier } = req.params;
+        const idUtilisateurAuthentifie = +req.utilisateur.id;
+
+        const service_dossier = new ServiceDossier();
+        const resultat = await service_dossier.restaurerFichierDepuisCorbeille(idUtilisateurAuthentifie, decodeURIComponent(nomFichier));
+        res.json({ message: 'Fichier restauré avec succès', fichier: resultat });
+    } catch (error) {
+        console.error('Erreur lors de la restauration du fichier :', error);
+        res.status(500).json({ error: error.message || 'Erreur lors de la restauration du fichier' });
     }
 });
 
