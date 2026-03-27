@@ -26,6 +26,27 @@ compteRouter.post('/api/login', async (req, res) => {
     }
 });
 
+compteRouter.post('/api/auth/google', async (req, res) => {
+    try {
+        const { idToken } = req.body;
+        if (!idToken) {
+            return res.status(400).json({ message: 'idToken requis' });
+        }
+
+        const service_compte = new ServiceCompte();
+        const resultat = await service_compte.authentifierGoogle(idToken);
+
+        res.status(200).json({
+            message: 'Connexion Google réussie',
+            utilisateur: resultat.utilisateur,
+            token: resultat.token,
+        });
+    } catch (error) {
+        console.error('Erreur lors de la connexion Google:', error);
+        res.status(401).json({ message: error.message || 'Échec de l\'authentification Google' });
+    }
+});
+
 compteRouter.post('/api/register', async (req, res) => {
     try {
         const service_compte = new ServiceCompte();
@@ -53,7 +74,7 @@ compteRouter.put('/api/users/:id', authentifierToken, async (req, res) => {
         const idUtilisateurAuthentifie = +req.utilisateur.id;
 
         // Vérifier que l'utilisateur modifie son propre profil
-        if (parseInt(id) !== idUtilisateurAuthentifie) {
+        if (Number.parseInt(id, 10) !== idUtilisateurAuthentifie) {
             return res.status(403).json({ message: 'Vous ne pouvez modifier que votre propre profil' });
         }
 

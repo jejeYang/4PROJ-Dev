@@ -35,6 +35,18 @@
     cursor: pointer;
 }
 
+.google-separator {
+    margin: 1rem 0;
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--text-secondary-color, #777);
+}
+
+.google-login-wrapper {
+    display: flex;
+    justify-content: center;
+}
+
 .message-erreur {
     color: var(--error-color);
     background: var(--bg-primary-color);

@@ -1,13 +1,24 @@
 import DtoCompte from "../dto/compte.js";
 import ServiceDossier from "./dossier.js";
 import jwt from 'jsonwebtoken';
-import { JWT_SECRET } from '../global_properties.js';
+import { OAuth2Client } from 'google-auth-library';
+import { GOOGLE_CLIENT_ID, JWT_SECRET } from '../global_properties.js';
 
 class ServiceCompte {
     constructor() {
         this.dto_compte = new DtoCompte();
         this.service_dossier = new ServiceDossier();
         this.jwtSecret = JWT_SECRET;
+        this.googleClientId = GOOGLE_CLIENT_ID;
+        this.googleClient = this.googleClientId ? new OAuth2Client(this.googleClientId) : null;
+    }
+
+    genererToken(utilisateur) {
+        return jwt.sign(
+            { id: utilisateur.id, email: utilisateur.email },
+            this.jwtSecret,
+            { expiresIn: '24h' }
+        );
     }
 
     async creerCompte(compte) {
@@ -35,14 +46,49 @@ class ServiceCompte {
     async authentifierUtilisateur(email, mdp) {
         const utilisateur = await this.dto_compte.verifierMotDePasse(email, mdp);
         if (utilisateur) {
-            const token = jwt.sign(
-                { id: utilisateur.id, email: utilisateur.email },
-                this.jwtSecret,
-                { expiresIn: '24h' }
-            );
+            const token = this.genererToken(utilisateur);
             return { utilisateur, token };
         }
         return null;
+    }
+
+    async authentifierGoogle(idToken) {
+        if (!this.googleClient || !this.googleClientId) {
+            throw new Error('Google Auth non configuré sur le serveur');
+        }
+
+        const ticket = await this.googleClient.verifyIdToken({
+            idToken,
+            audience: this.googleClientId,
+        });
+
+        const payload = ticket.getPayload();
+        if (!payload?.email || !payload.email_verified) {
+            throw new Error('Compte Google invalide');
+        }
+
+        let compte = await this.dto_compte.trouverParEmail(payload.email);
+        if (!compte) {
+            const nouveauCompte = await this.creerCompte({
+                nom: payload.name || payload.email.split('@')[0],
+                email: payload.email,
+                mdp: crypto.randomUUID(),
+            });
+
+            compte = {
+                idCompte: nouveauCompte.idCompte,
+                nomCompte: nouveauCompte.nomCompte,
+                adresseMailCompte: nouveauCompte.adresseMailCompte,
+            };
+        }
+
+        const utilisateur = {
+            id: compte.idCompte,
+            nom: compte.nomCompte,
+            email: compte.adresseMailCompte,
+        };
+
+        return { utilisateur, token: this.genererToken(utilisateur) };
     }
 
     async mettreAJourCompte(idCompte, donnees) {
