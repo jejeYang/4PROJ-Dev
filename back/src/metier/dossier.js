@@ -23,16 +23,16 @@ class ServiceDossier {
         return await this.dto_dossier.recupererDossierCompte(idCompteCreateurDossier);
     }
 
-    async recupererDossiersRacineParCompte(idCompteCreateurDossier) {
-        return await this.dto_dossier.recupererDossiersRacineCompte(idCompteCreateurDossier);
+    async recupererCorbeille(idCompteCreateur) {
+        return await this.dto_dossier.recupererCorbeille(idCompteCreateur);
+    }
+
+    async recupererDossiersCorbeille(idCompteCreateur) {
+        return await this.dto_dossier.recupererDossiersCorbeille(idCompteCreateur);
     }
 
     async recupererSousDossiers(dossierId) {
         return await this.dto_dossier.recupererSousDossiers(dossierId);
-    }
-
-    async recupererFichiersDossier(dossierId) {
-        return await this.dto_dossier.recupererFichiersDossier(dossierId);
     }
 
     async mettreAJourDossier(dossierId, cheminDaccesDossier) {
@@ -51,12 +51,40 @@ class ServiceDossier {
         return await this.dto_dossier.recupererEndpoints(dossierId);
     }
 
-    async recupererFichiers(dossierId,endpoint) {
-        return await this.dto_dossier.recupererFichiers(dossierId,endpoint);
+    async recupererFichiersDossier(dossierId) {
+        return await this.dto_dossier.recupererFichiersDossier(dossierId);
     }
 
     async supprimerFichier(dossierId, path) {
         return await this.dto_dossier.supprimerFichier(dossierId, path);
+    }
+
+    async recupererDossierRacineParCompte(idCompteCreateur) {
+        return await this.dto_dossier.recupererDossierRacineParCompte(idCompteCreateur);
+    }
+
+    async deplacerVersCorbeille(dossierId, idCompteCreateur) {
+        return await this.dto_dossier.deplacerVersCorbeille(dossierId, idCompteCreateur);
+    }
+
+    async restaurerDossier(dossierId) {
+        return await this.dto_dossier.restaurerDossier(dossierId);
+    }
+
+    async viderCorbeille(idCompteCreateur) {
+        return await this.dto_dossier.viderCorbeille(idCompteCreateur);
+    }
+
+    async deplacerFichierVersCorbeille(dossierId, nomFichier) {
+        return await this.dto_dossier.deplacerFichierVersCorbeille(dossierId, nomFichier);
+    }
+
+    async restaurerFichierDepuisCorbeille(idCompteCreateur, nomFichier) {
+        return await this.dto_dossier.restaurerFichierDepuisCorbeille(idCompteCreateur, nomFichier);
+    }
+
+    async recupererTailleDossier(dossierId) {
+        return await this.dto_dossier.recupererTailleDossier(dossierId);
     }
 
 }

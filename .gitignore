@@ -36,3 +36,7 @@ coverage/
 *.local
 *.cache
 *.tmp
+
+# Storage files
+.back/storage/
+/back/storage/

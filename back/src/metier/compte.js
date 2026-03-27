@@ -14,16 +14,15 @@ class ServiceCompte {
         // Créer le compte
         const utilisateur = await this.dto_compte.creerCompte(compte);
         
-        // Créer automatiquement un dossier personnel pour le nouvel utilisateur
+        // Créer automatiquement un dossier corbeille pour le nouvel utilisateur
         try {
-            const dossierPersonnel = {
-                idCompteCreateur: utilisateur.idcompte, // Utiliser idcompte (minuscule) comme retourné par la BD
-                cheminDaccesDossier: `dossier_${utilisateur.idcompte}`
+            const dossierCorbeille = {
+                idCompteCreateur: utilisateur.idCompte,
+                cheminDaccesDossier: `.corbeille`,
             };
-            await this.service_dossier.creerDossier(dossierPersonnel);
+            await this.service_dossier.creerDossier(dossierCorbeille);
         } catch (error) {
-            console.error('Erreur lors de la création du dossier personnel:', error);
-            // On ne lance pas l'erreur ici, le compte est créé même si le dossier échoue
+            console.error('Erreur lors de la création du dossier corbeille:', error);
         }
         
         return utilisateur;
@@ -44,6 +43,18 @@ class ServiceCompte {
             return { utilisateur, token };
         }
         return null;
+    }
+
+    async mettreAJourCompte(idCompte, donnees) {
+        return await this.dto_compte.mettreAJourCompte(idCompte, donnees);
+    }
+
+    async changerMotDePasse(idCompte, ancienMdp, nouveauMdp) {
+        return await this.dto_compte.changerMotDePasse(idCompte, ancienMdp, nouveauMdp);
+    }
+
+    async supprimerCompte(idCompte) {
+        return await this.dto_compte.supprimerCompte(idCompte);
     }
 
     verifierToken(token) {

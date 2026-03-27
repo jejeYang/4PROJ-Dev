@@ -1,3 +1,8 @@
+::-webkit-scrollbar {
+  width: 0px;
+  height: 0px;
+}
+
 body {
   margin: 0;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -88,9 +93,8 @@ body {
 /* Sidebar */
 .sidebar {
   width: 250px;
-  background-color: var(--bg-primary-color);
+  background-color: var(--header-bg-color);
   padding: 2rem 0;
-  overflow-y: auto;
   transition: transform 0.3s ease;
 }
 
@@ -100,14 +104,17 @@ body {
 
 .sidebar-content h3 {
   color: var(--btn-color);
-  margin: 0 0 1.5rem 0;
-  font-size: 1.1rem;
+  margin: 0;
+  font-size: 1.6rem;
+  padding: 0.8rem 1rem;
+  border-left: 4px solid transparent;
 }
 
 .sidebar-link {
   display: block;
   padding: 0.8rem 1rem;
-  color: var(--text-primary-color);
+  color: var(--text-secondary-color);
+  font-weight: bold;
   text-decoration: none;
   margin-bottom: 0.5rem;
   border-radius: 6px;
@@ -115,11 +122,15 @@ body {
   border-left: 4px solid transparent;
 }
 
-.sidebar-link:hover,
+.sidebar-link:hover{
+  background-color: var(--btn-hover);
+  color: var(--btn-text);
+  border-left-color: var(--btn-color);
+}
 .sidebar-link.active {
   background-color: var(--btn-color);
   color: var(--btn-text);
-  border-left-color: var(--btn-color);
+  border-left-color: var(--btn-hover);
 }
 
 .sidebar-close {
@@ -150,6 +161,8 @@ body {
   position: relative;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  width: 100%;
 }
 
 .main-content.auth-page {
