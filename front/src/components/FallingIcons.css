@@ -11,20 +11,18 @@
 
 .falling-icon {
   position: absolute;
-  top: -50px;
-  animation-name: fallAndStack;
-  animation-timing-function: ease-in;
-  animation-fill-mode: forwards; /* Garde l'image à sa position finale */
+  top: -60px;
+  animation-name: fallLoop;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
 }
 
-@keyframes fallAndStack {
+@keyframes fallLoop {
   0% {
     transform: translateY(0) rotate(0deg);
   }
-  90% {
-    transform: translateY(92vh) rotate(360deg); /* Atterrissage */
-  }
+
   100% {
-    transform: translateY(92vh) rotate(360deg); /* Reste bloqué ici */
+    transform: translateY(110vh) rotate(360deg); 
   }
 }
