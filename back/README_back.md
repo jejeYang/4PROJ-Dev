@@ -3,4 +3,4 @@
 
 ## Lancer le back :
 cd back
-node server.js
+docker compose up --build
