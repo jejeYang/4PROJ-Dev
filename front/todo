@@ -1,3 +1,6 @@
+General :
+- Ajouter des commentaires propres
+
 Page de base (non connecté) :
 - Refaire design
 
@@ -33,8 +36,6 @@ Dashboard :
     - Déplacement multiple
 
 Corbeille :
-- Restaurer un fichier
-- Supprimer définitivement un fichier
 - Selection multiple de fichier & dossier
 
 Liens :

@@ -1,0 +1,460 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { formatFileSize, obtenirTypeFichier } from '../utils/fichierUtils';
+
+const API = 'http://localhost:3000';
+
+export function useDashboard() {
+    const [dossiers, setDossiers] = useState([]);
+    const [fichiers_base, setFichiersBase] = useState([]);
+    const [dossier_racine, setDossierRacine] = useState(null);
+    const [corbeille_info, setCorbeilleInfo] = useState(null);
+
+    const [etat_survole_upload, setEtatSurvoleUpload] = useState(false);
+    const [dossier_survole_upload, setDossierSurvoleUpload] = useState(null);
+    const compteur_drag = useRef(0);
+
+    const [loading, setLoading] = useState(true);
+    const [menu_nom_dossier, setChangeNomDossier] = useState('');
+    const [creating, setCreating] = useState(false);
+    const [error, setError] = useState('');
+    const [ouvre_modal, setOuvreModal] = useState({ type: null, data: null });
+    const [nouveau_nom, setRenommeDossier] = useState('');
+
+    const [dossier_actuel, setDossierActuel] = useState(null);
+    const [contenu_dossier, setContenuDossier] = useState({ dossiers: [], fichiers: [] });
+    const [fil_ariane, setFilAriane] = useState([]);
+
+    const [taille_dossiers, setTailleDossiers] = useState({});
+    const [menu_options_dossier, setMenuOptionsDossier] = useState(null);
+    const [menu_options_fichier, setMenuOptionsFichier] = useState(null);
+    const [fichier_preview, setFichierPreview] = useState(null);
+    const [chargement_preview, setChargementPreview] = useState(false);
+    const navigate = useNavigate();
+
+    const authHeader = useCallback(() => {
+        const token = localStorage.getItem('token');
+        return { Authorization: `Bearer ${token}` };
+    }, []);
+
+    const fetchData = useCallback(async () => {
+        try {
+            const user = JSON.parse(localStorage.getItem('user'));
+            const response = await axios.get(`${API}/api/comptes/${user.id}/dossiers`, { headers: authHeader() });
+            const allRoots = response.data || [];
+
+            const racine = allRoots.find(d => d.cheminDaccesDossier === `user_${user.id}`);
+            const corbeille = allRoots.find(d => d.cheminDaccesDossier === '.corbeille');
+
+            if (corbeille) setCorbeilleInfo(corbeille);
+
+            if (racine) {
+                setDossierRacine(racine);
+                const [resDossiers, resFichiers] = await Promise.all([
+                    axios.get(`${API}/api/dossiers/${racine.idDossier}/sous-dossiers`, { headers: authHeader() }),
+                    axios.get(`${API}/api/dossiers/${racine.idDossier}/fichiers`, { headers: authHeader() })
+                ]);
+                setDossiers(resDossiers.data || []);
+                setFichiersBase(resFichiers.data || []);
+            } else {
+                setDossiers([]);
+                setFichiersBase([]);
+            }
+        } catch (erreur) {
+            console.error('Erreur lors de la récupération des données :', erreur);
+            setError('Erreur lors du chargement des données.');
+        } finally {
+            setLoading(false);
+        }
+    }, [authHeader]); // fetchData dépend maintenant de authHeader
+
+    // Ajout de fetchData dans les dépendances
+    useEffect(() => { fetchData(); }, [fetchData]);
+
+    useEffect(() => {
+        const recupereTaille = async (list) => {
+            if (!list || list.length === 0) return;
+            const promises = list.map(async (dossier) => {
+                try {
+                    const res = await axios.get(`${API}/api/dossiers/${dossier.idDossier}/taille`, { headers: authHeader() });
+                    return { id: dossier.idDossier, size: res.data.taille || 0 };
+                } catch {
+                    return { id: dossier.idDossier, size: 0 };
+                }
+            });
+            const resultat = await Promise.all(promises);
+            const updates = {};
+            resultat.forEach(r => { if (r) updates[r.id] = r.size; });
+            if (Object.keys(updates).length > 0) setTailleDossiers(prev => ({ ...prev, ...updates }));
+        };
+
+        const listToProcess = [...dossiers];
+        if (corbeille_info) listToProcess.push(corbeille_info);
+        recupereTaille(listToProcess);
+        if (contenu_dossier?.dossiers) recupereTaille(contenu_dossier.dossiers);
+    }, [dossiers, contenu_dossier, corbeille_info, authHeader]); // authHeader est stable, donc plus de warning
+
+    const gestionClicDossier = async (dossier) => {
+        try {
+            const [res_dossiers, res_fichiers] = await Promise.all([
+                axios.get(`${API}/api/dossiers/${dossier.idDossier}/sous-dossiers`, { headers: authHeader() }),
+                axios.get(`${API}/api/dossiers/${dossier.idDossier}/fichiers`, { headers: authHeader() })
+            ]);
+            setDossierActuel(dossier);
+            setContenuDossier({ dossiers: res_dossiers.data || [], fichiers: res_fichiers.data || [] });
+            setFilAriane([...fil_ariane, dossier]);
+        } catch (erreur) {
+            console.error('Erreur lors de la récupération du contenu du dossier :', erreur);
+            setError("Erreur lors de l'ouverture du dossier");
+        }
+    };
+
+    const gestionClicBreadcrumb = async (index) => {
+        try {
+            if (index === -1) {
+                setDossierActuel(null);
+                setContenuDossier({ dossiers: [], fichiers: [] });
+                setFilAriane([]);
+            } else {
+                const nouveau_breadcrumb = fil_ariane.slice(0, index + 1);
+                const dossier_selectionne = nouveau_breadcrumb[index];
+                const [res_dossiers, res_fichiers] = await Promise.all([
+                    axios.get(`${API}/api/dossiers/${dossier_selectionne.idDossier}/sous-dossiers`, { headers: authHeader() }),
+                    axios.get(`${API}/api/dossiers/${dossier_selectionne.idDossier}/fichiers`, { headers: authHeader() })
+                ]);
+                setFilAriane(nouveau_breadcrumb);
+                setDossierActuel(dossier_selectionne);
+                setContenuDossier({ dossiers: res_dossiers.data || [], fichiers: res_fichiers.data || [] });
+            }
+        } catch (erreur) {
+            console.error('Erreur lors de la navigation :', erreur);
+        }
+    };
+
+    const naviguerVersUpload = () => {
+        navigate('/upload', { state: { dossierActuel: dossier_actuel, path: fil_ariane } });
+    };
+
+    // ===== DRAG & DROP =====
+    const handleDragEnterGlobal = (e) => {
+        e.preventDefault(); e.stopPropagation();
+        compteur_drag.current += 1;
+        if (e.dataTransfer.items && e.dataTransfer.items.length > 0) setEtatSurvoleUpload(true);
+    };
+
+    const handleDragLeaveGlobal = (e) => {
+        e.preventDefault(); e.stopPropagation();
+        compteur_drag.current -= 1;
+        if (compteur_drag.current === 0) setEtatSurvoleUpload(false);
+    };
+
+    const handleDragOverGlobal = (e) => { e.preventDefault(); e.stopPropagation(); };
+
+    const handleDropGlobal = async (e, id_dossier_specifique = null) => {
+        e.preventDefault(); e.stopPropagation();
+        setEtatSurvoleUpload(false);
+        setDossierSurvoleUpload(null);
+        compteur_drag.current = 0;
+
+        const files = Array.from(e.dataTransfer.files);
+        if (files.length === 0) return;
+
+        const cible_id = id_dossier_specifique || (dossier_actuel ? dossier_actuel.idDossier : dossier_racine?.idDossier);
+        if (!cible_id) { setError("Impossible de déterminer le dossier de destination."); return; }
+
+        try {
+            const formData = new FormData();
+            files.forEach(file => formData.append('fichiers', file));
+            await axios.post(`${API}/api/dossiers/${cible_id}/televerser-multiple`, formData,
+                { headers: { ...authHeader(), 'Content-Type': 'multipart/form-data' } });
+
+            if (cible_id === dossier_actuel?.idDossier) {
+                const resFichiers = await axios.get(`${API}/api/dossiers/${cible_id}/fichiers`, { headers: authHeader() });
+                setContenuDossier(prev => ({ ...prev, fichiers: resFichiers.data || [] }));
+            } else if (!dossier_actuel && cible_id === dossier_racine?.idDossier) {
+                const resFichiersBase = await axios.get(`${API}/api/dossiers/${cible_id}/fichiers`, { headers: authHeader() });
+                setFichiersBase(resFichiersBase.data || []);
+            }
+        } catch (erreur) {
+            setError('Erreur lors de l\'upload : ' + (erreur.response?.data?.error || erreur.message));
+        }
+    };
+
+    // ===== DOSSIERS =====
+    const gestionCreeDossier = async (e) => {
+        e.preventDefault();
+        const nom_dossier = menu_nom_dossier.trim();
+        if (!nom_dossier) { setError('Le nom du dossier ne peut pas être vide'); return; }
+
+        const liste_dossiers_actuels = dossier_actuel ? contenu_dossier.dossiers : dossiers;
+        if (liste_dossiers_actuels.some(d => d.cheminDaccesDossier.toLowerCase() === nom_dossier.toLowerCase())) {
+            setError('Un dossier portant ce nom existe déjà à cet emplacement.');
+            return;
+        }
+
+        setCreating(true); setError('');
+        const id_dossier_parent = dossier_actuel ? dossier_actuel.idDossier : dossier_racine?.idDossier;
+
+        try {
+            const response = await axios.post(`${API}/api/dossiers`,
+                { cheminDaccesDossier: nom_dossier, idDossierParent: id_dossier_parent },
+                { headers: authHeader() });
+
+            if (dossier_actuel) {
+                setContenuDossier({ ...contenu_dossier, dossiers: [...contenu_dossier.dossiers, response.data] });
+            } else {
+                setDossiers([...dossiers, response.data]);
+            }
+            setChangeNomDossier('');
+            setOuvreModal({ type: null, data: null });
+        } catch (erreur) {
+            setError(erreur.response?.data?.error || 'Erreur lors de la création du dossier');
+        } finally {
+            setCreating(false);
+        }
+    };
+
+    const ouvrirModalRenommerDossier = (dossier) => {
+        setRenommeDossier(dossier.cheminDaccesDossier);
+        setError('');
+        setOuvreModal({ type: 'renommage-dossier', data: dossier });
+        setMenuOptionsDossier(null);
+    };
+
+    const confirmerRenommageDossier = async () => {
+        const nouveau_nom_dossier = nouveau_nom.trim();
+        if (!nouveau_nom_dossier) { setError('Le nom du dossier ne peut pas être vide'); return; }
+
+        const liste_dossiers_actuels = dossier_actuel ? contenu_dossier.dossiers : dossiers;
+        if (liste_dossiers_actuels.some(d =>
+            d.cheminDaccesDossier.toLowerCase() === nouveau_nom_dossier.toLowerCase() &&
+            d.idDossier !== ouvre_modal.data.idDossier)) {
+            setError('Un dossier portant ce nom existe déjà à cet emplacement.');
+            return;
+        }
+        setError('');
+
+        try {
+            const res = await axios.put(`${API}/api/dossiers/${ouvre_modal.data.idDossier}`,
+                { cheminDaccesDossier: nouveau_nom_dossier }, { headers: authHeader() });
+
+            if (dossier_actuel) {
+                setContenuDossier(prev => ({ ...prev, dossiers: prev.dossiers.map(d => d.idDossier === ouvre_modal.data.idDossier ? res.data : d) }));
+            } else {
+                setDossiers(prev => prev.map(d => d.idDossier === ouvre_modal.data.idDossier ? res.data : d));
+            }
+            setOuvreModal({ type: null, data: null });
+        } catch (erreur) {
+            setError(erreur.response?.data?.error || 'Erreur lors du renommage');
+        }
+    };
+
+    const ouvrirModalSuppressionDossier = async (dossier) => {
+        setError('');
+        setOuvreModal({ type: 'suppression-dossier', data: dossier });
+        setMenuOptionsDossier(null);
+
+        try {
+            await axios.delete(`${API}/api/dossiers/${dossier.idDossier}/vers-corbeille`, { headers: authHeader() });
+
+            if (dossier_actuel) {
+                setContenuDossier(prev => ({ ...prev, dossiers: prev.dossiers.filter(d => d.idDossier !== dossier.idDossier) }));
+            } else {
+                setDossiers(prev => prev.filter(d => d.idDossier !== dossier.idDossier));
+            }
+            setOuvreModal({ type: 'suppression-reussie-dossier', data: dossier });
+            setTimeout(() => setOuvreModal({ type: null, data: null }), 2000);
+        } catch (erreur) {
+            setOuvreModal({ type: null, data: null });
+            setError(erreur.response?.data?.error || 'Erreur lors du déplacement vers la corbeille');
+        }
+    };
+
+    const ouvrirModalSuppressionDefinitiveDossier = (dossier) => {
+        setError('');
+        setOuvreModal({ type: 'confirmation-suppression-dossier', data: dossier });
+        setMenuOptionsDossier(null);
+    };
+
+    const confirmerSuppressionDefinitiveDossier = async () => {
+        try {
+            await axios.delete(`${API}/api/dossiers/${ouvre_modal.data.idDossier}`, { headers: authHeader() });
+            setContenuDossier(prev => ({ ...prev, dossiers: prev.dossiers.filter(d => d.idDossier !== ouvre_modal.data.idDossier) }));
+            setOuvreModal({ type: null, data: null });
+        } catch (erreur) {
+            setError(erreur.response?.data?.error || 'Erreur lors de la suppression définitive');
+        }
+    };
+
+    const ouvrirModalViderCorbeille = () => { setError(''); setOuvreModal({ type: 'vidage-corbeille', data: null }); };
+
+    const confirmerViderCorbeille = async () => {
+        try {
+            await axios.delete(`${API}/api/corbeille/vider`, { headers: authHeader() });
+            setContenuDossier({ dossiers: [], fichiers: [] });
+            setOuvreModal({ type: null, data: null });
+        } catch (erreur) {
+            setError(erreur.response?.data?.error || 'Erreur lors du vidage de la corbeille');
+        }
+    };
+
+    const restaurerDossier = async (dossier) => {
+        setCreating(true); setError('');
+        setMenuOptionsDossier(null);
+        try {
+            await axios.post(`${API}/api/dossiers/${dossier.idDossier}/restaurer`, {}, { headers: authHeader() });
+            setContenuDossier(prev => ({ ...prev, dossiers: prev.dossiers.filter(d => d.idDossier !== dossier.idDossier) }));
+            await fetchData();
+        } catch (erreur) {
+            setError(erreur.response?.data?.error || 'Erreur lors de la restauration');
+        } finally {
+            setCreating(false);
+        }
+    };
+
+    // ===== FICHIERS =====
+    const telechargerFichier = async (fichier) => {
+        const id_dossier_actuel = dossier_actuel ? dossier_actuel.idDossier : dossier_racine?.idDossier;
+        if (!id_dossier_actuel) { setError("Erreur d'identification du dossier."); return; }
+
+        try {
+            const response = await axios.get(
+                `${API}/api/dossiers/${id_dossier_actuel}/fichiers/${encodeURIComponent(fichier.nom)}`,
+                { headers: authHeader(), responseType: 'blob' }
+            );
+            const url = URL.createObjectURL(response.data);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fichier.nom;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (erreur) {
+            setError('Erreur lors du téléchargement : ' + (erreur.response?.data?.error || erreur.message));
+        }
+    };
+
+    const ouvrirModalSuppressionFichier = async (fichier) => {
+        setError('');
+        setOuvreModal({ type: 'suppression-fichier', data: fichier });
+        setMenuOptionsFichier(null);
+        
+        const id_dossier_actuel = dossier_actuel ? dossier_actuel.idDossier : dossier_racine?.idDossier;
+
+        try {
+            await axios.delete(
+                `${API}/api/dossiers/${id_dossier_actuel}/fichiers/${encodeURIComponent(fichier.nom)}/vers-corbeille`,
+                { headers: authHeader() }
+            );
+            if (dossier_actuel) {
+                setContenuDossier(prev => ({ ...prev, fichiers: prev.fichiers.filter(f => f.nom !== fichier.nom) }));
+            } else {
+                setFichiersBase(prev => prev.filter(f => f.nom !== fichier.nom));
+            }
+            setOuvreModal({ type: 'suppression-reussie-fichier', data: fichier });
+            setTimeout(() => setOuvreModal({ type: null, data: null }), 2000);
+        } catch (erreur) {
+            setOuvreModal({ type: null, data: null });
+            setError(erreur.response?.data?.error || 'Erreur lors du déplacement du fichier vers la corbeille');
+        }
+    };
+
+    const restaurerFichier = async (fichier) => {
+        try {
+            await axios.post(
+                `${API}/api/corbeille/fichiers/${encodeURIComponent(fichier.nom)}/restaurer`,
+                {}, { headers: authHeader() }
+            );
+            setContenuDossier(prev => ({ ...prev, fichiers: prev.fichiers.filter(f => f.nom !== fichier.nom) }));
+            await fetchData();
+            setMenuOptionsFichier(null);
+        } catch (erreur) {
+            setError(erreur.response?.data?.error || 'Erreur lors de la restauration du fichier');
+        }
+    };
+
+    const ouvrirModalSuppressionDefinitiveFichier = (fichier) => {
+        setError('');
+        setOuvreModal({ type: 'confirmation-suppression-fichier', data: fichier });
+        setMenuOptionsFichier(null);
+    };
+
+    const confirmerSuppressionDefinitiveFichier = async () => {
+        const fichier = ouvre_modal.data;
+        const id_dossier_actuel = dossier_actuel ? dossier_actuel.idDossier : dossier_racine?.idDossier;
+
+        try {
+            await axios.delete(
+                `${API}/api/dossiers/${id_dossier_actuel}/fichiers/${encodeURIComponent(fichier.nom)}`,
+                { headers: authHeader() }
+            );
+            if (dossier_actuel) {
+                setContenuDossier(prev => ({ ...prev, fichiers: prev.fichiers.filter(f => f.nom !== fichier.nom) }));
+            } else {
+                setFichiersBase(prev => prev.filter(f => f.nom !== fichier.nom));
+            }
+            setOuvreModal({ type: null, data: null });
+            setError('');
+        } catch (erreur) {
+            setError(erreur.response?.data?.error || 'Erreur lors de la suppression de fichier');
+        }
+    };
+
+    // ===== APERÇU =====
+    const ouvrirApercu = async (fichier) => {
+        const type = obtenirTypeFichier(fichier.nom);
+        if (type === 'inconnu') {
+            setFichierPreview({ nom: fichier.nom, url: null, type: 'non_supporte' });
+            setError('');
+            return;
+        }
+
+        setChargementPreview(true); setError('');
+        const id_dossier_actuel = dossier_actuel ? dossier_actuel.idDossier : dossier_racine?.idDossier;
+
+        try {
+            const response = await axios.get(
+                `${API}/api/dossiers/${id_dossier_actuel}/fichiers/${encodeURIComponent(fichier.nom)}`,
+                { headers: authHeader(), responseType: 'blob' }
+            );
+            const url = URL.createObjectURL(response.data);
+            setFichierPreview({ nom: fichier.nom, url, type });
+        } catch (erreur) {
+            setError(erreur.response?.data?.error || "Erreur lors du chargement de l'aperçu du fichier.");
+        } finally {
+            setChargementPreview(false);
+        }
+    };
+
+    const fermerApercu = () => {
+        if (fichier_preview?.url) URL.revokeObjectURL(fichier_preview.url);
+        setFichierPreview(null);
+    };
+
+    return {
+        // etats
+        dossiers, fichiers_base, dossier_racine, corbeille_info,
+        etat_survole_upload, dossier_survole_upload, setDossierSurvoleUpload,
+        loading, menu_nom_dossier, setChangeNomDossier, creating, error, setError,
+        ouvre_modal, setOuvreModal, nouveau_nom, setRenommeDossier,
+        dossier_actuel, contenu_dossier, fil_ariane,
+        taille_dossiers, menu_options_dossier, setMenuOptionsDossier,
+        menu_options_fichier, setMenuOptionsFichier,
+        fichier_preview, chargement_preview,
+        // actions
+        fetchData, naviguerVersUpload,
+        handleDragEnterGlobal, handleDragLeaveGlobal, handleDragOverGlobal, handleDropGlobal,
+        gestionClicDossier, gestionClicBreadcrumb,
+        gestionCreeDossier, 
+        ouvrirModalRenommerDossier, confirmerRenommageDossier,
+        ouvrirModalSuppressionDossier, ouvrirModalSuppressionDefinitiveDossier, confirmerSuppressionDefinitiveDossier,
+        restaurerDossier,
+        ouvrirModalViderCorbeille, confirmerViderCorbeille,
+        telechargerFichier, restaurerFichier, 
+        ouvrirModalSuppressionFichier, ouvrirModalSuppressionDefinitiveFichier, confirmerSuppressionDefinitiveFichier,
+        ouvrirApercu, fermerApercu,
+        formatFileSize,
+    };
+}
