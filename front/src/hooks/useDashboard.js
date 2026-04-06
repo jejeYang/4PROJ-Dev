@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 import { formatFileSize, obtenirTypeFichier } from '../utils/fichierUtils';
 
 const API = 'http://localhost:3000';
@@ -14,6 +16,9 @@ export function useDashboard() {
     const [etat_survole_upload, setEtatSurvoleUpload] = useState(false);
     const [dossier_survole_upload, setDossierSurvoleUpload] = useState(null);
     const compteur_drag = useRef(0);
+
+    const [selection, setSelection] = useState([]);
+    const [action_en_cours, setActionEnCours] = useState({ active: false, type: '', progression: 0 });
 
     const [loading, setLoading] = useState(true);
     const [menu_nom_dossier, setChangeNomDossier] = useState('');
@@ -67,9 +72,8 @@ export function useDashboard() {
         } finally {
             setLoading(false);
         }
-    }, [authHeader]); // fetchData dépend maintenant de authHeader
+    }, [authHeader]);
 
-    // Ajout de fetchData dans les dépendances
     useEffect(() => { fetchData(); }, [fetchData]);
 
     useEffect(() => {
@@ -89,11 +93,11 @@ export function useDashboard() {
             if (Object.keys(updates).length > 0) setTailleDossiers(prev => ({ ...prev, ...updates }));
         };
 
-        const listToProcess = [...dossiers];
-        if (corbeille_info) listToProcess.push(corbeille_info);
-        recupereTaille(listToProcess);
+        const queue_fichiers = [...dossiers];
+        if (corbeille_info) queue_fichiers.push(corbeille_info);
+        recupereTaille(queue_fichiers);
         if (contenu_dossier?.dossiers) recupereTaille(contenu_dossier.dossiers);
-    }, [dossiers, contenu_dossier, corbeille_info, authHeader]); // authHeader est stable, donc plus de warning
+    }, [dossiers, contenu_dossier, corbeille_info, authHeader]);
 
     const gestionClicDossier = async (dossier) => {
         try {
@@ -134,6 +138,103 @@ export function useDashboard() {
 
     const naviguerVersUpload = () => {
         navigate('/upload', { state: { dossierActuel: dossier_actuel, path: fil_ariane } });
+    };
+
+    // ===== SELECTION MULTIPLE =====
+    const estSelectionne = (item, type) => {
+        return selection.some(s => s.type === type && 
+            (type === 'dossier' ? s.item.idDossier === item.idDossier : s.item.nom === item.nom)
+        );
+    };
+
+    const switchSelection = (item, type) => {
+        if (estSelectionne(item, type)) {
+            setSelection(prev => prev.filter(s => !(s.type === type && 
+                (type === 'dossier' ? s.item.idDossier === item.idDossier : s.item.nom === item.nom))
+            ));
+        } else {
+            setSelection(prev => [...prev, { type, item }]);
+        }
+    };
+
+    const toggleSelection = (dossiersAffiches, fichiersAffiches) => {
+        const totalAffiches = dossiersAffiches.length + fichiersAffiches.length;
+        if (selection.length === totalAffiches) {
+            setSelection([]);
+        } else {
+            const nouvelleSelection = [
+                ...dossiersAffiches.map(d => ({ type: 'dossier', item: d })),
+                ...fichiersAffiches.map(f => ({ type: 'fichier', item: f }))
+            ];
+            setSelection(nouvelleSelection);
+        }
+    };
+
+    const supprimerSelection = async () => {
+        if (selection.length === 0) return;
+        setActionEnCours({ active: true, type: 'Suppression', progression: 0 });
+        const total = selection.length;
+        const id_dossier_actuel = dossier_actuel ? dossier_actuel.idDossier : dossier_racine?.idDossier;
+
+        try {
+            for (let i = 0; i < total; i++) {
+                const element = selection[i];
+                if (element.type === 'dossier') {
+                    await axios.delete(`${API}/api/dossiers/${element.item.idDossier}/vers-corbeille`, { headers: authHeader() });
+                } else {
+                    await axios.delete(`${API}/api/dossiers/${id_dossier_actuel}/fichiers/${encodeURIComponent(element.item.nom)}/vers-corbeille`, { headers: authHeader() });
+                }
+                setActionEnCours({ active: true, type: 'Suppression', progression: Math.round(((i + 1) / total) * 100) });
+            }
+
+            if (dossier_actuel) {
+                await gestionClicDossier(dossier_actuel);
+            } else {
+                await fetchData();
+            }
+            setSelection([]);
+        } catch (erreur) {
+            setError('Une erreur est survenue lors de la suppression de certains éléments.', erreur);
+        } finally {
+            setTimeout(() => setActionEnCours({ active: false, type: '', progression: 0 }), 500);
+        }
+    };
+
+    const telechargerSelection = async () => {
+        const fichiersSelectionnes = selection.filter(s => s.type === 'fichier');
+        if (fichiersSelectionnes.length === 0) {
+            setError("Veuillez sélectionner au moins un fichier pour créer une archive.");
+            return;
+        }
+
+        setActionEnCours({ active: true, type: 'Téléchargement de l\'archive', progression: 0 });
+        const zip = new JSZip();
+        const total = fichiersSelectionnes.length;
+        const id_dossier_actuel = dossier_actuel ? dossier_actuel.idDossier : dossier_racine?.idDossier;
+
+        try {
+            for (let i = 0; i < total; i++) {
+                const fichier = fichiersSelectionnes[i].item;
+                const response = await axios.get(
+                    `${API}/api/dossiers/${id_dossier_actuel}/fichiers/${encodeURIComponent(fichier.nom)}`,
+                    { headers: authHeader(), responseType: 'blob' }
+                );
+                zip.file(fichier.nom, response.data);
+                setActionEnCours({ active: true, type: 'Préparation des fichiers', progression: Math.round(((i + 1) / total) * 50) });
+            }
+
+            setActionEnCours({ active: true, type: 'Compression ZIP en cours...', progression: 50 });
+            const content = await zip.generateAsync({ type: 'blob' }, (metadata) => {
+                setActionEnCours({ active: true, type: 'Compression ZIP en cours...', progression: 50 + (metadata.percent / 2) });
+            });
+
+            saveAs(content, `Archive_Espace_${new Date().getTime()}.zip`);
+            setSelection([]);
+        } catch (erreur) {
+            setError("Erreur lors de la création de l'archive ZIP.", erreur);
+        } finally {
+            setTimeout(() => setActionEnCours({ active: false, type: '', progression: 0 }), 500);
+        }
     };
 
     // ===== DRAG & DROP =====
@@ -437,6 +538,8 @@ export function useDashboard() {
         // etats
         dossiers, fichiers_base, dossier_racine, corbeille_info,
         etat_survole_upload, dossier_survole_upload, setDossierSurvoleUpload,
+        selection, estSelectionne, toggleSelection: switchSelection, toggleSelectionTout: toggleSelection, 
+        supprimerSelection, telechargerSelection, action_en_cours,
         loading, menu_nom_dossier, setChangeNomDossier, creating, error, setError,
         ouvre_modal, setOuvreModal, nouveau_nom, setRenommeDossier,
         dossier_actuel, contenu_dossier, fil_ariane,
