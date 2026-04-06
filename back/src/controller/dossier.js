@@ -308,8 +308,25 @@ dossierRouter.get('/api/dossiers/:dossierId/fichiers/:nomFichier', authentifierT
     }
 });
 
+// Middleware pour intercepter les erreurs Multer et retourner un JSON lisible
+const gererErreurMulter = (uploadMiddleware) => (req, res, next) => {
+    uploadMiddleware(req, res, (err) => {
+        if (!err) return next();
+        if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(413).json({ error: 'Fichier trop volumineux. La taille maximale autorisée est de 50 Mo.' });
+        }
+        if (err.code === 'LIMIT_FILE_COUNT') {
+            return res.status(400).json({ error: 'Trop de fichiers. Vous ne pouvez pas envoyer plus de 10 fichiers à la fois.' });
+        }
+        if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+            return res.status(400).json({ error: 'Champ de fichier inattendu.' });
+        }
+        return res.status(500).json({ error: err.message || 'Erreur lors du téléversement.' });
+    });
+};
+
 // Téléversement d'un fichier dans un dossier
-dossierRouter.post('/api/dossiers/:dossierId/televerser', authentifierToken, verifierDossierExiste, upload.single('fichier'), async (req, res) => {
+dossierRouter.post('/api/dossiers/:dossierId/televerser', authentifierToken, verifierDossierExiste, gererErreurMulter(upload.single('fichier')), async (req, res) => {
     try {
         const { dossierId } = req.params;
         const idUtilisateurAuthentifie = +req.utilisateur.id;
@@ -362,7 +379,7 @@ dossierRouter.post('/api/dossiers/:dossierId/televerser', authentifierToken, ver
 });
 
 // Téléversement de plusieurs fichiers
-dossierRouter.post('/api/dossiers/:dossierId/televerser-multiple', authentifierToken, verifierDossierExiste, upload.array('fichiers', 10), async (req, res) => {
+dossierRouter.post('/api/dossiers/:dossierId/televerser-multiple', authentifierToken, verifierDossierExiste, gererErreurMulter(upload.array('fichiers', 10)), async (req, res) => {
     try {
         const { dossierId } = req.params;
         const idUtilisateurAuthentifie = +req.utilisateur.id;

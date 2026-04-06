@@ -89,12 +89,26 @@ function Upload() {
         }
     };
 
+    const TAILLE_MAX_FICHIER = 50 * 1024 * 1024;
+    const MAX_FICHIERS = 10;
+
     const gestionTeleversement = async (event) => {
         event.preventDefault();
         setErreurUpload('');
         
         if (fichiers.length === 0) {
             setErreurUpload('Veuillez sélectionner au moins un fichier');
+            return;
+        }
+
+        if (fichiers.length > MAX_FICHIERS) {
+            setErreurUpload(`Trop de fichiers. Vous ne pouvez pas envoyer plus de ${MAX_FICHIERS} fichiers à la fois.`);
+            return;
+        }
+
+        const fichierTropGros = fichiers.find(f => f.size > TAILLE_MAX_FICHIER);
+        if (fichierTropGros) {
+            setErreurUpload(`Le fichier "${fichierTropGros.name}" dépasse la taille maximale autorisée de 50 Mo.`);
             return;
         }
         

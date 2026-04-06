@@ -351,6 +351,17 @@ export function useDashboard() {
         const files = Array.from(e.dataTransfer.files);
         if (files.length === 0) return;
 
+        if (files.length > 10) {
+            setError('Trop de fichiers. Vous ne pouvez pas envoyer plus de 10 fichiers à la fois.');
+            return;
+        }
+
+        const fichierTropGros = files.find(f => f.size > 50 * 1024 * 1024);
+        if (fichierTropGros) {
+            setError(`Le fichier "${fichierTropGros.name}" dépasse la taille maximale autorisée de 50 Mo.`);
+            return;
+        }
+
         const cible_id = id_dossier_specifique || (dossier_actuel ? dossier_actuel.idDossier : dossier_racine?.idDossier);
         if (!cible_id) { setError("Impossible de déterminer le dossier de destination."); return; }
 
