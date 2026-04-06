@@ -10,6 +10,7 @@ import Upload from './pages/Upload';
 import Settings from './pages/Settings';
 import logo from './assets/logo.png';
 import { ThemeProvider } from './context/theme_context';
+import FallingIcons from './components/FallingIcons';
 
 axios.interceptors.response.use(
     (response) => {
@@ -58,6 +59,7 @@ function AppContent() {
 
   return (
     <div className="app-container">
+      <FallingIcons />
       <nav className="navbar">
         <Link to="/" className="nav-brand">
           <img src={logo} alt="SupFile Logo" className="nav-logo" />
