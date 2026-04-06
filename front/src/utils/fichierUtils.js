@@ -16,3 +16,20 @@ export const obtenirTypeFichier = (nomFichier) => {
     if (['pdf', 'txt', 'md', 'html', 'js', 'json', 'yml', 'xml'].includes(ext)) return 'document';
     return 'inconnu';
 };
+
+export const tronquerNom = (nom) => {
+    if (!nom || nom.length <= 35) return nom;
+    return `${nom.substring(0, 35)}...`;
+};
+
+export const separerNomExtension = (nomComplet) => {
+    const indexPoint = nomComplet.lastIndexOf('.');
+    // Exception dans le cas où le fichier commence par un point
+    if (indexPoint > 0) {
+        return {
+            nomBase: nomComplet.substring(0, indexPoint),
+            extension: nomComplet.substring(indexPoint + 1).toLowerCase()
+        };
+    }
+    return { nomBase: nomComplet, extension: '' };
+};

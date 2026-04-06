@@ -28,11 +28,7 @@ Dashboard :
 - Fonctionnalités fichiers :
     - Créer un lien de partage (y compris de dossier)
 - Selection multiple de fichier & dossier :
-    - Suppression multiple
     - Déplacement multiple
-
-Corbeille :
-- Selection multiple de fichier & dossier
 
 Liens :
 - Voir liens actifs fichier / dossier
@@ -46,3 +42,5 @@ Parametres :
 
 Back :
 - Modifier table dossier pour contenir "Date de création" & "Modifié le"
+- Restaurer un élement doit le remettre dans le dossier dans lequel il était plutôt qu'à la racine
+- Faire la route de téléchargement (archive zip)

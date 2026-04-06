@@ -108,7 +108,7 @@
 }
 
 .btn-primary {
-    background-color: var(--btn-color);
+    background-color: var(--btn-primary-color);
     color: var(--btn-text);
 }
 

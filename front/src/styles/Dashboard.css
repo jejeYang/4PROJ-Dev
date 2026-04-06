@@ -24,7 +24,7 @@
 .btn-publie-dashboard-header, .btn-cree-dossier-dashboard-header {
     height: 48px;
     color: var(--btn-text);
-    background-color: var(--btn-color);
+    background-color: var(--btn-primary-color);
     padding: 0.8rem;
     font-weight: 600;
     font-size: 1rem;
@@ -47,7 +47,7 @@
 
 .breadcrumb-separateur {
     color: var(--text-secondary-color);
-    font-size: 0.95rem;
+    font-size: 1.15rem;
 }
 
 .breadcrumb-objet {
@@ -75,16 +75,22 @@
 }
 
 .dossier-header-tableau {
+    display: grid;
+    grid-template-columns: 40px 2fr 120px 100px 1fr 60px;
+    padding: 0.7rem 1rem;
+    align-items: center;
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--btn-primary-color);
+    margin-bottom: 0.6rem;
+    transition: border-left 0.1s ease;
     background: var(--bg-secondary-color);
     font-weight: bold;
-    border: 1px solid var(--border-color);
-    border-left: 4px solid transparent;
     color: var(--text-secondary-color);
     border-radius: 8px;
 }
 
 .dossier-header-tableau:hover {
-    border-left: 4px solid transparent;
+    border-left: 1px solid var(--border-color);
     cursor: default;
 }
 
@@ -98,12 +104,7 @@
     width: 18px;
     height: 18px;
     cursor: pointer;
-    accent-color: var(--btn-color);
-}
-
-.ligne-selectionnee {
-    background-color: var(--bg-tertiary-color);
-    border-color: var(--btn-color);
+    accent-color: var(--btn-primary-color);
 }
 
 .actions-multiples {
@@ -118,7 +119,7 @@
 }
 
 .action-principal {
-    color: var(--btn-color);
+    color: var(--btn-primary-color);
 }
 
 .box-barre-progression {
@@ -133,7 +134,7 @@
 
 .barre-progression {
     height: 100%;
-    background-color: var(--btn-color);
+    background-color: var(--btn-primary-color);
     transition: width 0.3s ease-out;
 }
 
@@ -181,7 +182,7 @@
 }
 
 .btn-confirmer {
-    background: var(--btn-color);
+    background: var(--btn-primary-color);
     color: var(--btn-text);
     border: none;
     padding: 0.6rem 1.2rem;
@@ -204,12 +205,12 @@
 
 .dossiers-section {
     background: var(--bg-primary-color);
-    padding: 2rem 0;
+    padding: 1.5rem 0;
     border-radius: 8px;
 }
 
 .dossiers-section h2 {
-    margin: 0 0 1.5rem 0;   
+    margin: 0 0 1rem 0;   
     color: var(--text-primary-color);
 }
 
@@ -232,13 +233,13 @@
 
 .dossier-ligne {
     display: grid;
-    grid-template-columns: 40px 2fr 1fr 1fr 60px;
-    gap: 1rem;
-    padding: 0.8rem 1rem;
+    grid-template-columns: 40px 2fr 120px 100px 1fr 60px;
+    background-color: var(--bg-tertiary-color);
+    padding: 0.5rem 1rem;
     align-items: center;
     border-radius: 8px;
     border: 1px solid var(--border-color);
-    border-left: 4px solid var(--btn-color);
+    border-left: 4px solid var(--btn-primary-color);
     transition: border-left 0.1s ease;
 }
 
@@ -247,11 +248,16 @@
     cursor: pointer;
 }
 
+.ligne-selectionnee {
+    background-color: var(--select-primary-color);
+    border-color: var(--btn-primary-color);
+}
+
 .dashboard-drag-overlay {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
     background: rgba(6, 188, 193, 0.1);
-    border: 3px dashed var(--btn-color);
+    border: 3px dashed var(--btn-primary-color);
     border-radius: 8px;
     z-index: 100;
     display: flex;
@@ -259,23 +265,18 @@
     justify-content: center;
     font-size: 1.5rem;
     font-weight: bold;
-    color: var(--btn-color);
+    color: var(--btn-primary-color);
     pointer-events: none;
 }
 
 .dossier-ligne.drag-over {
     background-color: var(--select-primary-color);
-    border: 2px dashed var(--btn-color);
+    border: 2px dashed var(--btn-primary-color);
     transform: scale(1.01);
 }
 
 .fichier-ligne {
-    border-left: 4px solid var(--btn-color);
-}
-
-.col-nom {
-    margin-right: '10px';
-    font-size: '1.2rem';
+    border-left: 4px solid var(--btn-primary-color);
 }
 
 .dossier-nom {
@@ -283,8 +284,9 @@
     color: var(--text-primary-color);
 }
 
-.col-id, .col-taille {
+.col-nom, .col-id, .col-taille, .col-extension {
     color: var(--text-primary-color);
+    padding: 0.4re 0;
     font-size: 0.95rem;
 }
 
@@ -299,7 +301,7 @@
     background: none;
     border: 1px solid transparent;
     font-size: 1.2rem;
-    padding: 0.4rem 0.6rem;
+    padding: 0.4rem;
     cursor: pointer;
     border-radius: 6px;
     color: var(--text-primary-color);
@@ -324,7 +326,7 @@
 }
 
 .action-icon-btn {
-    background-color: var(--hover-primary-color);
+    background-color: var(--btn-secondary-color);
     border: 1px solid transparent;
     font-size: 1.0rem;
     padding: 0.4rem;
@@ -342,8 +344,11 @@
 }
 
 .section-corbeille {
-    margin-top: 1.5rem;
-    padding-bottom: 2rem;
+    margin-top: 1rem;
+}
+
+.section-corbeille h2 {
+    margin: 0 0 1rem 0;
 }
 
 .bloc-corbeille {
@@ -372,7 +377,7 @@
     font-size: 1.4rem;
 }
 
-.taille-dossier {
+.taille-corbeille {
     font-size: 0.95rem;
     color: var(--text-primary-color);
     margin: 0;
@@ -461,7 +466,7 @@
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    background: var(--bg-secondary-color);
+    background: white;
     border-radius: 8px;
 }
 

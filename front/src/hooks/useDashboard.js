@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
-import { formatFileSize, obtenirTypeFichier } from '../utils/fichierUtils';
+import { formatFileSize, obtenirTypeFichier, tronquerNom, separerNomExtension } from '../utils/fichierUtils';
 
 const API = 'http://localhost:3000';
 
@@ -42,6 +42,26 @@ export function useDashboard() {
         const token = localStorage.getItem('token');
         return { Authorization: `Bearer ${token}` };
     }, []);
+
+    // ===== RAFRAÎCHISSEMENT =====
+    const rafraichirVueActuelle = async () => {
+        await fetchData();
+
+        if (dossier_actuel) {
+            try {
+                const [res_dossiers, res_fichiers] = await Promise.all([
+                    axios.get(`${API}/api/dossiers/${dossier_actuel.idDossier}/sous-dossiers`, { headers: authHeader() }),
+                    axios.get(`${API}/api/dossiers/${dossier_actuel.idDossier}/fichiers`, { headers: authHeader() })
+                ]);
+                setContenuDossier({ 
+                    dossiers: res_dossiers.data || [], 
+                    fichiers: res_fichiers.data || [] 
+                });
+            } catch (erreur) {
+                console.error('Erreur lors du rafraîchissement du dossier actuel :', erreur);
+            }
+        }
+    };
 
     const fetchData = useCallback(async () => {
         try {
@@ -101,6 +121,7 @@ export function useDashboard() {
 
     const gestionClicDossier = async (dossier) => {
         try {
+            setSelection([]);
             const [res_dossiers, res_fichiers] = await Promise.all([
                 axios.get(`${API}/api/dossiers/${dossier.idDossier}/sous-dossiers`, { headers: authHeader() }),
                 axios.get(`${API}/api/dossiers/${dossier.idDossier}/fichiers`, { headers: authHeader() })
@@ -116,6 +137,7 @@ export function useDashboard() {
 
     const gestionClicBreadcrumb = async (index) => {
         try {
+            setSelection([]);
             if (index === -1) {
                 setDossierActuel(null);
                 setContenuDossier({ dossiers: [], fichiers: [] });
@@ -170,8 +192,15 @@ export function useDashboard() {
         }
     };
 
+    const ouvrirModalSuppressionMultiple = () => {
+        if (selection.length === 0) return;
+        setError('');
+        setOuvreModal({ type: 'confirmation-suppression-multiple', data: selection.length });
+    };
+
     const supprimerSelection = async () => {
         if (selection.length === 0) return;
+        setOuvreModal({ type: null, data: null });
         setActionEnCours({ active: true, type: 'Suppression', progression: 0 });
         const total = selection.length;
         const id_dossier_actuel = dossier_actuel ? dossier_actuel.idDossier : dossier_racine?.idDossier;
@@ -187,11 +216,7 @@ export function useDashboard() {
                 setActionEnCours({ active: true, type: 'Suppression', progression: Math.round(((i + 1) / total) * 100) });
             }
 
-            if (dossier_actuel) {
-                await gestionClicDossier(dossier_actuel);
-            } else {
-                await fetchData();
-            }
+            await rafraichirVueActuelle();
             setSelection([]);
         } catch (erreur) {
             setError('Une erreur est survenue lors de la suppression de certains éléments.', erreur);
@@ -232,6 +257,71 @@ export function useDashboard() {
             setSelection([]);
         } catch (erreur) {
             setError("Erreur lors de la création de l'archive ZIP.", erreur);
+        } finally {
+            setTimeout(() => setActionEnCours({ active: false, type: '', progression: 0 }), 500);
+        }
+    };
+
+    const ouvrirModalRestaurerMultiple = () => {
+        if (selection.length === 0) return;
+        setError('');
+        setOuvreModal({ type: 'confirmation-restauration-multiple', data: selection.length });
+    };
+
+    const restaurerSelection = async () => {
+        if (selection.length === 0) return;
+        setOuvreModal({ type: null, data: null });
+        setActionEnCours({ active: true, type: 'Restauration', progression: 0 });
+        const total = selection.length;
+
+        try {
+            for (let i = 0; i < total; i++) {
+                const element = selection[i];
+                if (element.type === 'dossier') {
+                    await axios.post(`${API}/api/dossiers/${element.item.idDossier}/restaurer`, {}, { headers: authHeader() });
+                } else {
+                    await axios.post(`${API}/api/corbeille/fichiers/${encodeURIComponent(element.item.nom)}/restaurer`, {}, { headers: authHeader() });
+                }
+                setActionEnCours({ active: true, type: 'Restauration', progression: Math.round(((i + 1) / total) * 100) });
+            }
+
+            await rafraichirVueActuelle();
+            setSelection([]);
+        } catch (erreur) {
+            setError('Une erreur est survenue lors de la restauration de certains éléments.', erreur);
+        } finally {
+            setTimeout(() => setActionEnCours({ active: false, type: '', progression: 0 }), 500);
+        }
+    };
+
+    const ouvrirModalSuppressionDefinitiveMultiple = () => {
+        if (selection.length === 0) return;
+        setError('');
+        setOuvreModal({ type: 'confirmation-suppression-definitive-multiple', data: selection.length });
+    };
+
+    const supprimerDefinitivementSelection = async () => {
+        if (selection.length === 0) return;
+        setOuvreModal({ type: null, data: null });
+        setActionEnCours({ active: true, type: 'Suppression définitive', progression: 0 });
+        const total = selection.length;
+        const id_dossier_actuel = dossier_actuel ? dossier_actuel.idDossier : dossier_racine?.idDossier;
+
+        try {
+            for (let i = 0; i < total; i++) {
+                const element = selection[i];
+                if (element.type === 'dossier') {
+                    await axios.delete(`${API}/api/dossiers/${element.item.idDossier}`, { headers: authHeader() });
+                } else {
+                    await axios.delete(`${API}/api/dossiers/${id_dossier_actuel}/fichiers/${encodeURIComponent(element.item.nom)}`, { headers: authHeader() });
+                }
+                setActionEnCours({ active: true, type: 'Suppression définitive', progression: Math.round(((i + 1) / total) * 100) });
+            }
+
+            await rafraichirVueActuelle();
+            setSelection([]);
+        } catch (erreur) {
+            setError('Une erreur est survenue lors de la suppression définitive de certains éléments.', erreur);
         } finally {
             setTimeout(() => setActionEnCours({ active: false, type: '', progression: 0 }), 500);
         }
@@ -539,7 +629,9 @@ export function useDashboard() {
         dossiers, fichiers_base, dossier_racine, corbeille_info,
         etat_survole_upload, dossier_survole_upload, setDossierSurvoleUpload,
         selection, estSelectionne, toggleSelection: switchSelection, toggleSelectionTout: toggleSelection, 
-        supprimerSelection, telechargerSelection, action_en_cours,
+        ouvrirModalSuppressionMultiple, supprimerSelection, telechargerSelection, action_en_cours,
+        ouvrirModalRestaurerMultiple, restaurerSelection,
+        ouvrirModalSuppressionDefinitiveMultiple, supprimerDefinitivementSelection,
         loading, menu_nom_dossier, setChangeNomDossier, creating, error, setError,
         ouvre_modal, setOuvreModal, nouveau_nom, setRenommeDossier,
         dossier_actuel, contenu_dossier, fil_ariane,
@@ -558,6 +650,6 @@ export function useDashboard() {
         telechargerFichier, restaurerFichier, 
         ouvrirModalSuppressionFichier, ouvrirModalSuppressionDefinitiveFichier, confirmerSuppressionDefinitiveFichier,
         ouvrirApercu, fermerApercu,
-        formatFileSize,
+        formatFileSize, tronquerNom, separerNomExtension
     };
 }

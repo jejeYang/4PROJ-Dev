@@ -59,7 +59,8 @@ function AppContent() {
 
   return (
     <div className="app-container">
-      <FallingIcons />
+      {isHome && (<FallingIcons />)}
+      
       <nav className="navbar">
         <Link to="/" className="nav-brand">
           <img src={logo} alt="SupFile Logo" className="nav-logo" />

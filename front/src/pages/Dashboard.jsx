@@ -16,7 +16,9 @@ function Dashboard() {
         naviguerVersUpload, handleDragEnterGlobal, handleDragLeaveGlobal, handleDragOverGlobal, handleDropGlobal,
         gestionClicDossier, gestionClicBreadcrumb,
         selection, estSelectionne, toggleSelection, toggleSelectionTout,
-        supprimerSelection, telechargerSelection, action_en_cours,
+        ouvrirModalSuppressionMultiple, supprimerSelection, telechargerSelection, action_en_cours,
+        ouvrirModalRestaurerMultiple, restaurerSelection,
+        ouvrirModalSuppressionDefinitiveMultiple, supprimerDefinitivementSelection,
         gestionCreeDossier, 
         ouvrirModalRenommerDossier, confirmerRenommageDossier,
         ouvrirModalSuppressionDossier, ouvrirModalSuppressionDefinitiveDossier, confirmerSuppressionDefinitiveDossier,
@@ -25,7 +27,7 @@ function Dashboard() {
         telechargerFichier, restaurerFichier, 
         ouvrirModalSuppressionFichier, ouvrirModalSuppressionDefinitiveFichier, confirmerSuppressionDefinitiveFichier,
         ouvrirApercu, fermerApercu,
-        formatFileSize,
+        formatFileSize, tronquerNom, separerNomExtension,
     } = useDashboard();
 
     if (loading) return <div className="dashboard-container">Chargement...</div>;
@@ -136,10 +138,22 @@ function Dashboard() {
                             </div>
                         )}
 
+                        {ouvre_modal.type === 'confirmation-suppression-multiple' && (
+                            <div>
+                                <h3>Déplacer vers la corbeille ?</h3>
+                                <p>Voulez-vous vraiment déplacer les <strong>{ouvre_modal.data}</strong> éléments sélectionnés vers la corbeille ?</p>
+                                {error && <p className="erreur-modale suppression">{error}</p>}
+                                <div className="modal-bouttons">
+                                    <button className="btn-annuler" onClick={() => setOuvreModal({ type: null, data: null })}>Annuler</button>
+                                    <button className="btn-confirmer" onClick={supprimerSelection}>Déplacer</button>
+                                </div>
+                            </div>
+                        )}
+
                         {ouvre_modal.type === 'confirmation-suppression-dossier' && (
                             <div>
                                 <h3>Supprimer définitivement ?</h3>
-                                <p style={{color: 'var(--text-primary-color)'}}>Voulez-vous vraiment supprimer le dossier "{ouvre_modal.data?.cheminDaccesDossier}" ? Cette action est irréversible.</p>
+                                <p>Voulez-vous vraiment supprimer le dossier "{ouvre_modal.data?.cheminDaccesDossier}" ? Cette action est irréversible.</p>
                                 {error && <p className="erreur-modale suppression">{error}</p>}
                                 <div className="modal-bouttons">
                                     <button className="btn-annuler" onClick={() => setOuvreModal({ type: null, data: null })}>Annuler</button>
@@ -151,7 +165,7 @@ function Dashboard() {
                         {ouvre_modal.type === 'confirmation-suppression-fichier' && (
                             <div>
                                 <h3>Supprimer définitivement ?</h3>
-                                <p style={{color: 'var(--text-primary-color)'}}>Voulez-vous vraiment supprimer le fichier "{ouvre_modal.data?.nom}" ? Cette action est irréversible.</p>
+                                <p>Voulez-vous vraiment supprimer le fichier "{ouvre_modal.data?.nom}" ? Cette action est irréversible.</p>
                                 {error && <p className="erreur-modale suppression">{error}</p>}
                                 <div className="modal-bouttons">
                                     <button className="btn-annuler" onClick={() => setOuvreModal({ type: null, data: null })}>Annuler</button>
@@ -159,11 +173,35 @@ function Dashboard() {
                                 </div>
                             </div>
                         )}
+
+                        {ouvre_modal.type === 'confirmation-restauration-multiple' && (
+                            <div>
+                                <h3>Restaurer la sélection ?</h3>
+                                <p>Voulez-vous vraiment restaurer les <strong>{ouvre_modal.data}</strong> éléments sélectionnés vers leurs emplacements d'origine ?</p>
+                                {error && <p className="erreur-modale suppression">{error}</p>}
+                                <div className="modal-bouttons">
+                                    <button className="btn-annuler" onClick={() => setOuvreModal({ type: null, data: null })}>Annuler</button>
+                                    <button className="btn-confirmer" onClick={restaurerSelection}>Restaurer</button>
+                                </div>
+                            </div>
+                        )}
+
+                        {ouvre_modal.type === 'confirmation-suppression-definitive-multiple' && (
+                            <div>
+                                <h3>Supprimer définitivement ?</h3>
+                                <p>Voulez-vous vraiment supprimer définitivement les <strong>{ouvre_modal.data}</strong> éléments sélectionnés ? Cette action est irréversible.</p>
+                                {error && <p className="erreur-modale suppression">{error}</p>}
+                                <div className="modal-bouttons">
+                                    <button className="btn-annuler" onClick={() => setOuvreModal({ type: null, data: null })}>Annuler</button>
+                                    <button className="btn-confirmer" style={{backgroundColor: 'var(--error-color)'}} onClick={supprimerDefinitivementSelection}>Supprimer</button>
+                                </div>
+                            </div>
+                        )}
                         
                         {ouvre_modal.type === 'vidage-corbeille' && (
                             <div>
                                 <h3>Vider la corbeille ?</h3>
-                                <p style={{color: 'var(--text-primary-color)'}}>Tous les éléments présents dans la corbeille seront définitivement supprimés.</p>
+                                <p>Tous les éléments présents dans la corbeille seront définitivement supprimés.</p>
                                 {error && <p className="erreur-modale suppression">{error}</p>}
                                 <div className="modal-bouttons">
                                     <button className="btn-annuler" onClick={() => setOuvreModal({ type: null, data: null })}>Annuler</button>
@@ -173,16 +211,16 @@ function Dashboard() {
                         )}
                         
                         {ouvre_modal.type === 'suppression-dossier' && (
-                            <div><h3>Déplacement en cours...</h3><p style={{color: 'var(--text-primary-color)'}}>Déplacement du dossier "{ouvre_modal.data?.cheminDaccesDossier}" vers la corbeille</p></div>
+                            <div><h3>Déplacement en cours...</h3><p>Déplacement du dossier "{ouvre_modal.data?.cheminDaccesDossier}" vers la corbeille</p></div>
                         )}
                         {ouvre_modal.type === 'suppression-reussie-dossier' && (
-                            <div><h3>Dossier déplacé</h3><p style={{color: 'var(--text-primary-color)'}}>Dossier "{ouvre_modal.data?.cheminDaccesDossier}" déplacé vers la corbeille</p><div className="modal-bouttons"><button className="btn-confirmer" onClick={() => setOuvreModal({ type: null, data: null })}>OK</button></div></div>
+                            <div><h3>Dossier déplacé</h3><p>Dossier "{ouvre_modal.data?.cheminDaccesDossier}" déplacé vers la corbeille</p><div className="modal-bouttons"><button className="btn-confirmer" onClick={() => setOuvreModal({ type: null, data: null })}>OK</button></div></div>
                         )}
                         {ouvre_modal.type === 'suppression-fichier' && (
-                            <div><h3>Déplacement en cours...</h3><p style={{color: 'var(--text-primary-color)'}}>Déplacement du fichier "{ouvre_modal.data?.nom}" vers la corbeille</p></div>
+                            <div><h3>Déplacement en cours...</h3><p>Déplacement du fichier "{ouvre_modal.data?.nom}" vers la corbeille</p></div>
                         )}
                         {ouvre_modal.type === 'suppression-reussie-fichier' && (
-                            <div><h3>Fichier déplacé</h3><p style={{color: 'var(--text-primary-color)'}}>Fichier "{ouvre_modal.data?.nom}" déplacé vers la corbeille</p><div className="modal-bouttons"><button className="btn-confirmer" onClick={() => setOuvreModal({ type: null, data: null })}>OK</button></div></div>
+                            <div><h3>Fichier déplacé</h3><p>Fichier "{ouvre_modal.data?.nom}" déplacé vers la corbeille</p><div className="modal-bouttons"><button className="btn-confirmer" onClick={() => setOuvreModal({ type: null, data: null })}>OK</button></div></div>
                         )}
                     </div>
                 </div>
@@ -198,8 +236,7 @@ function Dashboard() {
                     </div>
                 ) : (
                     <div className="dossiers-liste">
-                        
-                        <div className="dossier-ligne dossier-header-tableau">
+                        <div className="dossier-header-tableau">
                             <div className="col-checkbox">
                                 <input 
                                     type="checkbox" 
@@ -209,13 +246,20 @@ function Dashboard() {
                                 />
                             </div>
                             <div className="col-nom">Nom</div>
-                            <div className="col-id">Date / ID</div>
+                            <div className="col-extension">Extension</div>
+                            <div className="col-id">ID</div>
                             <div className="col-taille">Taille</div>
                             <div className="col-actions">
                                 {selection.length > 0 && !estDansCorbeille && (
                                     <div className="actions-multiples">
-                                        <button className="action-icon-btn action-danger" onClick={supprimerSelection} title="Supprimer la sélection">🗑️</button>
+                                        <button className="action-icon-btn action-danger" onClick={ouvrirModalSuppressionMultiple} title="Supprimer la sélection">🗑️</button>
                                         <button className="action-icon-btn action-primary" onClick={telechargerSelection} title="Télécharger en ZIP (fichiers uniquement)">⬇️</button>
+                                    </div>
+                                )}
+                                {selection.length > 0 && estDansCorbeille && (
+                                    <div className="actions-multiples">
+                                        <button className="action-icon-btn action-primary" onClick={ouvrirModalRestaurerMultiple} title="Restaurer la sélection">♻️</button>
+                                        <button className="action-icon-btn action-danger" onClick={ouvrirModalSuppressionDefinitiveMultiple} title="Supprimer définitivement la sélection">❌</button>
                                     </div>
                                 )}
                             </div>
@@ -240,8 +284,11 @@ function Dashboard() {
                                 </div>
                                 <div className="col-nom">
                                     <span>📁</span>
-                                    <span className="dossier-nom">{dossier.cheminDaccesDossier}</span>
+                                    <span className="dossier-nom" title={dossier.cheminDaccesDossier}>
+                                        {tronquerNom(dossier.cheminDaccesDossier)}
+                                    </span>
                                 </div>
+                                <div className="col-extension">dossier</div>
                                 <div className="col-id">ID: {dossier.idDossier}</div>
                                 <div className="col-taille">{taille_dossiers[dossier.idDossier] !== undefined ? formatFileSize(taille_dossiers[dossier.idDossier]) : '...'}</div>
                                 <div className="col-actions">
@@ -269,50 +316,57 @@ function Dashboard() {
                             </div>
                         ))}
 
-                        {displayItems.fichiers.map((fichier, index) => (
-                            <div
-                                key={`file-${index}`}
-                                className={`dossier-ligne fichier-ligne ${estSelectionne(fichier, 'fichier') ? 'ligne-selectionnee' : ''}`}
-                                onClick={() => ouvrirApercu(fichier)}
-                                style={{ cursor: chargement_preview ? 'wait' : 'pointer' }}
-                            >
-                                <div className="col-checkbox" onClick={(e) => e.stopPropagation()}>
-                                    <input 
-                                        type="checkbox" 
-                                        checked={estSelectionne(fichier, 'fichier')}
-                                        onChange={() => toggleSelection(fichier, 'fichier')}
-                                    />
+                        {displayItems.fichiers.map((fichier, index) => {
+                            const { nomBase, extension } = separerNomExtension(fichier.nom);
+                            return (
+                                <div
+                                    key={`file-${index}`}
+                                    className={`dossier-ligne fichier-ligne ${estSelectionne(fichier, 'fichier') ? 'ligne-selectionnee' : ''}`}
+                                    onClick={() => ouvrirApercu(fichier)}
+                                    style={{ cursor: chargement_preview ? 'wait' : 'pointer' }}
+                                >
+                                    <div className="col-checkbox" onClick={(e) => e.stopPropagation()}>
+                                        <input 
+                                            type="checkbox" 
+                                            checked={estSelectionne(fichier, 'fichier')}
+                                            onChange={() => toggleSelection(fichier, 'fichier')}
+                                        />
+                                    </div>
+                                    
+                                    <div className="col-nom">
+                                        <span>📄</span>
+                                        <span className="dossier-nom" title={fichier.nom}>
+                                            {tronquerNom(nomBase)}
+                                        </span>
+                                    </div>
+                                    <div className="col-extension">{extension || 'fichier'}</div> 
+                                    <div className="col-id">{new Date(fichier.dateModification).toLocaleDateString('fr-FR')}</div>
+                                    <div className="col-taille">{formatFileSize(fichier.taille)}</div>
+                                    <div className="col-actions">
+                                        {menu_options_fichier === fichier.nom && (
+                                            <div className="actions-rapides" onClick={(e) => e.stopPropagation()}>
+                                                {!estDansCorbeille ? (
+                                                    <>
+                                                        <button className="action-icon-btn" onClick={() => telechargerFichier(fichier)} title="Télécharger">⬇️</button>
+                                                        <button className="action-icon-btn" onClick={() => ouvrirModalSuppressionFichier(fichier)} title="Déplacer vers la corbeille">🗑️</button>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <button className="action-icon-btn" onClick={() => restaurerFichier(fichier)} title="Restaurer le fichier">♻️</button>
+                                                        <button className="action-icon-btn" onClick={() => ouvrirModalSuppressionDefinitiveFichier(fichier)} title="Supprimer définitivement">❌</button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        )}
+                                        <button
+                                            className="options-btn"
+                                            onClick={(e) => { e.stopPropagation(); setMenuOptionsFichier(menu_options_fichier === fichier.nom ? null : fichier.nom); }}
+                                            title="Options"
+                                        >⋮</button>
+                                    </div>
                                 </div>
-                                <div className="col-nom">
-                                    <span>📄</span>
-                                    <span className="dossier-nom">{fichier.nom}</span>
-                                </div>
-                                <div className="col-id">{new Date(fichier.dateModification).toLocaleDateString('fr-FR')}</div>
-                                <div className="col-taille">{formatFileSize(fichier.taille)}</div>
-                                <div className="col-actions">
-                                    {menu_options_fichier === fichier.nom && (
-                                        <div className="actions-rapides" onClick={(e) => e.stopPropagation()}>
-                                            {!estDansCorbeille ? (
-                                                <>
-                                                    <button className="action-icon-btn" onClick={() => telechargerFichier(fichier)} title="Télécharger">⬇️</button>
-                                                    <button className="action-icon-btn" onClick={() => ouvrirModalSuppressionFichier(fichier)} title="Déplacer vers la corbeille">🗑️</button>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <button className="action-icon-btn" onClick={() => restaurerFichier(fichier)} title="Restaurer le fichier">♻️</button>
-                                                    <button className="action-icon-btn" onClick={() => ouvrirModalSuppressionDefinitiveFichier(fichier)} title="Supprimer définitivement">❌</button>
-                                                </>
-                                            )}
-                                        </div>
-                                    )}
-                                    <button
-                                        className="options-btn"
-                                        onClick={(e) => { e.stopPropagation(); setMenuOptionsFichier(menu_options_fichier === fichier.nom ? null : fichier.nom); }}
-                                        title="Options"
-                                    >⋮</button>
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>
@@ -329,8 +383,8 @@ function Dashboard() {
                         aria-label="Ouvrir la corbeille"
                     >
                         <div className="icone-corbeille">🗑️</div>
-                        <h3 style={{color: 'var(--text-primary-color)'}}>Corbeille</h3>
-                        <p className="taille-dossier">{taille_dossiers[corbeille_info.idDossier] !== undefined ? formatFileSize(taille_dossiers[corbeille_info.idDossier]) : 'Calcul...'}</p>
+                        <h3>Corbeille</h3>
+                        <p className="taille-corbeille">{taille_dossiers[corbeille_info.idDossier] !== undefined ? formatFileSize(taille_dossiers[corbeille_info.idDossier]) : 'Calcul...'}</p>
                     </div>
                 </div>
             )}
@@ -347,7 +401,7 @@ function Dashboard() {
                             {fichier_preview.type === 'video' && <video controls autoPlay src={fichier_preview.url} />}
                             {fichier_preview.type === 'audio' && <audio controls autoPlay src={fichier_preview.url} />}
                             {fichier_preview.type === 'document' && <iframe src={fichier_preview.url} title={fichier_preview.nom} />}
-                            {fichier_preview.type === 'non_supporte' && <div style={{color: 'var(--text-primary-color)'}}>L'affichage de ce type de fichier n'est pas supporté.</div>}
+                            {fichier_preview.type === 'non_supporte' && <div>L'affichage de ce type de fichier n'est pas supporté.</div>}
                         </div>
                     </div>
                 </div>
