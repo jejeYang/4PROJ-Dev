@@ -9,9 +9,7 @@ const googleClientId =
   '60122681226-56ehoh7uj46u1ot03dlct24srh1j83p0.apps.googleusercontent.com'
 
 createRoot(document.getElementById('root')).render(
-  <StrictMode>
     <GoogleOAuthProvider clientId={googleClientId}>
       <App />
     </GoogleOAuthProvider>
-  </StrictMode>,
 )
