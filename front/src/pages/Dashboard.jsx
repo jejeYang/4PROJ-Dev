@@ -253,7 +253,7 @@ function Dashboard() {
                                 {selection.length > 0 && !estDansCorbeille && (
                                     <div className="actions-multiples">
                                         <button className="action-icon-btn action-danger" onClick={ouvrirModalSuppressionMultiple} title="Supprimer la sélection">🗑️</button>
-                                        <button className="action-icon-btn action-primary" onClick={telechargerSelection} title="Télécharger en ZIP (fichiers uniquement)">⬇️</button>
+                                        <button className="action-icon-btn action-primary" onClick={telechargerSelection} title="Télécharger la sélection en ZIP">⬇️</button>
                                     </div>
                                 )}
                                 {selection.length > 0 && estDansCorbeille && (

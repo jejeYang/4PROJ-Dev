@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { formatFileSize, obtenirTypeFichier, tronquerNom, separerNomExtension } from '../utils/fichierUtils';
 
@@ -226,39 +225,58 @@ export function useDashboard() {
     };
 
     const telechargerSelection = async () => {
-        const fichiersSelectionnes = selection.filter(s => s.type === 'fichier');
-        if (fichiersSelectionnes.length === 0) {
-            setError("Veuillez sélectionner au moins un fichier pour créer une archive.");
-            return;
-        }
+        if (selection.length === 0) return;
 
-        setActionEnCours({ active: true, type: 'Téléchargement de l\'archive', progression: 0 });
-        const zip = new JSZip();
-        const total = fichiersSelectionnes.length;
-        const id_dossier_actuel = dossier_actuel ? dossier_actuel.idDossier : dossier_racine?.idDossier;
+        setActionEnCours({ active: true, type: 'Préparation de l\'archive par le serveur...', progression: 50 });
 
         try {
-            for (let i = 0; i < total; i++) {
-                const fichier = fichiersSelectionnes[i].item;
-                const response = await axios.get(
-                    `${API}/api/dossiers/${id_dossier_actuel}/fichiers/${encodeURIComponent(fichier.nom)}`,
-                    { headers: authHeader(), responseType: 'blob' }
-                );
-                zip.file(fichier.nom, response.data);
-                setActionEnCours({ active: true, type: 'Préparation des fichiers', progression: Math.round(((i + 1) / total) * 50) });
-            }
+            const nom_racine = dossier_racine ? dossier_racine.cheminDaccesDossier : '';
+            const sous_dossiers = fil_ariane.map(d => d.cheminDaccesDossier).join('/');
+            const chemin_actuel = sous_dossiers ? `${nom_racine}/${sous_dossiers}` : nom_racine;
+            
+            const liste_fichier = selection
+                .filter(s => s.type === 'fichier')
+                .map(s => `${chemin_actuel}/${s.item.nom}`);
+                
+            const liste_dossier = selection
+                .filter(s => s.type === 'dossier')
+                .map(s => `${chemin_actuel}/${s.item.cheminDaccesDossier}`);
 
-            setActionEnCours({ active: true, type: 'Compression ZIP en cours...', progression: 50 });
-            const content = await zip.generateAsync({ type: 'blob' }, (metadata) => {
-                setActionEnCours({ active: true, type: 'Compression ZIP en cours...', progression: 50 + (metadata.percent / 2) });
+            const params = new URLSearchParams();
+            if (liste_fichier.length > 0) params.append('listeFichier', JSON.stringify(liste_fichier));
+            if (liste_dossier.length > 0) params.append('listeDossier', JSON.stringify(liste_dossier));
+
+            const response = await axios.get(`${API}/api/telechargerZip?${params.toString()}`, {
+                headers: authHeader(),
+                responseType: 'blob' 
             });
 
-            saveAs(content, `Archive_Espace_${new Date().getTime()}.zip`);
-            setSelection([]);
+            let nom_archive_zip = `Archive_${new Date().getTime()}.zip`;
+            const content_disposition = response.headers['content-disposition'];
+            if (content_disposition) {
+                const match = content_disposition.match(/filename="(.+)"/);
+                if (match) nom_archive_zip = match[1];
+            }
+
+            saveAs(response.data, nom_archive_zip);
+
+            setActionEnCours({ active: true, type: 'Téléchargement terminé !', progression: 100 });
+            setSelection([]);            
         } catch (erreur) {
-            setError("Erreur lors de la création de l'archive ZIP.", erreur);
+            console.error(erreur);
+            if (erreur.response && erreur.response.data instanceof Blob) {
+                try {
+                    const text = await erreur.response.data.text();
+                    const jsonErreur = JSON.parse(text);
+                    setError(jsonErreur.error || "Erreur lors de la création de l'archive par le serveur.");
+                } catch (e) {
+                    setError("Erreur lors de la création de l'archive par le serveur.", e);
+                }
+            } else {
+                setError("Erreur lors de la création de l'archive par le serveur.");
+            }
         } finally {
-            setTimeout(() => setActionEnCours({ active: false, type: '', progression: 0 }), 500);
+            setTimeout(() => setActionEnCours({ active: false, type: '', progression: 0 }), 1000);
         }
     };
 
@@ -492,12 +510,20 @@ export function useDashboard() {
     const ouvrirModalViderCorbeille = () => { setError(''); setOuvreModal({ type: 'vidage-corbeille', data: null }); };
 
     const confirmerViderCorbeille = async () => {
+        setOuvreModal({ type: null, data: null });
+        
+        setActionEnCours({ active: true, type: 'Vidage de la corbeille...', progression: 50 });
+
         try {
             await axios.delete(`${API}/api/corbeille/vider`, { headers: authHeader() });
+            setActionEnCours({ active: true, type: 'Corbeille vidée', progression: 100 });
             setContenuDossier({ dossiers: [], fichiers: [] });
-            setOuvreModal({ type: null, data: null });
+            await rafraichirVueActuelle(); 
+            
         } catch (erreur) {
             setError(erreur.response?.data?.error || 'Erreur lors du vidage de la corbeille');
+        } finally {
+            setTimeout(() => setActionEnCours({ active: false, type: '', progression: 0 }), 500);
         }
     };
 
