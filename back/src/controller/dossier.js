@@ -4,6 +4,7 @@ import { authentifierToken } from '../middleware/auth.js';
 import multer from 'multer';
 import path from 'node:path';
 import fs, { promises as fsPromises } from 'node:fs';
+import archiver from 'archiver';
 import { SERVER_FILES_PATH } from '../global_properties.js';
 
 const dossierRouter = express.Router();
@@ -418,6 +419,141 @@ dossierRouter.post('/api/dossiers/:dossierId/televerser-multiple', authentifierT
         res.status(500).json({ error: error.message || 'Erreur lors du téléversement' });
     }
 });
+
+// Télécharger un dossier et son contenu en tant qu'archive ZIP
+const parserListeChemins = (valeur) => {
+    if (!valeur) return [];
+
+    if (Array.isArray(valeur)) {
+        return valeur.filter(v => typeof v === 'string');
+    }
+
+    if (typeof valeur === 'string') {
+        try {
+            const parse = JSON.parse(valeur);
+            if (Array.isArray(parse)) {
+                return parse.filter(v => typeof v === 'string');
+            }
+        } catch {
+            return [valeur];
+        }
+    }
+
+    return [];
+};
+
+const normaliserCheminRelatif = (cheminRelatif) => {
+    if (typeof cheminRelatif !== 'string') return null;
+
+    const cheminNettoye = cheminRelatif.trim();
+    if (!cheminNettoye) return null;
+
+    const normalise = path.normalize(cheminNettoye).replace(/^([/\\])+/, '');
+    if (!normalise || normalise === '.') return null;
+
+    return normalise;
+};
+
+const resoudreCheminSecurise = (baseUtilisateur, cheminRelatif) => {
+    const relatif = normaliserCheminRelatif(cheminRelatif);
+    if (!relatif) return null;
+
+    const baseResolue = path.resolve(baseUtilisateur);
+    const absolu = path.resolve(baseResolue, relatif);
+
+    if (absolu !== baseResolue && !absolu.startsWith(`${baseResolue}${path.sep}`)) {
+        return null;
+    }
+
+    return { absolu, relatif };
+};
+
+dossierRouter.get('/api/telechargerZip', authentifierToken, async (req, res) => {
+    try {
+        const idUtilisateurAuthentifie = +req.utilisateur.id;
+        const listeFichier = parserListeChemins(req.query.listeFichier ?? req.body?.listeFichier);
+        const listeDossier = parserListeChemins(req.query.listeDossier ?? req.body?.listeDossier);
+
+        if (listeFichier.length === 0 && listeDossier.length === 0) {
+            return res.status(400).json({ error: 'Aucun chemin de fichier ou de dossier fourni' });
+        }
+
+        const baseUtilisateur = path.join(SERVER_FILES_PATH, `user_${idUtilisateurAuthentifie}`);
+        if (!fs.existsSync(baseUtilisateur)) {
+            return res.status(404).json({ error: 'Espace de fichiers utilisateur introuvable' });
+        }
+
+        const fichiersValides = [];
+        const dossiersValides = [];
+        const dejaAjoutes = new Set();
+
+        for (const cheminFichier of listeFichier) {
+            const cheminSecurise = resoudreCheminSecurise(baseUtilisateur, cheminFichier);
+            if (!cheminSecurise) continue;
+
+            const cle = `f:${cheminSecurise.relatif.toLowerCase()}`;
+            if (dejaAjoutes.has(cle)) continue;
+
+            const stat = await fsPromises.stat(cheminSecurise.absolu).catch(() => null);
+            if (!stat || !stat.isFile()) continue;
+
+            dejaAjoutes.add(cle);
+            fichiersValides.push(cheminSecurise);
+        }
+
+        for (const cheminDossier of listeDossier) {
+            const cheminSecurise = resoudreCheminSecurise(baseUtilisateur, cheminDossier);
+            if (!cheminSecurise) continue;
+
+            const cle = `d:${cheminSecurise.relatif.toLowerCase()}`;
+            if (dejaAjoutes.has(cle)) continue;
+
+            const stat = await fsPromises.stat(cheminSecurise.absolu).catch(() => null);
+            if (!stat || !stat.isDirectory()) continue;
+
+            dejaAjoutes.add(cle);
+            dossiersValides.push(cheminSecurise);
+        }
+
+        if (fichiersValides.length === 0 && dossiersValides.length === 0) {
+            return res.status(404).json({ error: 'Aucun fichier ou dossier valide trouvé' });
+        }
+
+        const nomArchive = `archive_${idUtilisateurAuthentifie}_${Date.now()}.zip`;
+        res.setHeader('Content-Type', 'application/zip');
+        res.setHeader('Content-Disposition', `attachment; filename="${nomArchive}"`);
+
+        const archive = archiver('zip', { zlib: { level: 9 } });
+
+        archive.on('error', (archiveError) => {
+            console.error('Erreur lors de la création de l\'archive ZIP :', archiveError);
+            if (!res.headersSent) {
+                res.status(500).json({ error: 'Erreur lors de la création de l\'archive ZIP' });
+                return;
+            }
+
+            res.destroy(archiveError);
+        });
+
+        archive.pipe(res);
+
+        for (const fichier of fichiersValides) {
+            archive.file(fichier.absolu, { name: fichier.relatif.replace(/\\/g, '/') });
+        }
+
+        for (const dossier of dossiersValides) {
+            archive.directory(dossier.absolu, dossier.relatif.replace(/\\/g, '/'));
+        }
+
+        await archive.finalize();
+
+
+    } catch (error) {
+        console.error('Erreur lors du téléchargement du dossier :', error);
+        res.status(500).json({ error: error.message || 'Erreur lors du téléchargement' });
+    }
+});
+
 
 // ===== GESTION DE LA CORBEILLE =====
 
