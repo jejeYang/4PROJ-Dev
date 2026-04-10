@@ -468,6 +468,49 @@ const resoudreCheminSecurise = (baseUtilisateur, cheminRelatif) => {
     return { absolu, relatif };
 };
 
+const construireNomArchiveUtilisateur = (utilisateur, idUtilisateur) => {
+    const depuisNom = typeof utilisateur?.nom === 'string' ? utilisateur.nom : '';
+    const depuisEmail = typeof utilisateur?.email === 'string'
+        ? utilisateur.email.split('@')[0]
+        : '';
+
+    const brut = (depuisNom || depuisEmail || `user_${idUtilisateur}`).trim();
+
+    const ascii = brut
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^A-Za-z0-9._-]+/g, '_')
+        .replace(/^[_\-.]+|[_\-.]+$/g, '');
+
+    return ascii || `user_${idUtilisateur}`;
+};
+
+const genererNomUniqueZip = (nomSouhaite, nomsUtilises) => {
+    const nomNettoye = (nomSouhaite || '').replace(/\\/g, '/').replace(/^[/]+|[/]+$/g, '');
+    if (!nomNettoye) return null;
+
+    const cleInitiale = nomNettoye.toLowerCase();
+    if (!nomsUtilises.has(cleInitiale)) {
+        nomsUtilises.add(cleInitiale);
+        return nomNettoye;
+    }
+
+    const extension = path.extname(nomNettoye);
+    const base = extension ? nomNettoye.slice(0, -extension.length) : nomNettoye;
+
+    let compteur = 2;
+    while (true) {
+        const candidat = `${base} (${compteur})${extension}`;
+        const cle = candidat.toLowerCase();
+        if (!nomsUtilises.has(cle)) {
+            nomsUtilises.add(cle);
+            return candidat;
+        }
+
+        compteur += 1;
+    }
+};
+
 dossierRouter.get('/api/telechargerZip', authentifierToken, async (req, res) => {
     try {
         const idUtilisateurAuthentifie = +req.utilisateur.id;
@@ -519,7 +562,7 @@ dossierRouter.get('/api/telechargerZip', authentifierToken, async (req, res) => 
             return res.status(404).json({ error: 'Aucun fichier ou dossier valide trouvé' });
         }
 
-        const nomArchive = `archive_${idUtilisateurAuthentifie}_${Date.now()}.zip`;
+        const nomArchive = `${construireNomArchiveUtilisateur(req.utilisateur, idUtilisateurAuthentifie)}.zip`;
         res.setHeader('Content-Type', 'application/zip');
         res.setHeader('Content-Disposition', `attachment; filename="${nomArchive}"`);
 
@@ -536,13 +579,22 @@ dossierRouter.get('/api/telechargerZip', authentifierToken, async (req, res) => 
         });
 
         archive.pipe(res);
+        const nomsUtilisesDansZip = new Set();
 
         for (const fichier of fichiersValides) {
-            archive.file(fichier.absolu, { name: fichier.relatif.replace(/\\/g, '/') });
+            const nomFichier = path.basename(fichier.relatif);
+            const nomEntree = genererNomUniqueZip(nomFichier, nomsUtilisesDansZip);
+            if (!nomEntree) continue;
+
+            archive.file(fichier.absolu, { name: nomEntree });
         }
 
         for (const dossier of dossiersValides) {
-            archive.directory(dossier.absolu, dossier.relatif.replace(/\\/g, '/'));
+            const nomDossier = path.basename(dossier.relatif);
+            const nomEntree = genererNomUniqueZip(nomDossier, nomsUtilisesDansZip);
+            if (!nomEntree) continue;
+
+            archive.directory(dossier.absolu, nomEntree);
         }
 
         await archive.finalize();

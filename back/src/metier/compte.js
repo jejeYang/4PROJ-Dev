@@ -15,7 +15,7 @@ class ServiceCompte {
 
     genererToken(utilisateur) {
         return jwt.sign(
-            { id: utilisateur.id, email: utilisateur.email },
+            { id: utilisateur.id, nom: utilisateur.nom, email: utilisateur.email },
             this.jwtSecret,
             { expiresIn: '24h' }
         );
