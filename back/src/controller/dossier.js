@@ -259,6 +259,72 @@ dossierRouter.put('/api/dossiers/:dossierId', authentifierToken, async (req, res
     }
 });
 
+// UPDATE - Déplacer un dossier
+dossierRouter.put('/api/dossiers/:dossierId/deplacer', authentifierToken, async (req, res) => {
+    try {
+        const { dossierId } = req.params;
+        const { idNouveauDossierParent } = req.body;
+        const idUtilisateurAuthentifie = +req.utilisateur.id;
+
+        if (!idNouveauDossierParent) {
+            return res.status(400).json({ error: 'idNouveauDossierParent est requis' });
+        }
+
+        const service_dossier = new ServiceDossier();
+
+        // Vérifier que le dossier source/cible appartient à l'user
+        const dossierSource = await service_dossier.recupererDossierParId(dossierId);
+        if (dossierSource.idCompteCreateur !== idUtilisateurAuthentifie) {
+            return res.status(403).json({ error: 'Le dossier source ne vous appartient pas' });
+        }
+        const dossierCible = await service_dossier.recupererDossierParId(idNouveauDossierParent);
+        if (dossierCible.idCompteCreateur !== idUtilisateurAuthentifie) {
+            return res.status(403).json({ error: 'Le dossier de destination ne vous appartient pas' });
+        }
+
+        const resultat = await service_dossier.deplacerDossier(dossierId, idNouveauDossierParent);
+        res.json(resultat);
+    } catch (error) {
+        console.error('Erreur lors du déplacement du dossier :', error);
+        // Si l'erreur est un conflit (nom existant) ou une boucle, on renvoie 409
+        const status = error.message.includes('existe déjà') || error.message.includes('sous-dossiers') ? 409 : 500;
+        res.status(status).json({ error: error.message || 'Erreur lors du déplacement' });
+    }
+});
+
+// UPDATE - Déplacer un fichier
+dossierRouter.put('/api/dossiers/:dossierId/fichiers/:nomFichier/deplacer', authentifierToken, async (req, res) => {
+    try {
+        const { dossierId, nomFichier } = req.params;
+        const { idNouveauDossierParent } = req.body;
+        const idUtilisateurAuthentifie = +req.utilisateur.id;
+
+        if (!idNouveauDossierParent) {
+            return res.status(400).json({ error: 'idNouveauDossierParent est requis' });
+        }
+
+        const service_dossier = new ServiceDossier();
+
+        // Vérifier que le dossier source/cible appartient à l'user
+        const dossierSource = await service_dossier.recupererDossierParId(dossierId);
+        if (dossierSource.idCompteCreateur !== idUtilisateurAuthentifie) {
+            return res.status(403).json({ error: 'Le dossier source ne vous appartient pas' });
+        }
+        const dossierCible = await service_dossier.recupererDossierParId(idNouveauDossierParent);
+        if (dossierCible.idCompteCreateur !== idUtilisateurAuthentifie) {
+            return res.status(403).json({ error: 'Le dossier de destination ne vous appartient pas' });
+        }
+
+        const nomFichierDecode = decodeURIComponent(nomFichier);
+        const resultat = await service_dossier.deplacerFichier(dossierId, nomFichierDecode, idNouveauDossierParent);
+        res.json(resultat);
+    } catch (error) {
+        console.error('Erreur lors du déplacement du fichier :', error);
+        const status = error.message.includes('existe déjà') ? 409 : 500;
+        res.status(status).json({ error: error.message || 'Erreur lors du déplacement' });
+    }
+});
+
 // DELETE - Supprimer un dossier
 // (Suppression définitive)
 dossierRouter.delete('/api/dossiers/:dossierId', authentifierToken, async (req, res) => {
@@ -742,6 +808,32 @@ dossierRouter.delete('/api/corbeille/vider', authentifierToken, async (req, res)
     } catch (error) {
         console.error('Erreur lors du vidage de la corbeille :', error);
         res.status(500).json({ error: error.message || 'Erreur lors du vidage' });
+    }
+});
+
+
+// ===== RECHERCHE =====
+
+// READ - Recherche récursive de fichiers dans un dossier
+dossierRouter.get('/api/dossiers/:dossierId/rechercher', authentifierToken, async (req, res) => {
+    try {
+        const { dossierId } = req.params;
+        const { q, type } = req.query;
+        const idUtilisateurAuthentifie = +req.utilisateur.id;
+
+        const service_dossier = new ServiceDossier();
+
+        // Vérifier que le dossier appartient à l'utilisateur
+        const dossier = await service_dossier.recupererDossierParId(dossierId);
+        if (dossier.idCompteCreateur !== idUtilisateurAuthentifie) {
+            return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
+        }
+
+        const resultats = await service_dossier.rechercherFichiers(dossierId, q, type);
+        res.json(resultats);
+    } catch (error) {
+        console.error('Erreur lors de la recherche :', error);
+        res.status(500).json({ error: error.message || 'Erreur lors de la recherche' });
     }
 });
 

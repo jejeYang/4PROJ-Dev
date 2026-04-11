@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useDashboard } from '../hooks/useDashboard';
 import '../styles/Dashboard.css';
 
@@ -9,7 +9,7 @@ function Dashboard() {
         ouvre_modal, setOuvreModal,
         menu_nom_dossier, setChangeNomDossier, nouveau_nom, setRenommeDossier,
         dossier_actuel, contenu_dossier, fil_ariane,
-        taille_dossiers, dossiers, fichiers_base,
+        taille_dossiers, dossiers, fichiers_base, dossier_racine,
         menu_options_dossier, setMenuOptionsDossier,
         menu_options_fichier, setMenuOptionsFichier,
         fichier_preview, chargement_preview, corbeille_info,
@@ -29,18 +29,43 @@ function Dashboard() {
         ouvrirModalSuppressionFichier, ouvrirModalSuppressionDefinitiveFichier, confirmerSuppressionDefinitiveFichier,
         ouvrirApercu, fermerApercu,
         ouvrirModalDeplacement, naviguerDeplacement, confirmerDeplacement,
+        lancerRecherche, reinitialiserRecherche,
+        recherche_active, resultats_recherche, chargement_recherche,
         formatFileSize, tronquerNom, separerNomExtension,
     } = useDashboard();
 
+    const [modal_recherche_ouverte, setModalRechercheOuverte] = useState(false);
+    const [recherche_query, setRechercheQuery] = useState('');
+    const [recherche_type, setRechercheType] = useState('tout');
+
     if (loading) return <div className="dashboard-container">Chargement...</div>;
 
-    const displayItems = dossier_actuel
-        ? { dossiers: contenu_dossier.dossiers || [], fichiers: contenu_dossier.fichiers || [] }
-        : { dossiers, fichiers: fichiers_base };
+    const id_dossier_courant = dossier_actuel ? dossier_actuel.idDossier : dossier_racine?.idDossier;
+
+    const displayItems = recherche_active
+        ? {
+            dossiers: (resultats_recherche.dossiers || []).filter(d => d.idDossierParent === id_dossier_courant),
+            fichiers: (resultats_recherche.fichiers || []).filter(f => f.idDossier === id_dossier_courant)}
+        : dossier_actuel
+            ? { dossiers: contenu_dossier.dossiers || [], fichiers: contenu_dossier.fichiers || [] }
+            : { dossiers, fichiers: fichiers_base };
 
     const allItems = [...displayItems.dossiers, ...displayItems.fichiers];
     const estDansCorbeille = fil_ariane.some(d => d.cheminDaccesDossier === '.corbeille');
     const toutEstSelectionne = allItems.length > 0 && selection.length === allItems.length;
+
+    const soumettreRecherche = async (e) => {
+        e.preventDefault();
+        await lancerRecherche(recherche_query, recherche_type);
+        setModalRechercheOuverte(false);
+    };
+
+    const reinitialiser = () => {
+        reinitialiserRecherche();
+        setRechercheQuery('');
+        setRechercheType('tout');
+        setModalRechercheOuverte(false);
+    };
 
     return (
         <div
@@ -275,12 +300,69 @@ function Dashboard() {
             )}
 
             <div className="dossiers-section">
-                <h2>{dossier_actuel ? `Contenu de ${dossier_actuel.cheminDaccesDossier}` : 'Mes dossiers'}</h2>
+                <div className="dossiers-section-header">
+                    <h2>{recherche_active ? 'Résultats de la recherche' : dossier_actuel ? `Contenu de ${dossier_actuel.cheminDaccesDossier}` : 'Mes dossiers'}</h2>
+                    <button
+                        className="btn-recherche"
+                        style={recherche_active ? { backgroundColor: 'var(--select-primary-color)', borderColor: 'var(--btn-primary-color)' } : {}}
+                        onClick={() => setModalRechercheOuverte(true)}
+                        title="Rechercher"
+                    >🔍</button>
+                </div>
 
-                {allItems.length === 0 ? (
+                {modal_recherche_ouverte && (
+                    <div className="modal-overlay" onClick={() => setModalRechercheOuverte(false)}>
+                        <div className="modal-contenu modal-recherche" onClick={e => e.stopPropagation()}>
+                            <h3>Rechercher</h3>
+                            <form onSubmit={soumettreRecherche}>
+                                <div className="recherche-champ">
+                                    <label>Nom du fichier</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Rechercher par nom ou extension..."
+                                        value={recherche_query}
+                                        onChange={e => setRechercheQuery(e.target.value)}
+                                        autoFocus
+                                    />
+                                </div>
+                                <div className="recherche-champ">
+                                    <label>Type de fichier</label>
+                                    <div className="recherche-types">
+                                        {['tout', 'images', 'videos', 'audio', 'pdf', 'zip'].map(t => (
+                                            <button
+                                                key={t}
+                                                type="button"
+                                                className={`btn-type-fichier ${recherche_type === t ? 'actif' : ''}`}
+                                                onClick={() => setRechercheType(t)}
+                                            >
+                                                {t === 'tout' ? 'Tout' : t === 'images' ? 'Images' : t === 'videos' ? 'Vidéos' : t === 'audio' ? 'Audio' : t === 'pdf' ? 'PDF' : 'ZIP'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="recherche-actions">
+                                    {recherche_active && (
+                                        <button type="button" className="btn-annuler" onClick={reinitialiser}>Réinitialiser</button>
+                                    )}
+                                    <button type="submit" className="btn-confirmer" disabled={chargement_recherche}>
+                                        {chargement_recherche ? <span className="spinner-recherche" /> : 'Rechercher'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+                {chargement_recherche ? (
                     <div className="dossier-vide">
-                        <p>Aucun dossier ou fichier pour le moment</p>
-                        <p className="hint">Cliquez sur "Créer un dossier" ou "Publier un fichier"</p>
+                        <span className="spinner-recherche spinner-recherche-grand" />
+                    </div>
+                ) : allItems.length === 0 ? (
+                    <div className="dossier-vide">
+                        {recherche_active
+                            ? <p>Aucun résultat pour cette recherche</p>
+                            : <><p>Aucun dossier ou fichier pour le moment</p><p className="hint">Cliquez sur "Créer un dossier" ou "Publier un fichier"</p></>
+                        }
                     </div>
                 ) : (
                     <div className="dossiers-liste">
@@ -302,7 +384,7 @@ function Dashboard() {
                                     <div className="actions-multiples">
                                         <button className="action-icon-btn action-danger" onClick={ouvrirModalSuppressionMultiple} title="Supprimer la sélection">🗑️</button>
                                         <button className="action-icon-btn action-primary" onClick={telechargerSelection} title="Télécharger la sélection en ZIP">⬇️</button>
-                                        <button className="action-icon-btn action-primary" onClick={() => ouvrirModalDeplacement()} title="Déplacer la sélection">➡️</button>
+                                        <button className="action-icon-btn action-primary" onClick={() => ouvrirModalDeplacement()} title="Déplacer la sélection">↪️</button>
                                     </div>
                                 )}
                                 {selection.length > 0 && estDansCorbeille && (
@@ -346,7 +428,7 @@ function Dashboard() {
                                             {!estDansCorbeille ? (
                                                 <>
                                                     <button className="action-icon-btn" onClick={() => ouvrirModalRenommerDossier(dossier)} title="Renommer">✏️</button>
-                                                    <button className="action-icon-btn" onClick={() => ouvrirModalDeplacement(dossier)} title="Déplacer">➡️</button>
+                                                    <button className="action-icon-btn" onClick={() => ouvrirModalDeplacement(dossier)} title="Déplacer">↪️</button>
                                                     <button className="action-icon-btn" onClick={() => ouvrirModalSuppressionDossier(dossier)} title="Déplacer vers la corbeille">🗑️</button>
                                                 </>
                                             ) : (
@@ -398,7 +480,7 @@ function Dashboard() {
                                                 {!estDansCorbeille ? (
                                                     <>
                                                         <button className="action-icon-btn" onClick={() => telechargerFichier(fichier)} title="Télécharger">⬇️</button>
-                                                        <button className="action-icon-btn" onClick={() => ouvrirModalDeplacement(fichier)} title="Déplacer">➡️</button>
+                                                        <button className="action-icon-btn" onClick={() => ouvrirModalDeplacement(fichier)} title="Déplacer">↪️</button>
                                                         <button className="action-icon-btn" onClick={() => ouvrirModalSuppressionFichier(fichier)} title="Déplacer vers la corbeille">🗑️</button>
                                                     </>
                                                 ) : (

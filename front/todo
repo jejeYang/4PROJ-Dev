@@ -1,5 +1,6 @@
 General :
 - Ajouter des commentaires propres
+- Conteneuriser le front
 
 Page d'accueil :
 - Refaire design avec :
@@ -10,8 +11,6 @@ Page d'accueil :
     - Diagrammes / Stats (Diagramme circulaire du type de fichier)
 
 Dashboard :
-- Déplacer dossier / fichier
-- Recherche dossier / fichier
 - Affichage logo type de fichier
 - Affichage fichier :
     - Nom
@@ -27,8 +26,6 @@ Dashboard :
     - Modifié le
 - Fonctionnalités fichiers :
     - Créer un lien de partage (y compris de dossier)
-- Selection multiple de fichier & dossier :
-    - Déplacement multiple
 
 Liens :
 - Voir liens actifs fichier / dossier
@@ -43,4 +40,3 @@ Parametres :
 Back :
 - Modifier table dossier pour contenir "Date de création" & "Modifié le"
 - Restaurer un élement doit le remettre dans le dossier dans lequel il était plutôt qu'à la racine
-- Faire la route de téléchargement (archive zip)

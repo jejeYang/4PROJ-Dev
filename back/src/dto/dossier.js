@@ -81,6 +81,87 @@ class DtoDossier {
         });
     }
 
+    async deplacerDossier(dossierId, idNouveauDossierParent) {
+        const dossierSource = await this.recupererDossierParId(dossierId);
+        const dossierCible = await this.recupererDossierParId(idNouveauDossierParent);
+
+        if (dossierSource.idCompteCreateur !== dossierCible.idCompteCreateur) {
+            throw new Error("Impossible de déplacer vers un dossier n'appartenant pas au même utilisateur.");
+        }
+
+        if (Number(dossierId) === Number(idNouveauDossierParent)) {
+            throw new Error("Le dossier cible est le même que le dossier source.");
+        }
+
+        // Empêche de déplacer un dossier dans l'un de ses propres enfants
+        let parentCourant = dossierCible.idDossierParent;
+        while (parentCourant) {
+            if (Number(parentCourant) === Number(dossierId)) {
+                throw new Error("Impossible de déplacer un dossier à l'intérieur de l'un de ses propres sous-dossiers.");
+            }
+            const parent = await this.recupererDossierParId(parentCourant);
+            parentCourant = parent.idDossierParent;
+        }
+
+        // Chemins relatifs depuis la racine du user
+        const cheminSourceRelatif = await this.construireCheminComplet(dossierId);
+        const cheminCibleRelatif = await this.construireCheminComplet(idNouveauDossierParent);
+
+        const basePath = path.join(SERVER_FILES_PATH, `user_${dossierSource.idCompteCreateur}`);
+        const cheminAncienPhysique = path.join(basePath, cheminSourceRelatif);
+        const cheminNouveauPhysique = path.join(basePath, cheminCibleRelatif, dossierSource.cheminDaccesDossier);
+
+        if (fs.existsSync(cheminNouveauPhysique)) {
+            throw new Error(`Un dossier nommé "${dossierSource.cheminDaccesDossier}" existe déjà à cet emplacement.`);
+        }
+
+        // Déplacement
+        if (fs.existsSync(cheminAncienPhysique)) {
+            fs.renameSync(cheminAncienPhysique, cheminNouveauPhysique);
+        }
+        // Mise à jour bdd
+        return prisma.dossier.update({
+            where: { idDossier: Number(dossierId) },
+            data: { idDossierParent: Number(idNouveauDossierParent) },
+        });
+    }
+
+    async deplacerFichier(dossierSourceId, nomFichier, idNouveauDossierParent) {
+        const dossierSource = await this.recupererDossierParId(dossierSourceId);
+        const dossierCible = await this.recupererDossierParId(idNouveauDossierParent);
+
+        if (dossierSource.idCompteCreateur !== dossierCible.idCompteCreateur) {
+            throw new Error("Impossible de déplacer vers un dossier n'appartenant pas au même utilisateur.");
+        }
+
+        if (Number(dossierSourceId) === Number(idNouveauDossierParent)) {
+            throw new Error("Le fichier est déjà dans ce dossier.");
+        }
+
+        const cheminSourceRelatif = await this.construireCheminComplet(dossierSourceId);
+        const cheminCibleRelatif = await this.construireCheminComplet(idNouveauDossierParent);
+
+        const basePath = path.join(SERVER_FILES_PATH, `user_${dossierSource.idCompteCreateur}`);
+        const cheminAncienPhysique = path.join(basePath, cheminSourceRelatif, nomFichier);
+        const cheminNouveauPhysique = path.join(basePath, cheminCibleRelatif, nomFichier);
+
+        if (!fs.existsSync(cheminAncienPhysique)) {
+            throw new Error(`Le fichier source "${nomFichier}" est introuvable sur le disque.`);
+        }
+
+        if (fs.existsSync(cheminNouveauPhysique)) {
+            throw new Error(`Un fichier nommé "${nomFichier}" existe déjà dans le dossier de destination.`);
+        }
+
+        // S'assure que le dossier cible existe
+        if (!fs.existsSync(path.dirname(cheminNouveauPhysique))) {
+            await mkdir(path.dirname(cheminNouveauPhysique), { recursive: true });
+        }
+        fs.renameSync(cheminAncienPhysique, cheminNouveauPhysique);
+
+        return { message: `Fichier '${nomFichier}' déplacé avec succès.`, dossierCibleId: idNouveauDossierParent };
+    }
+
     async supprimerDossier(dossierId) {
         const dossier = await this.recupererDossierParId(dossierId);
 
@@ -507,6 +588,80 @@ class DtoDossier {
         }
 
         return dossiersSupprimes;
+    }
+
+// Recherche récursive de fichiers dans un dossier et ses sous-dossiers
+    async rechercherFichiers(dossierId, query, type) {
+        const dossier = await this.recupererDossierParId(dossierId);
+        const cheminComplet = await this.construireCheminComplet(dossierId);
+        const cheminPhysique = path.join(SERVER_FILES_PATH, `user_${dossier.idCompteCreateur}`, cheminComplet);
+
+        const resultats = { dossiers: [], fichiers: [] };
+
+        if (!fs.existsSync(cheminPhysique)) return resultats;
+
+        // Fonction récursive qui retourne si le dossier (ou un de ses enfants) contient un fichier retenu par la recherche
+        const parcourirDossier = async (cheminDir, idDossierCourant) => {
+            const elements = fs.readdirSync(cheminDir);
+            let aTrouveDesFichiers = false;
+
+            for (const nom of elements) {
+                const cheminElement = path.join(cheminDir, nom);
+                const stat = fs.statSync(cheminElement);
+
+                if (stat.isDirectory()) {
+                    // Cherche le sous-dossier en base pour obtenir son id
+                    const sousDossier = await prisma.dossier.findFirst({
+                        where: { idDossierParent: idDossierCourant, cheminDaccesDossier: nom }
+                    });
+                    if (!sousDossier) continue;
+
+                    // Wérifier récursivement ce que contient le sous-dossier
+                    const sousDossierValide = await parcourirDossier(cheminElement, sousDossier.idDossier);
+
+                    // Si le sous-dossier contient des fichiers correspondants, on conserve
+                    if (sousDossierValide) {
+                        resultats.dossiers.push(sousDossier);
+                        aTrouveDesFichiers = true;
+                    }
+                } else {
+                    // Filtrer par nom/extension
+                    const nomLower = nom.toLowerCase();
+                    const queryLower = (query || '').toLowerCase().trim();
+                    let match = true;
+
+                    if (queryLower && !nomLower.includes(queryLower)) match = false;
+
+                    // Filtrer par type
+                    if (match && type && type !== 'tout') {
+                        const ext = nom.split('.').pop().toLowerCase();
+                        const types = {
+                            images: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'jfif'],
+                            videos: ['mp4', 'webm'],
+                            audio: ['mp3', 'wav', 'm4a', 'ogg'],
+                            pdf: ['pdf'],
+                            zip: ['zip', 'rar', '7z', 'tar', 'gz'],
+                        };
+                        if (!types[type]?.includes(ext)) match = false;
+                    }
+
+                    if (match) {
+                        resultats.fichiers.push({
+                            nom,
+                            taille: stat.size,
+                            dateModification: stat.mtime,
+                            type: 'fichier',
+                            idDossier: idDossierCourant,
+                        });
+                        aTrouveDesFichiers = true;
+                    }
+                }
+            }
+
+            return aTrouveDesFichiers;
+        };
+        await parcourirDossier(cheminPhysique, dossier.idDossier);
+        return resultats;
     }
 
     async recupererTailleDossier(dossierId) {

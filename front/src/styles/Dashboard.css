@@ -550,3 +550,100 @@
         justify-content: flex-start;
     }
 }
+
+.dossiers-section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.dossiers-section-header h2 {
+    margin: 0;
+}
+
+.btn-recherche {
+    background-color: var(--btn-secondary-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.3rem 0.6rem;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: border-color 0.2s, color 0.2s;
+}
+
+.btn-recherche:hover {
+    border-color: var(--select-primary-color);
+    color: var(--select-primary-color);
+}
+
+.modal-recherche {
+    min-width: 380px;
+    max-width: 480px;
+}
+
+.recherche-champ {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-bottom: 1.2rem;
+}
+
+.recherche-champ label {
+    font-size: 0.85rem;
+    color: var(--text-secondary-color, #888);
+}
+
+.recherche-types {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.btn-type-fichier {
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.btn-type-fichier.actif {
+    background: var(--btn-primary-color);
+    border-color: var(--btn-primary-color);
+    color: var(--btn-text);
+}
+
+.recherche-actions {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.spinner-recherche {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--btn-text, #fff);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+}
+
+.spinner-recherche-grand {
+    width: 36px;
+    height: 36px;
+    border-width: 3px;
+    border-color: var(--btn-primary-color);
+    border-top-color: transparent;
+    margin: 2rem auto;
+    display: block;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

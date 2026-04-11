@@ -36,6 +36,11 @@ export function useDashboard() {
     const [fichier_preview, setFichierPreview] = useState(null);
     const [chargement_preview, setChargementPreview] = useState(false);
 
+    const [recherche_active, setRechercheActive] = useState(false);
+    const [resultats_recherche, setResultatsRecherche] = useState({ dossiers: [], fichiers: [] });
+    const [chargement_recherche, setChargementRecherche] = useState(false);
+    const [id_dossier_origine_recherche, setIdDossierOrigineRecherche] = useState(null);
+
     const [dossier_cible_deplacement, setDossierCibleDeplacement] = useState(null);
     const [chemin_deplacement, setCheminDeplacement] = useState([]);
     const [sous_dossiers_deplacement, setSousDossiersDeplacement] = useState([]);
@@ -141,6 +146,17 @@ export function useDashboard() {
     const gestionClicBreadcrumb = async (index) => {
         try {
             setSelection([]);
+            if (recherche_active && id_dossier_origine_recherche) {
+                if (id_dossier_origine_recherche !== dossier_racine?.idDossier) {
+                    const nouveau_breadcrumb = index === -1 ? [] : fil_ariane.slice(0, index + 1);
+                    
+                    const origine_toujours_presente = nouveau_breadcrumb.some(d => d.idDossier === id_dossier_origine_recherche);
+                    
+                    if (!origine_toujours_presente) {
+                        reinitialiserRecherche();
+                    }
+                }
+            }
             if (index === -1) {
                 setDossierActuel(null);
                 setContenuDossier({ dossiers: [], fichiers: [] });
@@ -487,6 +503,7 @@ export function useDashboard() {
             } else {
                 setDossiers(prev => prev.filter(d => d.idDossier !== dossier.idDossier));
             }
+            setSelection(prev => prev.filter(s => !(s.type === 'dossier' && s.item.idDossier === dossier.idDossier)));
             setOuvreModal({ type: 'suppression-reussie-dossier', data: dossier });
             setTimeout(() => setOuvreModal({ type: null, data: null }), 2000);
         } catch (erreur) {
@@ -505,6 +522,7 @@ export function useDashboard() {
         try {
             await axios.delete(`${API}/api/dossiers/${ouvre_modal.data.idDossier}`, { headers: authHeader() });
             setContenuDossier(prev => ({ ...prev, dossiers: prev.dossiers.filter(d => d.idDossier !== ouvre_modal.data.idDossier) }));
+            setSelection(prev => prev.filter(s => !(s.type === 'dossier' && s.item.idDossier === ouvre_modal.data.idDossier)));
             setOuvreModal({ type: null, data: null });
         } catch (erreur) {
             setError(erreur.response?.data?.error || 'Erreur lors de la suppression définitive');
@@ -537,6 +555,7 @@ export function useDashboard() {
         try {
             await axios.post(`${API}/api/dossiers/${dossier.idDossier}/restaurer`, {}, { headers: authHeader() });
             setContenuDossier(prev => ({ ...prev, dossiers: prev.dossiers.filter(d => d.idDossier !== dossier.idDossier) }));
+            setSelection(prev => prev.filter(s => !(s.type === 'dossier' && s.item.idDossier === dossier.idDossier)));
             await fetchData();
         } catch (erreur) {
             setError(erreur.response?.data?.error || 'Erreur lors de la restauration');
@@ -585,6 +604,7 @@ export function useDashboard() {
             } else {
                 setFichiersBase(prev => prev.filter(f => f.nom !== fichier.nom));
             }
+            setSelection(prev => prev.filter(s => !(s.type === 'fichier' && s.item.nom === fichier.nom)));
             setOuvreModal({ type: 'suppression-reussie-fichier', data: fichier });
             setTimeout(() => setOuvreModal({ type: null, data: null }), 2000);
         } catch (erreur) {
@@ -600,6 +620,7 @@ export function useDashboard() {
                 {}, { headers: authHeader() }
             );
             setContenuDossier(prev => ({ ...prev, fichiers: prev.fichiers.filter(f => f.nom !== fichier.nom) }));
+            setSelection(prev => prev.filter(s => !(s.type === 'fichier' && s.item.nom === fichier.nom)));
             await fetchData();
             setMenuOptionsFichier(null);
         } catch (erreur) {
@@ -627,6 +648,7 @@ export function useDashboard() {
             } else {
                 setFichiersBase(prev => prev.filter(f => f.nom !== fichier.nom));
             }
+            setSelection(prev => prev.filter(s => !(s.type === 'fichier' && s.item.nom === fichier.nom)));
             setOuvreModal({ type: null, data: null });
             setError('');
         } catch (erreur) {
@@ -663,6 +685,33 @@ export function useDashboard() {
     const fermerApercu = () => {
         if (fichier_preview?.url) URL.revokeObjectURL(fichier_preview.url);
         setFichierPreview(null);
+    };
+
+    const lancerRecherche = async (query, type) => {
+        const id_dossier_recherche = dossier_actuel ? dossier_actuel.idDossier : dossier_racine?.idDossier;
+        if (!id_dossier_recherche) return;
+
+        setChargementRecherche(true);
+        try {
+            const params = new URLSearchParams();
+            if (query) params.append('q', query);
+            if (type && type !== 'tout') params.append('type', type);
+
+            const res = await axios.get(`${API}/api/dossiers/${id_dossier_recherche}/rechercher?${params}`, { headers: authHeader() });
+            setResultatsRecherche(res.data);
+            setRechercheActive(true);
+            setIdDossierOrigineRecherche(id_dossier_recherche);
+        } catch (erreur) {
+            setError(erreur.response?.data?.error || 'Erreur lors de la recherche');
+        } finally {
+            setChargementRecherche(false);
+        }
+    };
+
+    const reinitialiserRecherche = () => {
+        setRechercheActive(false);
+        setResultatsRecherche({ dossiers: [], fichiers: [] });
+        setIdDossierOrigineRecherche(null);
     };
 
     // ===== DEPLACEMENT =====
@@ -780,6 +829,8 @@ export function useDashboard() {
         telechargerFichier, restaurerFichier, 
         ouvrirModalSuppressionFichier, ouvrirModalSuppressionDefinitiveFichier, confirmerSuppressionDefinitiveFichier,
         ouvrirApercu, fermerApercu,
+        lancerRecherche, reinitialiserRecherche,
+        recherche_active, resultats_recherche, chargement_recherche,
         ouvrirModalDeplacement, naviguerDeplacement, confirmerDeplacement,
         formatFileSize, tronquerNom, separerNomExtension
     };
