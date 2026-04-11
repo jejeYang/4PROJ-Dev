@@ -13,6 +13,7 @@ function Dashboard() {
         menu_options_dossier, setMenuOptionsDossier,
         menu_options_fichier, setMenuOptionsFichier,
         fichier_preview, chargement_preview, corbeille_info,
+        dossier_cible_deplacement, chemin_deplacement, sous_dossiers_deplacement,
         naviguerVersUpload, handleDragEnterGlobal, handleDragLeaveGlobal, handleDragOverGlobal, handleDropGlobal,
         gestionClicDossier, gestionClicBreadcrumb,
         selection, estSelectionne, toggleSelection, toggleSelectionTout,
@@ -27,6 +28,7 @@ function Dashboard() {
         telechargerFichier, restaurerFichier, 
         ouvrirModalSuppressionFichier, ouvrirModalSuppressionDefinitiveFichier, confirmerSuppressionDefinitiveFichier,
         ouvrirApercu, fermerApercu,
+        ouvrirModalDeplacement, naviguerDeplacement, confirmerDeplacement,
         formatFileSize, tronquerNom, separerNomExtension,
     } = useDashboard();
 
@@ -134,6 +136,52 @@ function Dashboard() {
                                 <div className="modal-bouttons">
                                     <button className="btn-annuler" onClick={() => setOuvreModal({ type: null, data: null })}>Annuler</button>
                                     <button className="btn-confirmer" onClick={confirmerRenommageDossier}>Sauvegarder</button>
+                                </div>
+                            </div>
+                        )}
+
+                        {ouvre_modal.type === 'deplacement' && (
+                            <div>
+                                <h3>Déplacer {ouvre_modal.data.length} élément(s)</h3>
+                                <p>Destination actuelle : {dossier_cible_deplacement ? dossier_cible_deplacement.cheminDaccesDossier : 'Mon Espace'}</p>
+                                
+                                <div className="modal-navigateur-deplacement">
+                                    <div className="modal-fil-ariane">
+                                        <span className="modal-lien-ariane" onClick={() => naviguerDeplacement(null)}>Mon Espace</span>
+                                        {chemin_deplacement.map((dossier, index) => (
+                                            <React.Fragment key={dossier.idDossier}>
+                                                <span className="separateur">›</span>
+                                                <span className="modal-lien-ariane" onClick={() => naviguerDeplacement(dossier, index)}>
+                                                    {dossier.cheminDaccesDossier}
+                                                </span>
+                                            </React.Fragment>
+                                        ))}
+                                    </div>
+                                    
+                                    {sous_dossiers_deplacement.length > 0 && (
+                                        <select 
+                                            className="modal-select-deplacement"
+                                            onChange={(e) => {
+                                                const dossier_trouve = sous_dossiers_deplacement.find(d => d.idDossier == e.target.value);
+                                                if(dossier_trouve) naviguerDeplacement(dossier_trouve);
+                                                e.target.value = "";
+                                            }}
+                                        >
+                                            <option value="">+ Entrer dans un sous-dossier...</option>
+                                            {sous_dossiers_deplacement.map((d) => (
+                                                <option key={d.idDossier} value={d.idDossier}>
+                                                    {d.cheminDaccesDossier}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    )}
+                                </div>
+
+                                {error && <p className="erreur-modale suppression">{error}</p>}
+                                
+                                <div className="modal-bouttons">
+                                    <button className="btn-annuler" onClick={() => setOuvreModal({ type: null, data: null })}>Annuler</button>
+                                    <button className="btn-confirmer" onClick={confirmerDeplacement}>Déplacer ici</button>
                                 </div>
                             </div>
                         )}
@@ -254,6 +302,7 @@ function Dashboard() {
                                     <div className="actions-multiples">
                                         <button className="action-icon-btn action-danger" onClick={ouvrirModalSuppressionMultiple} title="Supprimer la sélection">🗑️</button>
                                         <button className="action-icon-btn action-primary" onClick={telechargerSelection} title="Télécharger la sélection en ZIP">⬇️</button>
+                                        <button className="action-icon-btn action-primary" onClick={() => ouvrirModalDeplacement()} title="Déplacer la sélection">➡️</button>
                                     </div>
                                 )}
                                 {selection.length > 0 && estDansCorbeille && (
@@ -297,6 +346,7 @@ function Dashboard() {
                                             {!estDansCorbeille ? (
                                                 <>
                                                     <button className="action-icon-btn" onClick={() => ouvrirModalRenommerDossier(dossier)} title="Renommer">✏️</button>
+                                                    <button className="action-icon-btn" onClick={() => ouvrirModalDeplacement(dossier)} title="Déplacer">➡️</button>
                                                     <button className="action-icon-btn" onClick={() => ouvrirModalSuppressionDossier(dossier)} title="Déplacer vers la corbeille">🗑️</button>
                                                 </>
                                             ) : (
@@ -348,6 +398,7 @@ function Dashboard() {
                                                 {!estDansCorbeille ? (
                                                     <>
                                                         <button className="action-icon-btn" onClick={() => telechargerFichier(fichier)} title="Télécharger">⬇️</button>
+                                                        <button className="action-icon-btn" onClick={() => ouvrirModalDeplacement(fichier)} title="Déplacer">➡️</button>
                                                         <button className="action-icon-btn" onClick={() => ouvrirModalSuppressionFichier(fichier)} title="Déplacer vers la corbeille">🗑️</button>
                                                     </>
                                                 ) : (

@@ -35,6 +35,10 @@ export function useDashboard() {
     const [menu_options_fichier, setMenuOptionsFichier] = useState(null);
     const [fichier_preview, setFichierPreview] = useState(null);
     const [chargement_preview, setChargementPreview] = useState(false);
+
+    const [dossier_cible_deplacement, setDossierCibleDeplacement] = useState(null);
+    const [chemin_deplacement, setCheminDeplacement] = useState([]);
+    const [sous_dossiers_deplacement, setSousDossiersDeplacement] = useState([]);
     const navigate = useNavigate();
 
     const authHeader = useCallback(() => {
@@ -661,6 +665,94 @@ export function useDashboard() {
         setFichierPreview(null);
     };
 
+    // ===== DEPLACEMENT =====
+    const ouvrirModalDeplacement = async (item_unique = null) => {
+        const elements = item_unique 
+            ? [{ type: item_unique.cheminDaccesDossier ? 'dossier' : 'fichier', item: item_unique }] 
+            : selection;
+            
+        if (elements.length === 0) return;
+
+        setOuvreModal({ type: 'deplacement', data: elements });
+        setDossierCibleDeplacement(null);
+        setCheminDeplacement([]);
+        setError('');
+        setMenuOptionsDossier(null);
+        setMenuOptionsFichier(null);
+
+        try {
+            if (dossier_racine) {
+                const res = await axios.get(`${API}/api/dossiers/${dossier_racine.idDossier}/sous-dossiers`, { headers: authHeader() });
+                setSousDossiersDeplacement(res.data || []);
+            }
+        } catch (erreur) {
+            console.error('Erreur initialisation déplacement:', erreur);
+        }
+    };
+
+    const naviguerDeplacement = async (dossier, index = null) => {
+        setDossierCibleDeplacement(dossier);
+        
+        let nouveau_chemin = [];
+        if (dossier === null) {
+            nouveau_chemin = [];
+        } else if (index !== null) {
+            nouveau_chemin = chemin_deplacement.slice(0, index + 1);
+        } else {
+            nouveau_chemin = [...chemin_deplacement, dossier];
+        }
+        setCheminDeplacement(nouveau_chemin);
+
+        const id_cible = dossier ? dossier.idDossier : dossier_racine?.idDossier;
+        if (id_cible) {
+            try {
+                const res = await axios.get(`${API}/api/dossiers/${id_cible}/sous-dossiers`, { headers: authHeader() });
+                setSousDossiersDeplacement(res.data || []);
+            } catch (erreur) {
+                console.error('Erreur chargement sous-dossiers:', erreur);
+            }
+        }
+    };
+
+    const confirmerDeplacement = async () => {
+        const elements = ouvre_modal.data;
+        const id_cible = dossier_cible_deplacement ? dossier_cible_deplacement.idDossier : dossier_racine?.idDossier;
+
+        if (!id_cible) { setError("Dossier de destination introuvable."); return; }
+
+        const cibleDansSelection = elements.some(el => el.type === 'dossier' && el.item.idDossier === id_cible);
+        if (cibleDansSelection) {
+            setError("Impossible : Le dossier de destination fait partie de votre sélection.");
+            return;
+        }
+
+        setOuvreModal({ type: null, data: null });
+        setActionEnCours({ active: true, type: 'Déplacement en cours...', progression: 0 });
+        const total = elements.length;
+        const id_dossier_actuel = dossier_actuel ? dossier_actuel.idDossier : dossier_racine?.idDossier;
+
+        try {
+            for (let i = 0; i < total; i++) {
+                const element = elements[i];
+                //TODO: remplacer par vraies routes backend
+                if (element.type === 'dossier') {
+                    await axios.put(`${API}/api/dossiers/${element.item.idDossier}/deplacer`, 
+                        { idNouveauDossierParent: id_cible }, { headers: authHeader() });
+                } else {
+                    await axios.put(`${API}/api/dossiers/${id_dossier_actuel}/fichiers/${encodeURIComponent(element.item.nom)}/deplacer`, 
+                        { idNouveauDossierParent: id_cible }, { headers: authHeader() });
+                }
+                setActionEnCours({ active: true, type: 'Déplacement...', progression: Math.round(((i + 1) / total) * 100) });
+            }
+            await rafraichirVueActuelle();
+            setSelection([]);
+        } catch (erreur) {
+            setError(erreur.response?.data?.error || 'Erreur lors du déplacement.');
+        } finally {
+            setTimeout(() => setActionEnCours({ active: false, type: '', progression: 0 }), 500);
+        }
+    };
+
     return {
         // etats
         dossiers, fichiers_base, dossier_racine, corbeille_info,
@@ -675,6 +767,7 @@ export function useDashboard() {
         taille_dossiers, menu_options_dossier, setMenuOptionsDossier,
         menu_options_fichier, setMenuOptionsFichier,
         fichier_preview, chargement_preview,
+        dossier_cible_deplacement, chemin_deplacement, sous_dossiers_deplacement,
         // actions
         fetchData, naviguerVersUpload,
         handleDragEnterGlobal, handleDragLeaveGlobal, handleDragOverGlobal, handleDropGlobal,
@@ -687,6 +780,7 @@ export function useDashboard() {
         telechargerFichier, restaurerFichier, 
         ouvrirModalSuppressionFichier, ouvrirModalSuppressionDefinitiveFichier, confirmerSuppressionDefinitiveFichier,
         ouvrirApercu, fermerApercu,
+        ouvrirModalDeplacement, naviguerDeplacement, confirmerDeplacement,
         formatFileSize, tronquerNom, separerNomExtension
     };
 }

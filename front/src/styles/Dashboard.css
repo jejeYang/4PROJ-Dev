@@ -76,7 +76,7 @@
 
 .dossier-header-tableau {
     display: grid;
-    grid-template-columns: 40px 2fr 120px 100px 1fr 60px;
+    grid-template-columns: 40px 2fr 120px 100px 1fr 120px;
     padding: 0.7rem 1rem;
     align-items: center;
     border: 1px solid var(--border-color);
@@ -233,7 +233,7 @@
 
 .dossier-ligne {
     display: grid;
-    grid-template-columns: 40px 2fr 120px 100px 1fr 60px;
+    grid-template-columns: 40px 2fr 120px 100px 1fr 120px;
     background-color: var(--bg-tertiary-color);
     padding: 0.5rem 1rem;
     align-items: center;
@@ -484,6 +484,56 @@
 
 .preview-body audio {
     width: 80%;
+}
+
+.modal-navigateur-deplacement {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-tertiary-color);
+    padding: 0.8rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 1rem 0;
+}
+
+.modal-fil-ariane {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 5px;
+    font-size: 0.95rem;
+}
+
+.modal-lien-ariane {
+    background: var(--bg-primary-color);
+    border: 1px solid var(--border-color);
+    padding: 0 8px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text-primary-color);
+}
+
+.modal-lien-ariane:hover {
+    background: var(--bg-secondary-color);
+}
+
+.modal-select-deplacement {
+    color: var(--text-primary-color);
+    padding: 0.4rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-primary-color);
+    font-size: 0.9rem;
+    cursor: pointer;
+    flex-grow: 1;
+    max-width: 100%;
 }
 
 @media (max-width: 768px) {
