@@ -32,10 +32,6 @@ Liens :
 - Modifier lien (date d'expiration, mot de passe)
 - Supprimer lien (impossible de supprimer une collaboration)
 
-Parametres :
-- Modifier affichage (esthétique)
-
-
 
 Back :
 - Modifier table dossier pour contenir "Date de création" & "Modifié le"

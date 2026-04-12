@@ -12,17 +12,19 @@
 .falling-icon {
   position: absolute;
   top: -60px;
-  animation-name: fallLoop;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
 }
 
-@keyframes fallLoop {
-  0% {
-    transform: translateY(0) rotate(0deg);
-  }
-
-  100% {
-    transform: translateY(110vh) rotate(360deg); 
-  }
+@keyframes fallLoopCW {
+  0%   { transform: translateY(0) rotate(0deg); }
+  100% { transform: translateY(110vh) rotate(360deg); }
 }
+
+@keyframes fallLoopCCW {
+  0%   { transform: translateY(0) rotate(0deg); }
+  100% { transform: translateY(110vh) rotate(-360deg); }
+}
+
+.rotate-cw  { animation-name: fallLoopCW; }
+.rotate-ccw { animation-name: fallLoopCCW; }
