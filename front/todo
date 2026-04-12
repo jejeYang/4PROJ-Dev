@@ -1,6 +1,8 @@
 General :
 - Ajouter des commentaires propres
 
+- logo qui tombe doivent tomber dans les deux sans ------------------------------------------------Kilian FAIT
+
 Page d'accueil :
 - Refaire design avec :
     - Header utilisateur (nom, avatar)
@@ -12,7 +14,8 @@ Page d'accueil :
 Dashboard :
 - Déplacer dossier / fichier
 - Recherche dossier / fichier
-- Affichage logo type de fichier
+- Affichage logo type de fichier ( modifier emoji du fichier voir /utils/fichierUtils.js)------------Kilian pas trouver la ou on gere les icons 
+
 - Affichage fichier :
     - Nom
     - Type de fichier
@@ -40,7 +43,7 @@ Liens :
 - Supprimer lien (impossible de supprimer une collaboration)
 
 Parametres :
-- Modifier affichage (esthétique)
+- Modifier affichage (esthétique)--------------------------------------------------------------------Kilian
 
 
 

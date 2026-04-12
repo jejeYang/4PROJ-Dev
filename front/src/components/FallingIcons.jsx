@@ -11,7 +11,7 @@ const FallingIcons = () => {
         <img
           key={i}
           src={logo}
-          className="falling-icon"
+          className={`falling-icon ${i % 2 === 0 ? 'rotate-cw' : 'rotate-ccw'}`}
           alt=""
           style={{
             left: `${Math.random() * 100}%`,
