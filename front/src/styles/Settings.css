@@ -1,32 +1,32 @@
-.settings-container {
+.conteneur-parametres {
     max-width: 1100px;
     margin: 0 auto;
-    padding: 3rem 2rem;
+    padding: 0 2rem;
     color: var(--text-primary-color);
 }
 
-.settings-header {
+.en-tete-parametres {
     margin-bottom: 2.5rem;
     text-align: left;
 }
 
-.settings-header h1 {
+.en-tete-parametres h1 {
     font-size: 2.2rem;
     margin-bottom: 0.5rem;
 }
 
-.settings-header p {
+.en-tete-parametres p {
     opacity: 0.7;
 }
 
-.settings-layout {
+.disposition-parametres {
     display: grid;
     grid-template-columns: 1.8fr 1fr;
     gap: 2rem;
     align-items: start;
 }
 
-.settings-card {
+.carte-parametres {
     background: var(--bg-tertiary-color);
     padding: 2rem;
     border-radius: 16px;
@@ -35,13 +35,7 @@
     border: 1px solid rgba(255,255,255,0.05);
 }
 
-.settings-card h3 {
-    font-size: 1.25rem;
-    margin-bottom: 1.5rem;
-    font-weight: 600;
-}
-
-.profile-header-visual {
+.en-tete-visuel-profil {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -50,40 +44,41 @@
     border-bottom: 1px solid var(--border-color);
 }
 
-.avatar-placeholder {
+.espace-avatar {
     width: 90px;
     height: 90px;
-    background: linear-gradient(135deg, var(--btn-primary-color), #8ee6e6);
+    background: linear-gradient(135deg, var(--btn-primary-color), var(--btn-shadow));
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 2.5rem;
-    color: white;
+    color: var(--bg-primary-color);
     font-weight: bold;
     margin-bottom: 1rem;
-    box-shadow: 0 10px 15px var(--shadow-color);
+    box-shadow: 0 5px 15px var(--btn-shadow);
 }
 
-.form-group {
+.groupe-formulaire {
     margin-bottom: 1.2rem;
+    margin-right: 1.5rem;
 }
 
-.form-group-row {
+.rangee-groupe-formulaire {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
 }
 
-.form-group label {
+.groupe-formulaire label {
     display: block;
     font-size: 0.9rem;
     margin-bottom: 0.5rem;
     opacity: 0.8;
 }
 
-.form-group input {
-    width: 100%;
+.groupe-formulaire input {
+    width: 90%;
     padding: 0.9rem 1rem;
     background: var(--bg-primary-color);
     border: 1px solid var(--border-color);
@@ -93,67 +88,48 @@
     transition: all 0.2s ease;
 }
 
-.form-group input:focus {
+.groupe-formulaire input:focus {
     border-color: var(--btn-primary-color);
     outline: none;
-    box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.2);
+    box-shadow: 0 0 0 3px var(--btn-shadow);
 }
 
-.btn-update {
+.btn-mise-a-jour {
     width: 100%;
+    color: var(--btn-text);
     padding: 0.8rem;
-    border: none;
-    border-radius: 6px;
+    border-radius: 10px;
     font-weight: 600;
     font-size: 1rem;
     cursor: pointer;
     transition: all 0.3s ease;
 }
 
-.btn-primary {
-    background-color: var(--btn-primary-color);
-    color: var(--btn-text);
-    border: none;
-    border-radius: 10px;
-    font-weight: 600;
-    cursor: pointer;
-    margin-top: 1rem;
-}
-
-.btn-outline {
-    width: 100%;
-    padding: 0.9rem;
-    background: transparent;
-    border: 2px solid var(--btn-primary-color);
-    color: var(--text-primary-color);
-    border-radius: 10px;
-    font-weight: 600;
-    cursor: pointer;
-}
-
 .btn-danger {
     width: 100%;
     padding: 0.9rem;
-    background: #ff4d4d1a;
-    color: var(--error-color);
-    border: 1px solid var(--error-color);
+    background-color: var(--error-color);
+    color: var(--btn-text);
     border-radius: 10px;
     cursor: pointer;
     font-weight: 600;
 }
 
-.danger-zone {
+.zone-danger {
     border: 1px dashed var(--error-color);
 }
 
-.toggle-container {
+.conteneur-bascule {
     display: flex;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 0.5rem 1rem;
     align-items: center;
     gap: 1rem;
     cursor: pointer;
 }
 
-.toggle-track {
+.piste-bascule {
     width: 50px;
     height: 26px;
     background: #ccc;
@@ -162,11 +138,11 @@
     transition: 0.3s;
 }
 
-.toggle-track.active {
+.piste-bascule.actif {
     background: var(--btn-primary-color);
 }
 
-.toggle-ball {
+.bille-bascule {
     width: 20px;
     height: 20px;
     background: white;
@@ -177,11 +153,11 @@
     transition: 0.3s;
 }
 
-.active .toggle-ball {
+.actif .bille-bascule {
     left: 27px;
 }
 
-.message-toast {
+.notification-message {
     position: fixed;
     top: 20px;
     right: 20px;
@@ -191,16 +167,16 @@
     border-radius: 10px;
     box-shadow: 0 10px 20px var(--shadow-color);
     z-index: 1000;
-    animation: fadeInRight 0.3s ease;
+    animation: apparitionDroite 0.3s ease;
 }
 
-@keyframes fadeInRight {
+@keyframes apparitionDroite {
     from { transform: translateX(100%); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
 }
 
 @media (max-width: 900px) {
-    .settings-layout {
+    .disposition-parametres {
         grid-template-columns: 1fr;
     }
 }
