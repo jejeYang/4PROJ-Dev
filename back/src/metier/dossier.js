@@ -39,6 +39,10 @@ class ServiceDossier {
         return await this.dto_dossier.mettreAJourDossier(dossierId, cheminDaccesDossier);
     }
 
+    async deplacerDossier(dossierId, idNouveauDossierParent) {
+        return await this.dto_dossier.deplacerDossier(dossierId, idNouveauDossierParent);
+    }
+
     async supprimerDossier(dossierId) {
         return await this.dto_dossier.supprimerDossier(dossierId);
     }
@@ -63,6 +67,10 @@ class ServiceDossier {
         return await this.dto_dossier.recupererDossierRacineParCompte(idCompteCreateur);
     }
 
+    async deplacerFichier(dossierSourceId, nomFichier, idNouveauDossierParent) {
+        return await this.dto_dossier.deplacerFichier(dossierSourceId, nomFichier, idNouveauDossierParent);
+    }
+
     async deplacerVersCorbeille(dossierId, idCompteCreateur) {
         return await this.dto_dossier.deplacerVersCorbeille(dossierId, idCompteCreateur);
     }
@@ -81,6 +89,10 @@ class ServiceDossier {
 
     async restaurerFichierDepuisCorbeille(idCompteCreateur, nomFichier) {
         return await this.dto_dossier.restaurerFichierDepuisCorbeille(idCompteCreateur, nomFichier);
+    }
+
+    async rechercherFichiers(dossierId, query, type) {
+        return await this.dto_dossier.rechercherFichiers(dossierId, query, type);
     }
 
     async recupererTailleDossier(dossierId) {

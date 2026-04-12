@@ -1,11 +1,10 @@
 .home-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    min-height: 100%;
-    z-index: 1;
-    background: var(--bg-primary-color);
+  display: flex;
+  flex: 1; 
+  justify-content: center; 
+  align-items: center; 
+  width: 100%;
+  text-align: center;
 }
 
 /* Dashboard Quick View */
@@ -53,11 +52,11 @@
 
 .action-card.primary {
     border-color: var(--text-primary-color);
-    background: linear-gradient(135deg, var(--btn-color), var(--bg-primary-color));
+    background: linear-gradient(135deg, var(--btn-primary-color), var(--bg-primary-color));
 }
 
 .action-card.primary:hover {
-    background: linear-gradient(135deg, var(--bg-primary-color), var(--btn-color));
+    background: linear-gradient(135deg, var(--bg-primary-color), var(--btn-primary-color));
 }
 
 .action-card .icon {

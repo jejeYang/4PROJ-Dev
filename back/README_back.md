@@ -3,7 +3,7 @@
 
 ## Lancer le back :
 cd back
-node server.js
+docker compose up --build
 
 ## Google Auth (backend)
 Définir ces variables d'environnement avant de lancer l'API :
