@@ -31,7 +31,7 @@ function Dashboard() {
         ouvrirModalDeplacement, naviguerDeplacement, confirmerDeplacement,
         lancerRecherche, reinitialiserRecherche,
         recherche_active, resultats_recherche, chargement_recherche,
-        formatFileSize, tronquerNom, separerNomExtension,
+        formatFileSize, tronquerNom, separerNomExtension, obtenirEmojiFichier,
     } = useDashboard();
 
     const [modal_recherche_ouverte, setModalRechercheOuverte] = useState(false);
@@ -450,6 +450,7 @@ function Dashboard() {
 
                         {displayItems.fichiers.map((fichier, index) => {
                             const { nomBase, extension } = separerNomExtension(fichier.nom);
+                            const emojiFichier = obtenirEmojiFichier(fichier.nom);
                             return (
                                 <div
                                     key={`file-${index}`}
@@ -466,7 +467,7 @@ function Dashboard() {
                                     </div>
                                     
                                     <div className="col-nom">
-                                        <span>📄</span>
+                                        <span>{emojiFichier}</span>
                                         <span className="dossier-nom" title={fichier.nom}>
                                             {tronquerNom(nomBase)}
                                         </span>
