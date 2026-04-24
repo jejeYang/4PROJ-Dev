@@ -1,7 +1,6 @@
-import jwt from 'jsonwebtoken';
-import ServiceCompte from '../metier/compte.js';
+import CompteService from '../services/compte.service.js';
 
-const serviceCompte = new ServiceCompte();
+const compteService = new CompteService();
 
 export const authentifierToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -11,7 +10,7 @@ export const authentifierToken = (req, res, next) => {
         return res.status(401).json({ message: 'Token d\'authentification requis' });
     }
 
-    const decoded = serviceCompte.verifierToken(token);
+    const decoded = compteService.verifierToken(token);
     if (!decoded) {
         return res.status(403).json({ message: 'Token invalide' });
     }

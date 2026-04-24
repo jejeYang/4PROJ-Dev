@@ -1,29 +1,45 @@
-import prisma from '../prisma.js';
+import CompteRepository from "../repositories/compte.repository.js";
+import DossierService from "./dossier.service.js";
+import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { SERVER_FILES_PATH } from '../global_properties.js';
+import crypto from 'node:crypto';
+import { OAuth2Client } from 'google-auth-library';
+import { SERVER_FILES_PATH, JWT_SECRET, GOOGLE_CLIENT_ID } from '../config/env.js';
 
-class DtoCompte {
+class CompteService {
+    constructor() {
+        this.compteRepository = new CompteRepository();
+        this.dossierService = new DossierService();
+        this.jwtSecret = JWT_SECRET;
+        this.googleClientId = GOOGLE_CLIENT_ID;
+        this.googleClient = this.googleClientId ? new OAuth2Client(this.googleClientId) : null;
+    }
+
+    genererToken(utilisateur) {
+        return jwt.sign(
+            { id: utilisateur.id, nom: utilisateur.nom, email: utilisateur.email },
+            this.jwtSecret,
+            { expiresIn: '24h' }
+        );
+    }
+
     async creerCompte(compte) {
-        // Validations
+        // Validations (moved from DTO)
         if (!compte.nom || compte.nom.trim().length === 0) {
             throw new Error("Le nom est requis");
         }
         if (compte.nom.length > 100) {
             throw new Error("Le nom ne peut pas dépasser 100 caractères");
         }
-
         if (!compte.email || compte.email.trim().length === 0) {
             throw new Error("L'email est requis");
         }
-        
-        // Validation de format email simple
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(compte.email)) {
             throw new Error("L'email n'est pas valide");
         }
-
         if (!compte.mdp || compte.mdp.length === 0) {
             throw new Error("Le mot de passe est requis");
         }
@@ -32,14 +48,14 @@ class DtoCompte {
         }
 
         // Vérifier que l'email n'existe pas déjà
-        const existant = await this.trouverParEmail(compte.email);
+        const existant = await this.compteRepository.findByEmail(compte.email);
         if (existant) {
             throw new Error("Cet email est déjà utilisé");
         }
 
         const hashedPassword = await bcrypt.hash(compte.mdp, 10);
 
-        const resultat = await prisma.$transaction(async (tx) => {
+        const utilisateur = await this.compteRepository.transaction(async (tx) => {
             const created = await tx.compte.create({
                 data: {
                     nomCompte: compte.nom,
@@ -64,28 +80,29 @@ class DtoCompte {
             return created;
         });
 
-        return resultat;
+        // Créer automatiquement un dossier corbeille (logic from ServiceCompte)
+        try {
+            await this.dossierService.creerDossier({
+                idCompteCreateur: utilisateur.idCompte,
+                cheminDaccesDossier: `.corbeille`,
+            });
+        } catch (error) {
+            console.error('Erreur lors de la création du dossier corbeille:', error);
+        }
+
+        return utilisateur;
     }
 
     async recupererComptes() {
-        return prisma.compte.findMany({
-            select: {
-                idCompte: true,
-                nomCompte: true,
-                adresseMailCompte: true,
-                stockageCompte: true,
-            },
-        });
+        return await this.compteRepository.findAll();
     }
 
     async trouverParEmail(email) {
-        return prisma.compte.findUnique({
-            where: { adresseMailCompte: email },
-        });
+        return await this.compteRepository.findByEmail(email);
     }
 
     async verifierMotDePasse(email, mdp) {
-        const compte = await this.trouverParEmail(email);
+        const compte = await this.compteRepository.findByEmail(email);
         if (!compte) return null;
 
         const isValid = await bcrypt.compare(mdp, compte.mdpCompte);
@@ -95,8 +112,56 @@ class DtoCompte {
         return null;
     }
 
+    async authentifierUtilisateur(email, mdp) {
+        const utilisateur = await this.verifierMotDePasse(email, mdp);
+        if (utilisateur) {
+            const token = this.genererToken(utilisateur);
+            return { utilisateur, token };
+        }
+        return null;
+    }
+
+    async authentifierGoogle(idToken) {
+        if (!this.googleClient || !this.googleClientId) {
+            throw new Error('Google Auth non configuré sur le serveur');
+        }
+
+        const ticket = await this.googleClient.verifyIdToken({
+            idToken,
+            audience: this.googleClientId,
+        });
+
+        const payload = ticket.getPayload();
+        if (!payload?.email || !payload.email_verified) {
+            throw new Error('Compte Google invalide');
+        }
+
+        let compte = await this.compteRepository.findByEmail(payload.email);
+        if (!compte) {
+            const nouveauCompte = await this.creerCompte({
+                nom: payload.name || payload.email.split('@')[0],
+                email: payload.email,
+                mdp: crypto.randomUUID(), // Assumes crypto is available globally or needs import
+            });
+
+            compte = {
+                idCompte: nouveauCompte.idCompte,
+                nomCompte: nouveauCompte.nomCompte,
+                adresseMailCompte: nouveauCompte.adresseMailCompte,
+            };
+        }
+
+        const utilisateur = {
+            id: compte.idCompte,
+            nom: compte.nomCompte,
+            email: compte.adresseMailCompte,
+        };
+
+        return { utilisateur, token: this.genererToken(utilisateur) };
+    }
+
     async mettreAJourCompte(idCompte, donnees) {
-        // Validations
+        // Validations moved from DTO
         if (donnees.nom !== undefined) {
             if (donnees.nom.trim().length === 0) {
                 throw new Error("Le nom ne peut pas être vide");
@@ -112,10 +177,7 @@ class DtoCompte {
                 throw new Error("L'email n'est pas valide");
             }
 
-            // Vérifier que l'email n'est pas déjà utilisé par un autre compte
-            const existant = await prisma.compte.findUnique({
-                where: { adresseMailCompte: donnees.email },
-            });
+            const existant = await this.compteRepository.findByEmail(donnees.email);
             if (existant && existant.idCompte !== parseInt(idCompte)) {
                 throw new Error("Cet email est déjà utilisé");
             }
@@ -125,34 +187,20 @@ class DtoCompte {
         if (donnees.nom !== undefined) dataUpdate.nomCompte = donnees.nom;
         if (donnees.email !== undefined) dataUpdate.adresseMailCompte = donnees.email;
 
-        return prisma.compte.update({
-            where: { idCompte: parseInt(idCompte) },
-            data: dataUpdate,
-            select: {
-                idCompte: true,
-                nomCompte: true,
-                adresseMailCompte: true,
-                stockageCompte: true,
-            },
-        });
+        return await this.compteRepository.update(idCompte, dataUpdate);
     }
 
     async changerMotDePasse(idCompte, ancienMdp, nouveauMdp) {
-        const compte = await prisma.compte.findUnique({
-            where: { idCompte: parseInt(idCompte) },
-        });
-
+        const compte = await this.compteRepository.findById(idCompte);
         if (!compte) {
             throw new Error("Compte non trouvé");
         }
 
-        // Vérifier que l'ancien mot de passe est correct
         const isValid = await bcrypt.compare(ancienMdp, compte.mdpCompte);
         if (!isValid) {
             throw new Error("L'ancien mot de passe est incorrect");
         }
 
-        // Valider le nouveau mot de passe
         if (!nouveauMdp || nouveauMdp.length === 0) {
             throw new Error("Le nouveau mot de passe est requis");
         }
@@ -161,38 +209,29 @@ class DtoCompte {
         }
 
         const hashedPassword = await bcrypt.hash(nouveauMdp, 10);
-
-        return prisma.compte.update({
-            where: { idCompte: parseInt(idCompte) },
-            data: { mdpCompte: hashedPassword },
-            select: {
-                idCompte: true,
-                nomCompte: true,
-                adresseMailCompte: true,
-            },
-        });
+        return await this.compteRepository.update(idCompte, { mdpCompte: hashedPassword });
     }
 
     async supprimerCompte(idCompte) {
-        return prisma.compte.delete({
-            where: { idCompte: parseInt(idCompte) },
-        });
+        return await this.compteRepository.delete(idCompte);
     }
 
     async mettreAJourAvatar(idCompte, buffer) {
-        return prisma.compte.update({
-            where: { idCompte: parseInt(idCompte) },
-            data: { avatarBlobCompte: buffer },
-            select: { idCompte: true }
-        });
+        return await this.compteRepository.updateAvatar(idCompte, buffer);
     }
 
     async recupererAvatar(idCompte) {
-        return prisma.compte.findUnique({
-            where: { idCompte: parseInt(idCompte) },
-            select: { avatarBlobCompte: true }
-        });
+        return await this.compteRepository.getAvatar(idCompte);
+    }
+
+    verifierToken(token) {
+        try {
+            return jwt.verify(token, this.jwtSecret);
+        } catch (error) {
+            console.error('Token verification failed:', error);
+            return null;
+        }
     }
 }
 
-export default DtoCompte;
+export default CompteService;
