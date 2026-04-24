@@ -103,6 +103,14 @@ class ServiceCompte {
         return await this.dto_compte.supprimerCompte(idCompte);
     }
 
+    async mettreAJourAvatar(idCompte, buffer) {
+        return await this.dto_compte.mettreAJourAvatar(idCompte, buffer);
+    }
+
+    async recupererAvatar(idCompte) {
+        return await this.dto_compte.recupererAvatar(idCompte);
+    }
+
     verifierToken(token) {
         try {
             return jwt.verify(token, this.jwtSecret);

@@ -178,6 +178,21 @@ class DtoCompte {
             where: { idCompte: parseInt(idCompte) },
         });
     }
+
+    async mettreAJourAvatar(idCompte, buffer) {
+        return prisma.compte.update({
+            where: { idCompte: parseInt(idCompte) },
+            data: { avatarBlobCompte: buffer },
+            select: { idCompte: true }
+        });
+    }
+
+    async recupererAvatar(idCompte) {
+        return prisma.compte.findUnique({
+            where: { idCompte: parseInt(idCompte) },
+            select: { avatarBlobCompte: true }
+        });
+    }
 }
 
 export default DtoCompte;

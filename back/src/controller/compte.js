@@ -1,8 +1,23 @@
 import express from 'express';
+import multer from 'multer';
 import ServiceCompte from '../metier/compte.js';
 import { authentifierToken } from '../middleware/auth.js';
 
 const compteRouter = express.Router();
+
+// Configuration de multer pour stocker l'image en mémoire (Buffer)
+const storage = multer.memoryStorage();
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 2 * 1024 * 1024 }, // Limite à 2Mo
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Seules les images sont autorisées'));
+        }
+    }
+});
 
 // Route de connexion (non protégée)
 compteRouter.post('/api/login', async (req, res) => {
@@ -95,6 +110,45 @@ compteRouter.put('/api/users/:id', authentifierToken, async (req, res) => {
     } catch (error) {
         console.error('Erreur lors de la mise à jour du profil :', error);
         res.status(400).json({ message: error.message || 'Erreur lors de la mise à jour' });
+    }
+});
+
+// POST - Upload de l'avatar
+compteRouter.post('/api/users/avatar', authentifierToken, upload.single('avatar'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'Aucun fichier envoyé' });
+        }
+
+        const idUtilisateurAuthentifie = +req.utilisateur.id;
+        const service_compte = new ServiceCompte();
+        
+        await service_compte.mettreAJourAvatar(idUtilisateurAuthentifie, req.file.buffer);
+        
+        res.status(200).json({ message: 'Avatar mis à jour avec succès' });
+    } catch (error) {
+        console.error('Erreur lors de l\'upload de l\'avatar :', error);
+        res.status(400).json({ message: error.message || 'Erreur lors de l\'upload' });
+    }
+});
+
+// GET - Récupérer l'avatar (public ou protégé, ici public pour l'affichage simple)
+compteRouter.get('/api/users/avatar/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const service_compte = new ServiceCompte();
+        const resultat = await service_compte.recupererAvatar(id);
+
+        if (!resultat || !resultat.avatarBlobCompte) {
+            return res.status(404).json({ message: 'Avatar non trouvé' });
+        }
+
+        // On renvoie le buffer directement comme une image
+        res.set('Content-Type', 'image/png'); // Par défaut PNG, le navigateur gérera
+        res.send(resultat.avatarBlobCompte);
+    } catch (error) {
+        console.error('Erreur lors de la récupération de l\'avatar :', error);
+        res.status(500).json({ message: 'Erreur serveur' });
     }
 });
 
