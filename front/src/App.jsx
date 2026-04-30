@@ -11,6 +11,7 @@ import Settings from './pages/Settings';
 import logo from './assets/logo.png';
 import { ThemeProvider } from './context/theme_context';
 import FallingIcons from './components/FallingIcons';
+import Partage from './pages/Partage';
 
 axios.interceptors.response.use(
     (response) => {
@@ -91,6 +92,9 @@ function AppContent() {
               <Link to="/upload" className={`sidebar-link ${location.pathname === '/upload' ? 'active' : ''}`}>
                 Uploader
               </Link>
+              <Link to="/partages" className={`sidebar-link ${location.pathname === '/partages' ? 'active' : ''}`}>
+                Partages
+              </Link>
               <Link to="/settings" className={`sidebar-link ${location.pathname === '/settings' ? 'active' : ''}`}>
                 Paramètres
               </Link>
@@ -113,6 +117,7 @@ function AppContent() {
             <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Home />} />
             <Route path="/upload" element={isAuthenticated ? <Upload /> : <Home />} />
             <Route path="/settings" element={isAuthenticated ? <Settings /> : <Home />} />
+            <Route path="/partages" element={<Partage />} />
           </Routes>
         </div>
       </div>
