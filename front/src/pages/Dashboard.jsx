@@ -22,6 +22,7 @@ function Dashboard() {
     
     // États pour la navigation dans les dossiers
     const [dossier_actuel, setDossierActuel] = useState(null);
+    const [shareMessage, setShareMessage] = useState('');
     const [contenu_dossier, setContenuDossier] = useState({ dossiers: [], fichiers: [] });
     const [fil_ariane, setFilAriane] = useState([]);
 
@@ -29,6 +30,18 @@ function Dashboard() {
     const [menu_options_dossier, setMenuOptionsDossier] = useState(null);
     const [fichier_preview, setFichierPreview] = useState(null);
     const [chargement_preview, setChargementPreview] = useState(false);
+    
+    // États pour le formulaire de partage
+    const [shareFormOpen, setShareFormOpen] = useState(false);
+    const [shareFormTarget, setShareFormTarget] = useState(null);
+    const [shareFormData, setShareFormData] = useState({
+        email: '',
+        motDePasse: '',
+        dateExpiration: ''
+    });
+    const [shareFormEmailExists, setShareFormEmailExists] = useState(null);
+    const [shareFormLoading, setShareFormLoading] = useState(false);
+    
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -172,6 +185,99 @@ function Dashboard() {
                 path: fil_ariane 
             } 
         });
+    };
+
+    const verifierEmailCompte = async (email) => {
+        if (!email) {
+            setShareFormEmailExists(null);
+            return false;
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            setShareFormEmailExists(null);
+            return false;
+        }
+
+        try {
+            const response = await axios.get('http://localhost:3000/api/comptes/check-email', {
+                params: { email }
+            });
+            const exists = response.data?.exists === true;
+            setShareFormEmailExists(exists);
+            if (exists) {
+                setShareFormData(prev => ({ ...prev, motDePasse: '' }));
+            }
+            return exists;
+        } catch (err) {
+            console.error('Erreur lors de la vérification de l\'email :', err);
+            setShareFormEmailExists(null);
+            return false;
+        }
+    };
+
+    const handleShareEmailChange = (email) => {
+        setShareFormData(prev => ({ ...prev, email, motDePasse: '' }));
+        setShareFormEmailExists(null);
+    };
+
+    const handleShareEmailBlur = async () => {
+        await verifierEmailCompte(shareFormData.email);
+    };
+
+    const partagerRessource = ({ dossierId, fileName }) => {
+        setShareFormTarget({ dossierId, fileName });
+        setShareFormData({ email: '', motDePasse: '', dateExpiration: '' });
+        setShareFormEmailExists(null);
+        setShareFormOpen(true);
+    };
+
+    const soumettrFormulairePartage = async (e) => {
+        e.preventDefault();
+        if (!shareFormData.email) {
+            setError('Email requis pour le partage.');
+            return;
+        }
+
+        const emailExists = await verifierEmailCompte(shareFormData.email);
+        if (emailExists && shareFormData.motDePasse) {
+            setError('Le mot de passe ne peut être utilisé que pour des partages vers une adresse non enregistrée.');
+            return;
+        }
+
+        setShareFormLoading(true);
+        try {
+            const token = localStorage.getItem('token');
+            const body = {
+                email: shareFormData.email,
+            };
+            if (shareFormTarget.fileName) body.fileName = shareFormTarget.fileName;
+            if (shareFormData.motDePasse) body.motDePasse = shareFormData.motDePasse;
+            if (shareFormData.dateExpiration) body.dateExpiration = shareFormData.dateExpiration;
+
+            const response = await axios.post(
+                `http://localhost:3000/api/dossiers/${shareFormTarget.dossierId}/partager`,
+                body,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            const lien = response.data?.lien?.url;
+            const message = lien ? `Lien de partage créé : ${window.location.origin}${lien}` : 'Partage effectué avec succès.';
+            setShareMessage(message);
+            setShareFormOpen(false);
+            window.alert(message);
+        } catch (err) {
+            console.error('Erreur lors du partage :', err);
+            setError(err.response?.data?.error || 'Erreur lors du partage.');
+        } finally {
+            setShareFormLoading(false);
+        }
+    };
+
+    const fermerFormulairePartage = () => {
+        setShareFormOpen(false);
+        setShareFormTarget(null);
+        setShareFormData({ email: '', motDePasse: '', dateExpiration: '' });
     };
 
     const handleDragEnterGlobal = (e) => {
@@ -743,8 +849,62 @@ function Dashboard() {
                 </div>
             )}
 
+            {shareFormOpen && (
+                <div className="modal-overlay" onClick={fermerFormulairePartage}>
+                    <div className="modal-contenu" onClick={e => e.stopPropagation()}>
+                        <h3>Partager une ressource</h3>
+                        <form onSubmit={soumettrFormulairePartage}>
+                            <div className="form-group">
+                                <label htmlFor="share-email">Email</label>
+                                <input
+                                    id="share-email"
+                                    type="email"
+                                    placeholder="adresse@email.com"
+                                    value={shareFormData.email}
+                                    onChange={(e) => handleShareEmailChange(e.target.value)}
+                                    onBlur={handleShareEmailBlur}
+                                    required
+                                />
+                            </div>
+                            {shareFormEmailExists === true && (
+                                <p className="info-modale">Cet email correspond à un utilisateur existant. Le partage sera effectué directement dans sa racine.</p>
+                            )}
+                            {shareFormEmailExists === false && (
+                                <p className="info-modale">Aucun compte trouvé. Un lien de partage sera créé et vous pouvez définir un mot de passe.</p>
+                            )}
+                            <div className="form-group">
+                                <label htmlFor="share-password">Mot de passe (optionnel)</label>
+                                <input
+                                    id="share-password"
+                                    type="password"
+                                    placeholder="Laisser vide si aucun"
+                                    value={shareFormData.motDePasse}
+                                    onChange={(e) => setShareFormData({...shareFormData, motDePasse: e.target.value})}
+                                    disabled={shareFormEmailExists === true}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label htmlFor="share-expiry">Date d'expiration (optionnel)</label>
+                                <input
+                                    id="share-expiry"
+                                    type="datetime-local"
+                                    value={shareFormData.dateExpiration}
+                                    onChange={(e) => setShareFormData({...shareFormData, dateExpiration: e.target.value})}
+                                />
+                            </div>
+                            {error && <p className="erreur-modale">{error}</p>}
+                            <div className="modal-bouttons">
+                                <button type="button" className="btn-annuler" onClick={fermerFormulairePartage} disabled={shareFormLoading}>Annuler</button>
+                                <button type="submit" className="btn-confirmer" disabled={shareFormLoading}>{shareFormLoading ? 'Partage en cours...' : 'Partager'}</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             <div className="dossiers-section">
                 <h2>{dossier_actuel ? `Contenu de ${dossier_actuel.cheminDaccesDossier}` : 'Mes dossiers'}</h2>
+                {shareMessage && <p className="share-message">{shareMessage}</p>}
                 
                 {allItems.length === 0 ? (
                     <div className="dossier-vide">
@@ -791,8 +951,9 @@ function Dashboard() {
                                         <div className="actions-rapides" onClick={(e) => e.stopPropagation()}>
                                             {!estDansCorbeille ? (
                                                 <>
-                                                    <button className="action-icon-btn" onClick={() => ouvrirModalRenommer(dossier)} title="Renommer">✏️</button>
-                                                    <button className="action-icon-btn" onClick={() => ouvrirModalSuppression(dossier)} title="Déplacer vers la corbeille">🗑️</button>
+                                                    <button className="action-icon-btn" onClick={() => partagerRessource({ dossierId: dossier.idDossier })} title="Partager">🔗</button>
+                                    <button className="action-icon-btn" onClick={() => ouvrirModalRenommer(dossier)} title="Renommer">✏️</button>
+                                    <button className="action-icon-btn" onClick={() => ouvrirModalSuppression(dossier)} title="Déplacer vers la corbeille">🗑️</button>
                                                 </>
                                             ) : (
                                                 <>
@@ -830,6 +991,7 @@ function Dashboard() {
                                 <div className="col-id">{new Date(fichier.dateModification).toLocaleDateString('fr-FR')}</div>
                                 <div className="col-taille">{formatFileSize(fichier.taille)}</div>
                                 <div className="col-actions">
+                                    <button className="action-icon-btn" onClick={(e) => { e.stopPropagation(); partagerRessource({ dossierId: dossier_actuel ? dossier_actuel.idDossier : dossier_racine?.idDossier, fileName: fichier.nom }); }} title="Partager">🔗</button>
                                     <button className="options-btn" onClick={(e) => { e.stopPropagation(); supprimerFichier(fichier); }} title="Supprimer">⋮</button>
                                 </div>
                             </div>

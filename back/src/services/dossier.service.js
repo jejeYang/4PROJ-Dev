@@ -1,4 +1,5 @@
 import DossierRepository from "../repositories/dossier.repository.js";
+import CompteRepository from "../repositories/compte.repository.js";
 import fs from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
@@ -7,6 +8,7 @@ import { SERVER_FILES_PATH } from '../config/env.js';
 class DossierService {
     constructor() {
         this.dossierRepository = new DossierRepository();
+        this.compteRepository = new CompteRepository();
     }
 
     async creerDossier(dossier) {
@@ -169,6 +171,183 @@ class DossierService {
             console.error('Erreur lors de la récupération des fichiers :', error);
             throw error;
         }
+    }
+
+    async augmenterStockageCompte(idCompte, tailleSupplementaire) {
+        const compte = await this.compteRepository.findById(idCompte);
+        if (!compte) {
+            throw new Error('Compte introuvable pour mise à jour du stockage');
+        }
+
+        return await this.compteRepository.update(idCompte, {
+            stockageCompte: BigInt(compte.stockageCompte || 0) + BigInt(tailleSupplementaire),
+        });
+    }
+
+    async calculerTailleRecusive(chemin) {
+        const stat = await fs.promises.stat(chemin);
+        if (stat.isFile()) {
+            return stat.size;
+        }
+
+        if (stat.isDirectory()) {
+            const entrees = await fs.promises.readdir(chemin, { withFileTypes: true });
+            let taille = 0;
+            for (const entree of entrees) {
+                taille += await this.calculerTailleRecusive(path.join(chemin, entree.name));
+            }
+            return taille;
+        }
+
+        return 0;
+    }
+
+    async _genererNomUniqueFichier(dossierPhysique, nomSouhaite) {
+        const extension = path.extname(nomSouhaite);
+        const base = path.basename(nomSouhaite, extension);
+        let candidate = nomSouhaite;
+        let compteur = 1;
+
+        while (fs.existsSync(path.join(dossierPhysique, candidate))) {
+            compteur += 1;
+            candidate = `${base} (${compteur})${extension}`;
+        }
+
+        return candidate;
+    }
+
+    async _genererNomUniqueDossier(parentId, nomSouhaite) {
+        const sousDossiers = await this.recupererSousDossiers(parentId);
+        const noms = new Set(sousDossiers.map(d => d.cheminDaccesDossier.toLowerCase()));
+        let candidate = nomSouhaite;
+        let compteur = 1;
+
+        while (noms.has(candidate.toLowerCase())) {
+            compteur += 1;
+            candidate = `${nomSouhaite} (${compteur})`;
+        }
+
+        return candidate;
+    }
+
+    async copierFichierVersCompte(sourceDossierId, fileName, cibleCompteId) {
+        const dossierSource = await this.recupererDossierParId(sourceDossierId);
+        const cheminSourceRelatif = await this.construireCheminComplet(sourceDossierId);
+        const sourcePhysique = path.join(SERVER_FILES_PATH, `user_${dossierSource.idCompteCreateur}`, cheminSourceRelatif);
+        const fichierSource = path.join(sourcePhysique, fileName);
+
+        if (!fs.existsSync(fichierSource) || !fs.statSync(fichierSource).isFile()) {
+            throw new Error('Fichier source introuvable pour partage');
+        }
+
+        const racineCible = await this.recupererDossierRacineParCompte(cibleCompteId);
+        if (!racineCible || racineCible.length === 0) {
+            throw new Error('Dossier racine de l\'utilisateur cible introuvable');
+        }
+
+        const dossierRacineCible = racineCible[0];
+        const dossierCiblePhysique = path.join(SERVER_FILES_PATH, `user_${cibleCompteId}`, dossierRacineCible.cheminDaccesDossier);
+        if (!fs.existsSync(dossierCiblePhysique)) {
+            await mkdir(dossierCiblePhysique, { recursive: true });
+        }
+
+        const nouveauNomFichier = await this._genererNomUniqueFichier(dossierCiblePhysique, fileName);
+        const destination = path.join(dossierCiblePhysique, nouveauNomFichier);
+
+        try {
+            await fs.promises.symlink(fichierSource, destination, 'file');
+        } catch (error) {
+            await fs.promises.link(fichierSource, destination);
+        }
+
+        return {
+            chemin: path.join(dossierRacineCible.cheminDaccesDossier, nouveauNomFichier),
+            nom: nouveauNomFichier,
+            collaboratif: true,
+        };
+    }
+
+    async copierDossierVersCompte(sourceDossierId, cibleCompteId) {
+        const dossierSource = await this.recupererDossierParId(sourceDossierId);
+        const cheminSourceRelatif = await this.construireCheminComplet(sourceDossierId);
+        const sourcePhysique = path.join(SERVER_FILES_PATH, `user_${dossierSource.idCompteCreateur}`, cheminSourceRelatif);
+
+        if (!fs.existsSync(sourcePhysique) || !fs.statSync(sourcePhysique).isDirectory()) {
+            throw new Error('Dossier source introuvable pour partage');
+        }
+
+        const racineCible = await this.recupererDossierRacineParCompte(cibleCompteId);
+        if (!racineCible || racineCible.length === 0) {
+            throw new Error('Dossier racine de l\'utilisateur cible introuvable');
+        }
+
+        const dossierRacineCible = racineCible[0];
+        const dossierCiblePhysique = path.join(SERVER_FILES_PATH, `user_${cibleCompteId}`, dossierRacineCible.cheminDaccesDossier);
+        if (!fs.existsSync(dossierCiblePhysique)) {
+            await mkdir(dossierCiblePhysique, { recursive: true });
+        }
+
+        const nomCible = await this._genererNomUniqueDossier(dossierRacineCible.idDossier, dossierSource.cheminDaccesDossier);
+        const nouveauDossier = await this.dossierRepository.create({
+            idCompteCreateur: cibleCompteId,
+            idCompteAcces: dossierSource.idCompteCreateur,
+            cheminDaccesDossier: nomCible,
+            idDossierParent: dossierRacineCible.idDossier,
+        });
+
+        const destinationDossierPhysique = path.join(dossierCiblePhysique, nomCible);
+        await mkdir(destinationDossierPhysique, { recursive: true });
+        await fs.promises.symlink(sourcePhysique, destinationDossierPhysique, 'junction');
+
+        return {
+            dossier: nouveauDossier,
+            collaboratif: true,
+        };
+    }
+
+    async _copierDossierRecursif(sourceDossierId, targetDossierId, cibleCompteId) {
+        const sourceDossier = await this.recupererDossierParId(sourceDossierId);
+        const cheminSourceRelatif = await this.construireCheminComplet(sourceDossierId);
+        const sourcePhysique = path.join(SERVER_FILES_PATH, `user_${sourceDossier.idCompteCreateur}`, cheminSourceRelatif);
+
+        const targetDossier = await this.recupererDossierParId(targetDossierId);
+        const cheminTargetRelatif = await this.construireCheminComplet(targetDossierId);
+        const targetPhysique = path.join(SERVER_FILES_PATH, `user_${cibleCompteId}`, cheminTargetRelatif);
+
+        let tailleTotale = 0;
+        const entreePhysique = await fs.promises.readdir(sourcePhysique, { withFileTypes: true });
+
+        for (const entree of entreePhysique) {
+            const sourceChemin = path.join(sourcePhysique, entree.name);
+            const destinationChemin = path.join(targetPhysique, entree.name);
+
+            if (entree.isFile()) {
+                await fs.promises.copyFile(sourceChemin, destinationChemin);
+                tailleTotale += await this.calculerTailleRecusive(destinationChemin);
+                continue;
+            }
+
+            if (entree.isDirectory()) {
+                const sousDossierSource = await this.dossierRepository.findFirst({
+                    idCompteCreateur: sourceDossier.idCompteCreateur,
+                    cheminDaccesDossier: entree.name,
+                    idDossierParent: sourceDossierId,
+                });
+
+                const nomCible = await this._genererNomUniqueDossier(targetDossierId, entree.name);
+                const sousDossierCible = await this.dossierRepository.create({
+                    idCompteCreateur: cibleCompteId,
+                    cheminDaccesDossier: nomCible,
+                    idDossierParent: targetDossierId,
+                });
+
+                const sousDestination = path.join(targetPhysique, nomCible);
+                await mkdir(sousDestination, { recursive: true });
+                tailleTotale += await this._copierDossierRecursif(sousDossierSource.idDossier, sousDossierCible.idDossier, cibleCompteId);
+            }
+        }
+
+        return tailleTotale;
     }
 
     async recupererCorbeille(idCompteCreateur) {
