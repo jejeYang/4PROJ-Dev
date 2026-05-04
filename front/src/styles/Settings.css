@@ -180,3 +180,51 @@
         grid-template-columns: 1fr;
     }
 }
+
+
+/* --- Nouvelles règles pour l'édition de l'avatar --- */
+
+.conteneur-avatar-edition {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 1rem;
+}
+
+.espace-avatar {
+    margin-bottom: 0; /* On enlève la marge du bas ici car elle est gérée par le conteneur */
+    overflow: hidden; /* Pour que l'image reste ronde */
+}
+
+.image-avatar-siteweb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.bouton-editer-avatar {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 32px;
+    height: 32px;
+    background-color: var(--btn-primary-color);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    border: 2px solid var(--bg-tertiary-color);
+    transition: transform 0.2s ease, background-color 0.2s ease;
+    z-index: 10;
+}
+
+.bouton-editer-avatar:hover {
+    transform: scale(1.1);
+    background-color: var(--btn-shadow);
+}
+
+.icone-crayon {
+    font-size: 1.1rem;
+}

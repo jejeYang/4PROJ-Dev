@@ -1,10 +1,14 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import '../styles/Settings.css';
 import { ThemeContext } from '../context/theme_context';
 
 function Settings() {
+    const fileInputRef = useRef(null);
+    const [nouvelleImagePreview, setNouvelleImagePreview] = useState(null);
+    const [fichierImage, setFichierImage] = useState(null);
+
     const [utilisateur, setUtilisateur] = useState(() => {
         const donnees_sauvegardees = localStorage.getItem('user');
         return donnees_sauvegardees ? JSON.parse(donnees_sauvegardees) : null;
@@ -29,6 +33,8 @@ function Settings() {
     const naviguer = useNavigate();
     const { toggle: est_sombre, toggleFunction: changerTheme } = useContext(ThemeContext);
 
+    const urlAvatarBackend = utilisateur ? `http://localhost:3000/api/users/avatar/${utilisateur.id}` : null;
+
     const gestionChangementProfil = (e) => {
         setDonneesFormulaire({ ...donnees_formulaire, [e.target.name]: e.target.value });
     };
@@ -37,18 +43,64 @@ function Settings() {
         setDonneesMotDePasse({ ...donnees_mot_de_passe, [e.target.name]: e.target.value });
     };
 
+    const declencherSelectionFichier = () => {
+        fileInputRef.current.click();
+    };
+
+    const gestionChangementImage = (e) => {
+        const fichier = e.target.files[0];
+        if (fichier) {
+            setFichierImage(fichier);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setNouvelleImagePreview(reader.result);
+            };
+            reader.readAsDataURL(fichier);
+        }
+    };
+
     const mettreAJourProfil = async (e) => {
         e.preventDefault();
         try {
             const jeton_authentification = localStorage.getItem('token');
-            await axios.put(
+            const headersBase = { Authorization: `Bearer ${jeton_authentification}` };
+            
+            const reponseTexte = await axios.put(
                 `http://localhost:3000/api/users/${utilisateur.id}`,
-                donnees_formulaire,
-                { headers: { Authorization: `Bearer ${jeton_authentification}` } }
+                {
+                    nom: donnees_formulaire.nom,
+                    email: donnees_formulaire.email
+                },
+                { headers: headersBase }
             );
-            const utilisateur_mis_a_jour = { ...utilisateur, ...donnees_formulaire };
+
+            let utilisateur_mis_a_jour = { ...utilisateur, ...reponseTexte.data.utilisateur };
+
+            if (fichierImage) {
+                const formData = new FormData();
+                formData.append('avatar', fichierImage); 
+
+                await axios.post(
+                    'http://localhost:3000/api/users/avatar', 
+                    formData,
+                    { 
+                        headers: { 
+                            ...headersBase,
+                            'Content-Type': 'multipart/form-data' 
+                        } 
+                    }
+                );
+                
+                utilisateur_mis_a_jour.avatarUrl = `${urlAvatarBackend}?t=${new Date().getTime()}`;
+            } else if (!utilisateur.avatarUrl) {
+                 utilisateur_mis_a_jour.avatarUrl = urlAvatarBackend;
+            }
+
             localStorage.setItem('user', JSON.stringify(utilisateur_mis_a_jour));
             setUtilisateur(utilisateur_mis_a_jour);
+            setFichierImage(null); 
+            setNouvelleImagePreview(null);
+
             setMessageNotification('Profil mis à jour avec succès');
             setTimeout(() => setMessageNotification(''), 3000);
         } catch (erreur) {
@@ -115,8 +167,26 @@ function Settings() {
                 <div className="colonne-principale-parametres">
                     <section className="carte-parametres section-profil">
                         <div className="en-tete-visuel-profil">
-                            <div className="espace-avatar">
-                                {donnees_formulaire.nom.charAt(0).toUpperCase()}
+                            <div className="conteneur-avatar-edition">
+                                <div className="espace-avatar">
+                                    {nouvelleImagePreview ? (
+                                        <img src={nouvelleImagePreview} alt="Aperçu avatar" className="image-avatar-siteweb" />
+                                    ) : utilisateur.avatarUrl ? (
+                                        <img src={utilisateur.avatarUrl} alt="Avatar utilisateur" className="image-avatar-siteweb" />
+                                    ) : (
+                                        donnees_formulaire.nom.charAt(0).toUpperCase()
+                                    )}
+                                </div>
+                                <div className="bouton-editer-avatar" onClick={declencherSelectionFichier} title="Changer la photo de profil">
+                                    <span className="icone-crayon">✎</span>
+                                </div>
+                                <input 
+                                    type="file" 
+                                    ref={fileInputRef} 
+                                    style={{ display: 'none' }} 
+                                    accept="image/*" 
+                                    onChange={gestionChangementImage}
+                                />
                             </div>
                             <h3>Mon Profil</h3>
                         </div>
