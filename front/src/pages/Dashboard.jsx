@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDashboard } from '../hooks/useDashboard';
 import '../styles/Dashboard.css';
 
@@ -38,6 +38,25 @@ function Dashboard() {
     const [modal_recherche_ouverte, setModalRechercheOuverte] = useState(false);
     const [recherche_query, setRechercheQuery] = useState('');
     const [recherche_type, setRechercheType] = useState('tout');
+
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                if (ouvre_modal.type && !creating) {
+                    setOuvreModal({ type: null, data: null });
+                }
+                if (modal_recherche_ouverte) {
+                    setModalRechercheOuverte(false);
+                }
+                if (fichier_preview) {
+                    fermerApercu();
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [ouvre_modal.type, creating, modal_recherche_ouverte, fichier_preview, setOuvreModal, fermerApercu]);
 
     if (loading) return <div className="dashboard-container">Chargement...</div>;
 
@@ -140,7 +159,11 @@ function Dashboard() {
             )}
 
             {ouvre_modal.type && !action_en_cours.active && (
-                <div className="modal-overlay" onClick={() => !creating && setOuvreModal({ type: null, data: null })}>
+                <div className="modal-overlay" onMouseDown={(e) => { 
+                    if (e.target === e.currentTarget && !creating) {
+                        setOuvreModal({ type: null, data: null });
+                    }
+                }}>
                     <div className="modal-contenu" onClick={e => e.stopPropagation()}>
 
                         {ouvre_modal.type === 'creation-dossier' && (
@@ -315,7 +338,9 @@ function Dashboard() {
                 </div>
 
                 {modal_recherche_ouverte && (
-                    <div className="modal-overlay" onClick={() => setModalRechercheOuverte(false)}>
+                    <div className="modal-overlay" onMouseDown={(e) => { 
+                        if (e.target === e.currentTarget) setModalRechercheOuverte(false); 
+                    }}>
                         <div className="modal-contenu modal-recherche" onClick={e => e.stopPropagation()}>
                             <h3>Rechercher</h3>
                             <form onSubmit={soumettreRecherche}>
@@ -542,7 +567,9 @@ function Dashboard() {
             )}
 
             {fichier_preview && (
-                <div className="modal-overlay" onClick={fermerApercu}>
+                <div className="modal-overlay" onMouseDown={(e) => {
+                    if (e.target === e.currentTarget) fermerApercu();
+                }}>
                     <div className="modal-preview-contenu" onClick={e => e.stopPropagation()}>
                         <div className="preview-header">
                             <h3>{fichier_preview.nom}</h3>
