@@ -6,5 +6,6 @@ const router = express.Router();
 
 router.post('/dossiers/:dossierId/partager', authentifierToken, LienController.genererLienPartage);
 router.get('/liens/:token', LienController.accederLienPartage);
+router.get('/liens/:token/details', LienController.obtenirDetailsLien);
 
 export default router;

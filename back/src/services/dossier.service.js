@@ -73,6 +73,7 @@ class DossierService {
 
     async supprimerDossier(dossierId) {
         const dossier = await this.recupererDossierParId(dossierId);
+        const tailleDossier = await this.recupererTailleDossier(dossierId);
 
         const cheminRelatif = await this.construireCheminComplet(dossierId);
         const chemin = path.join(
@@ -89,10 +90,33 @@ class DossierService {
             console.error("Erreur suppression dossier physique", e);
         }
 
-        return await this.dossierRepository.delete(dossierId);
+        const resultat = await this.dossierRepository.delete(dossierId);
+
+        // Restaurer le quota (ajouter car stockageCompte est le quota restant)
+        const compte = await this.compteRepository.findById(dossier.idCompteCreateur);
+        if (compte) {
+            await this.compteRepository.update(dossier.idCompteCreateur, {
+                stockageCompte: BigInt(compte.stockageCompte) + BigInt(tailleDossier)
+            });
+        }
+
+        return resultat;
     }
 
-    async televerserFichier(dossierId, file) {
+    async televerserFichier(dossierId, file, idUtilisateur) {
+        // Mettre à jour le quota (décrémenter car stockageCompte est le quota restant)
+        const compte = await this.compteRepository.findById(idUtilisateur);
+        if (!compte) throw new Error("Compte non trouvé");
+
+        const nouvelleTaille = BigInt(compte.stockageCompte) - BigInt(file.size);
+        if (nouvelleTaille < 0n) {
+            throw new Error("Espace de stockage insuffisant");
+        }
+
+        await this.compteRepository.update(idUtilisateur, {
+            stockageCompte: nouvelleTaille
+        });
+
         return {
             message: 'Fichier téléversé avec succès',
             file: {
@@ -121,7 +145,17 @@ class DossierService {
             throw new Error(`Cible "${fileName}" n'est pas un fichier`);
         }
 
+        const fileSize = stat.size;
         fs.unlinkSync(cheminPhysique);
+
+        // Restaurer le quota
+        const compte = await this.compteRepository.findById(dossier.idCompteCreateur);
+        if (compte) {
+            await this.compteRepository.update(dossier.idCompteCreateur, {
+                stockageCompte: BigInt(compte.stockageCompte) + BigInt(fileSize)
+            });
+        }
+
         return { message: `Fichier '${fileName}' supprimé`, dossierId, fileName };
     }
 
@@ -175,6 +209,21 @@ class DossierService {
             console.error('Erreur lors de la récupération des fichiers :', error);
             throw error;
         }
+    }
+
+    async estDescendant(dossierId, ancetreId) {
+        if (parseInt(dossierId) === parseInt(ancetreId)) return true;
+        
+        try {
+            let current = await this.recupererDossierParId(dossierId);
+            while (current && current.idDossierParent) {
+                if (current.idDossierParent === parseInt(ancetreId)) return true;
+                current = await this.recupererDossierParId(current.idDossierParent);
+            }
+        } catch (error) {
+            return false;
+        }
+        return false;
     }
 
     async augmenterStockageCompte(idCompte, tailleSupplementaire) {
@@ -770,6 +819,7 @@ class DossierService {
             return [];
         }
 
+        // 1. Supprimer tous les dossiers qui sont dans la corbeille (cela restaure déjà leur quota via supprimerDossier)
         const dossiersCorbeille = await this.dossierRepository.findSubDossiers(corbeille.idDossier);
 
         const dossiersSupprimes = [];
@@ -782,6 +832,7 @@ class DossierService {
             }
         }
 
+        // 2. Restaurer le quota pour les fichiers "orphelins" (fichiers mis à la corbeille sans dossier parent)
         try {
             const cheminCorbeilleRelatif = await this.construireCheminComplet(corbeille.idDossier);
             const cheminCorbeillePhysique = path.join(SERVER_FILES_PATH, `user_${idCompteCreateur}`, cheminCorbeilleRelatif);
@@ -866,6 +917,99 @@ class DossierService {
         fs.renameSync(cheminAncienPhysique, cheminNouveauPhysique);
 
         return { message: `Fichier '${nomFichier}' déplacé avec succès.`, dossierCibleId: idNouveauDossierParent };
+    }
+
+    async copierFichierVersCompte(dossierSourceId, nomFichier, cibleCompteId) {
+        const dossierSource = await this.recupererDossierParId(dossierSourceId);
+        const dossierRacineCible = await this.recupererDossierRacineParCompte(cibleCompteId);
+        
+        if (!dossierRacineCible || dossierRacineCible.length === 0) {
+            throw new Error("Dossier racine de destination introuvable.");
+        }
+        
+        const idDossierCible = dossierRacineCible[0].idDossier;
+        
+        const cheminSourceRelatif = await this.construireCheminComplet(dossierSourceId);
+        const cheminSourcePhysique = path.join(SERVER_FILES_PATH, `user_${dossierSource.idCompteCreateur}`, cheminSourceRelatif, nomFichier);
+        
+        const cheminCibleRelatif = await this.construireCheminComplet(idDossierCible);
+        const cheminCiblePhysique = path.join(SERVER_FILES_PATH, `user_${cibleCompteId}`, cheminCibleRelatif, nomFichier);
+        
+        if (!fs.existsSync(cheminSourcePhysique)) {
+            throw new Error("Fichier source introuvable.");
+        }
+        
+        let finalCible = cheminCiblePhysique;
+        if (fs.existsSync(finalCible)) {
+            const ext = path.extname(nomFichier);
+            const base = path.basename(nomFichier, ext);
+            finalCible = path.join(path.dirname(cheminCiblePhysique), `${base}-partage-${Date.now()}${ext}`);
+        }
+        
+        fs.copyFileSync(cheminSourcePhysique, finalCible);
+        
+        // Mettre à jour le quota du destinataire
+        const stats = fs.statSync(finalCible);
+        const compteCible = await this.compteRepository.findById(cibleCompteId);
+        if (compteCible) {
+            await this.compteRepository.update(cibleCompteId, {
+                stockageCompte: BigInt(compteCible.stockageCompte) - BigInt(stats.size)
+            });
+        }
+        
+        return { message: "Fichier copié avec succès", destinationId: idDossierCible };
+    }
+
+    async copierDossierVersCompte(dossierSourceId, cibleCompteId) {
+        const dossierSource = await this.recupererDossierParId(dossierSourceId);
+        const dossierRacineCible = await this.recupererDossierRacineParCompte(cibleCompteId);
+        
+        if (!dossierRacineCible || dossierRacineCible.length === 0) {
+            throw new Error("Dossier racine de destination introuvable.");
+        }
+
+        const idDossierCibleParent = dossierRacineCible[0].idDossier;
+        
+        // Créer le dossier dans la base de données pour le nouveau propriétaire
+        const nouveauDossier = await this.creerDossier({
+            idCompteCreateur: cibleCompteId,
+            cheminDaccesDossier: `${dossierSource.cheminDaccesDossier}-partage`,
+            idDossierParent: idDossierCibleParent
+        });
+
+        const cheminSourceRelatif = await this.construireCheminComplet(dossierSourceId);
+        const cheminSourcePhysique = path.join(SERVER_FILES_PATH, `user_${dossierSource.idCompteCreateur}`, cheminSourceRelatif);
+        
+        const cheminCibleRelatif = await this.construireCheminComplet(nouveauDossier.idDossier);
+        const cheminCiblePhysique = path.join(SERVER_FILES_PATH, `user_${cibleCompteId}`, cheminCibleRelatif);
+
+        // Copie récursive physique
+        const copierRecursif = (src, dest) => {
+            if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
+            const elements = fs.readdirSync(src);
+            for (const el of elements) {
+                const srcPath = path.join(src, el);
+                const destPath = path.join(dest, el);
+                if (fs.statSync(srcPath).isDirectory()) {
+                    copierRecursif(srcPath, destPath);
+                } else {
+                    fs.copyFileSync(srcPath, destPath);
+                }
+            }
+        };
+
+        copierRecursif(cheminSourcePhysique, cheminCiblePhysique);
+
+        // Mettre à jour le quota (on calcule la taille totale copiée)
+        const tailleCopiee = await this.recupererTailleDossier(nouveauDossier.idDossier);
+        const compteCible = await this.compteRepository.findById(cibleCompteId);
+        if (compteCible) {
+            await this.compteRepository.update(cibleCompteId, {
+                stockageCompte: BigInt(compteCible.stockageCompte) - BigInt(tailleCopiee)
+            });
+        }
+
+        return nouveauDossier;
     }
 
     async rechercherFichiers(dossierId, query, type) {
