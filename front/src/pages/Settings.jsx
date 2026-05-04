@@ -74,32 +74,36 @@ function Settings() {
                 { headers: headersBase }
             );
 
-            let utilisateur_mis_a_jour = { ...utilisateur, ...reponseTexte.data.utilisateur };
+            let utilisateur_mis_a_jour = { 
+                ...utilisateur, 
+                ...(reponseTexte.data.utilisateur || {}), 
+                nom: donnees_formulaire.nom, 
+                email: donnees_formulaire.email 
+            };
 
             if (fichierImage) {
+                // ... (ton code pour l'upload d'image reste inchangé) ...
                 const formData = new FormData();
                 formData.append('avatar', fichierImage); 
 
                 await axios.post(
                     'http://localhost:3000/api/users/avatar', 
                     formData,
-                    { 
-                        headers: { 
-                            ...headersBase,
-                            'Content-Type': 'multipart/form-data' 
-                        } 
-                    }
+                    { headers: { ...headersBase, 'Content-Type': 'multipart/form-data' } }
                 );
                 
                 utilisateur_mis_a_jour.avatarUrl = `${urlAvatarBackend}?t=${new Date().getTime()}`;
             } else if (!utilisateur.avatarUrl) {
-                 utilisateur_mis_a_jour.avatarUrl = urlAvatarBackend;
+                utilisateur_mis_a_jour.avatarUrl = urlAvatarBackend;
             }
 
             localStorage.setItem('user', JSON.stringify(utilisateur_mis_a_jour));
             setUtilisateur(utilisateur_mis_a_jour);
             setFichierImage(null); 
             setNouvelleImagePreview(null);
+
+            console.log("📢 Signal 'profilMisAJour' envoyé !");
+            window.dispatchEvent(new Event('profilMisAJour'));
 
             setMessageNotification('Profil mis à jour avec succès');
             setTimeout(() => setMessageNotification(''), 3000);
