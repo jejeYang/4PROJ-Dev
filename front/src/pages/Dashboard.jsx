@@ -27,6 +27,7 @@ function Dashboard() {
         ouvrirModalViderCorbeille, confirmerViderCorbeille,
         telechargerFichier, restaurerFichier, 
         ouvrirModalSuppressionFichier, ouvrirModalSuppressionDefinitiveFichier, confirmerSuppressionDefinitiveFichier,
+        tri_config, demanderTri, trierElements,
         ouvrirApercu, fermerApercu,
         ouvrirModalDeplacement, naviguerDeplacement, confirmerDeplacement,
         lancerRecherche, reinitialiserRecherche,
@@ -50,7 +51,10 @@ function Dashboard() {
             ? { dossiers: contenu_dossier.dossiers || [], fichiers: contenu_dossier.fichiers || [] }
             : { dossiers, fichiers: fichiers_base };
 
-    const allItems = [...displayItems.dossiers, ...displayItems.fichiers];
+    const dossiersTries = trierElements(displayItems.dossiers, 'dossier');
+    const fichiersTries = trierElements(displayItems.fichiers, 'fichier');
+
+    const allItems = [...dossiersTries, ...fichiersTries];
     const estDansCorbeille = fil_ariane.some(d => d.cheminDaccesDossier === '.corbeille');
     const toutEstSelectionne = allItems.length > 0 && selection.length === allItems.length;
 
@@ -375,10 +379,22 @@ function Dashboard() {
                                     title="Sélectionner tout"
                                 />
                             </div>
-                            <div className="col-nom">Nom</div>
-                            <div className="col-extension">Extension</div>
-                            <div className="col-id">ID</div>
-                            <div className="col-taille">Taille</div>
+                            
+                            <div className="col-nom tri" onClick={() => demanderTri('nom')}>
+                                Nom {tri_config.cle === 'nom' && (tri_config.direction === 'asc' ? '↑' : '↓')}
+                            </div>
+                            <div className="col-extension tri" onClick={() => demanderTri('extension')}>
+                                Extension {tri_config.cle === 'extension' && (tri_config.direction === 'asc' ? '↑' : '↓')}
+                            </div>
+                            <div className="col-date tri" onClick={() => demanderTri('dateCreation')}>
+                                Créé le {tri_config.cle === 'dateCreation' && (tri_config.direction === 'asc' ? '↑' : '↓')}
+                            </div>
+                            <div className="col-date tri" onClick={() => demanderTri('modifieLe')}>
+                                Modifié le {tri_config.cle === 'modifieLe' && (tri_config.direction === 'asc' ? '↑' : '↓')}
+                            </div>
+                            <div className="col-taille tri" onClick={() => demanderTri('taille')}>
+                                Taille {tri_config.cle === 'taille' && (tri_config.direction === 'asc' ? '↑' : '↓')}
+                            </div>
                             <div className="col-actions">
                                 {selection.length > 0 && !estDansCorbeille && (
                                     <div className="actions-multiples">
@@ -396,7 +412,7 @@ function Dashboard() {
                             </div>
                         </div>
 
-                        {displayItems.dossiers.map((dossier) => (
+                        {dossiersTries.map((dossier) => (
                             <div
                                 key={dossier.idDossier}
                                 className={`dossier-ligne ${dossier_survole_upload === dossier.idDossier ? 'drag-over' : ''} ${estSelectionne(dossier, 'dossier') ? 'ligne-selectionnee' : ''}`}
@@ -420,7 +436,8 @@ function Dashboard() {
                                     </span>
                                 </div>
                                 <div className="col-extension">dossier</div>
-                                <div className="col-id">ID: {dossier.idDossier}</div>
+                                <div className="col-date">{new Date(dossier.dateCreation).toLocaleDateString('fr-FR')}</div>
+                                <div className="col-date">{new Date(dossier.modifieLe).toLocaleDateString('fr-FR')}</div>
                                 <div className="col-taille">{taille_dossiers[dossier.idDossier] !== undefined ? formatFileSize(taille_dossiers[dossier.idDossier]) : '...'}</div>
                                 <div className="col-actions">
                                     {menu_options_dossier === dossier.idDossier && (
@@ -448,7 +465,7 @@ function Dashboard() {
                             </div>
                         ))}
 
-                        {displayItems.fichiers.map((fichier, index) => {
+                        {fichiersTries.map((fichier, index) => {
                             const { nomBase, extension } = separerNomExtension(fichier.nom);
                             const emojiFichier = obtenirEmojiFichier(fichier.nom);
                             return (
@@ -473,7 +490,8 @@ function Dashboard() {
                                         </span>
                                     </div>
                                     <div className="col-extension">{extension || 'fichier'}</div> 
-                                    <div className="col-id">{new Date(fichier.dateModification).toLocaleDateString('fr-FR')}</div>
+                                    <div className="col-date">{new Date(fichier.dateCreation).toLocaleDateString('fr-FR')}</div>
+                                    <div className="col-date">{new Date(fichier.dateModification).toLocaleDateString('fr-FR')}</div>
                                     <div className="col-taille">{formatFileSize(fichier.taille)}</div>
                                     <div className="col-actions">
                                         {menu_options_fichier === fichier.nom && (

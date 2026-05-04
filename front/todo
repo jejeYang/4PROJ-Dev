@@ -7,17 +7,10 @@ Page d'accueil :
     - Header utilisateur (nom, avatar)
     - Taille utilisée sur taille restante
     - Dernier fichiers publiés
-    - Derniers fichiers visionnées / téléchargés
+    - Derniers fichiers visionnés
     - Diagrammes / Stats (Diagramme circulaire du type de fichier)
 
 Dashboard :
-- Affichage logo type de fichier
-- Affichage fichier :
-    - Nom
-    - Type de fichier
-    - Taille
-    - Date de création
-    - Modifié le
 - Filtres (croissant / décroissant):
     - Nom
     - Type de fichier
@@ -32,7 +25,10 @@ Liens :
 - Modifier lien (date d'expiration, mot de passe)
 - Supprimer lien (impossible de supprimer une collaboration)
 
+Paramètres :
+- Ajout photo de profile
+- Modification de photo de profile
+
 
 Back :
-- Modifier table dossier pour contenir "Date de création" & "Modifié le"
 - Restaurer un élement doit le remettre dans le dossier dans lequel il était plutôt qu'à la racine

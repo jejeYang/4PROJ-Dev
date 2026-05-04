@@ -656,6 +656,43 @@ export function useDashboard() {
         }
     };
 
+    // ===== TRI =====
+    const [tri_config, setTriConfig] = useState({ cle: 'nom', direction: 'asc' });
+
+    const demanderTri = (cle) => {
+        let direction = 'asc';
+        if (tri_config.cle === cle && tri_config.direction === 'asc') {
+            direction = 'desc';
+        }
+        setTriConfig({ cle, direction });
+    };
+
+    const trierElements = useCallback((elements, type) => {
+        if (!tri_config.cle) return elements;
+
+        return [...elements].sort((a, b) => {
+            let valA, valB;
+
+            if (type === 'dossier') {
+                if (tri_config.cle === 'nom') { valA = a.cheminDaccesDossier.toLowerCase(); valB = b.cheminDaccesDossier.toLowerCase(); }
+                else if (tri_config.cle === 'extension') { valA = ''; valB = ''; }
+                else if (tri_config.cle === 'dateCreation') { valA = new Date(a.dateCreation).getTime(); valB = new Date(b.dateCreation).getTime(); }
+                else if (tri_config.cle === 'modifieLe') { valA = new Date(a.modifieLe).getTime(); valB = new Date(b.modifieLe).getTime(); }
+                else if (tri_config.cle === 'taille') { valA = taille_dossiers[a.idDossier] || 0; valB = taille_dossiers[b.idDossier] || 0; }
+            } else {
+                if (tri_config.cle === 'nom') { valA = a.nom.toLowerCase(); valB = b.nom.toLowerCase(); }
+                else if (tri_config.cle === 'extension') { valA = separerNomExtension(a.nom).extension; valB = separerNomExtension(b.nom).extension; }
+                else if (tri_config.cle === 'dateCreation') { valA = new Date(a.dateCreation).getTime(); valB = new Date(b.dateCreation).getTime(); }
+                else if (tri_config.cle === 'modifieLe') { valA = new Date(a.modifieLe).getTime(); valB = new Date(b.modifieLe).getTime(); }
+                else if (tri_config.cle === 'taille') { valA = a.taille || 0; valB = b.taille || 0; }
+            }
+
+            if (valA < valB) return tri_config.direction === 'asc' ? -1 : 1;
+            if (valA > valB) return tri_config.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }, [tri_config, taille_dossiers]);
+
     // ===== APERÇU =====
     const ouvrirApercu = async (fichier) => {
         const type = obtenirTypeFichier(fichier.nom);
@@ -828,6 +865,7 @@ export function useDashboard() {
         ouvrirModalViderCorbeille, confirmerViderCorbeille,
         telechargerFichier, restaurerFichier, 
         ouvrirModalSuppressionFichier, ouvrirModalSuppressionDefinitiveFichier, confirmerSuppressionDefinitiveFichier,
+        tri_config, demanderTri, trierElements,
         ouvrirApercu, fermerApercu,
         lancerRecherche, reinitialiserRecherche,
         recherche_active, resultats_recherche, chargement_recherche,
