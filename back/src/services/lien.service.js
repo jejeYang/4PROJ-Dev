@@ -36,6 +36,10 @@ class LienService {
         return await this.lienRepository.findAll();
     }
 
+    async recupererLiensParCompte(idCompte) {
+        return await this.lienRepository.findByCompte(idCompte);
+    }
+
     async recupererParToken(token) {
         return await this.lienRepository.findByToken(token);
     }
