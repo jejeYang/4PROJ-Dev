@@ -75,6 +75,20 @@ class CompteController {
         }
     };
 
+    checkEmail = async (req, res, next) => {
+        try {
+            const { email } = req.query;
+            if (!email) {
+                return res.status(400).json({ message: 'Email requis pour la vérification.' });
+            }
+
+            const compte = await this.compteService.trouverParEmail(email);
+            res.status(200).json({ exists: Boolean(compte) });
+        } catch (error) {
+            next(error);
+        }
+    };
+
     updateUser = async (req, res, next) => {
         try {
             const { id } = req.params;

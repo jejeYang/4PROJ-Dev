@@ -9,6 +9,7 @@ const router = express.Router();
 router.post('/login', CompteController.login);
 router.post('/auth/google', CompteController.loginGoogle);
 router.post('/register', CompteController.register);
+router.get('/check-email', CompteController.checkEmail);
 
 // Routes protégées
 router.get('/users', authentifierToken, CompteController.getUsers);

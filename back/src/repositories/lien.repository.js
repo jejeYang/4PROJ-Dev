@@ -19,6 +19,19 @@ class LienRepository {
         });
     }
 
+    async findByToken(token) {
+        return prisma.lienGenere.findFirst({
+            where: { urlLienGenere: token },
+        });
+    }
+
+    async update(id, data) {
+        return prisma.lienGenere.update({
+            where: { idLienGenere: Number.parseInt(id) },
+            data,
+        });
+    }
+
     async findAll() {
         return prisma.lienGenere.findMany();
     }
