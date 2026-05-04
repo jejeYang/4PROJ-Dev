@@ -20,9 +20,12 @@ class LienController {
             const { dossierId } = req.params;
             const { email, fileName, motDePasse, mdpLienGenere, dateExpiration } = req.body;
             const idUtilisateurAuthentifie = +req.utilisateur.id;
+            const emailNormalise = typeof email === 'string' ? email.trim() : '';
+            const motDePasseParamFinal = motDePasse || mdpLienGenere;
 
-            if (!email) {
-                return res.status(400).json({ error: 'Email requis pour le partage.' });
+            // Mode "Générer un lien" : pas d'email, mais mot de passe obligatoire.
+            if (!emailNormalise && !motDePasseParamFinal) {
+                return res.status(400).json({ error: 'Mot de passe requis pour générer un lien.' });
             }
 
             const dossier = await this.dossierService.recupererDossierParId(dossierId);
@@ -30,7 +33,11 @@ class LienController {
                 return res.status(403).json({ error: 'Vous ne pouvez partager que vos propres dossiers et fichiers.' });
             }
 
-            const dossierCheminPhysique = path.join(SERVER_FILES_PATH, `user_${idUtilisateurAuthentifie}`, await this.dossierService.construireCheminComplet(dossierId));
+            const dossierCheminPhysique = path.join(
+                SERVER_FILES_PATH,
+                `user_${idUtilisateurAuthentifie}`,
+                await this.dossierService.construireCheminComplet(dossierId)
+            );
 
             if (fileName) {
                 const fichierPhysique = path.join(dossierCheminPhysique, fileName);
@@ -51,11 +58,13 @@ class LienController {
             const cheminDaccesLien = fileName ? `fichier:${dossierId}:${fileName}` : `dossier:${dossierId}`;
             const urlLienGenere = crypto.randomUUID();
 
-            // Vérifier si l'email correspond à un compte existant
-            const compteExistant = await this.compteService.trouverParEmail(email);
+            let compteExistant = null;
+            if (emailNormalise) {
+                compteExistant = await this.compteService.trouverParEmail(emailNormalise);
+            }
 
             if (compteExistant) {
-                if (motDePasse || mdpLienGenere) {
+                if (motDePasseParamFinal) {
                     return res.status(400).json({ error: 'Impossible de définir un mot de passe pour un partage vers un compte existant.' });
                 }
 
@@ -77,19 +86,16 @@ class LienController {
                 });
             }
 
-            const motDePasseParamFinal = motDePasse || mdpLienGenere;
             const lien = await this.lienService.creerLien({
                 idCompte: idUtilisateurAuthentifie,
                 cheminDaccesLien,
                 dateExpiration: expirationDate,
-                mdpLienGenere: motDePasseParamFinal,
+                mdpLienGenere: motDePasseParamFinal || null,
                 urlLienGenere,
             });
 
             res.status(201).json({
-                message: compteExistant 
-                    ? 'Partage effectué avec succès. Le fichier/dossier a été ajouté à la racine de l\'utilisateur.' 
-                    : 'Lien de partage créé avec succès.',
+                message: 'Lien de partage créé avec succès.',
                 lien: {
                     idLienGenere: lien.idLienGenere,
                     url: `/api/liens/${urlLienGenere}`,
@@ -97,7 +103,7 @@ class LienController {
                     chemin: cheminDaccesLien,
                     protégé: Boolean(motDePasseParamFinal),
                     dateExpiration: expirationDate,
-                    sharedWithAccount: Boolean(compteExistant),
+                    sharedWithAccount: false,
                 },
             });
         } catch (error) {

@@ -42,7 +42,9 @@ function Dashboard() {
     const [recherche_type, setRechercheType] = useState('tout');
 
     const [shareMessage, setShareMessage] = useState('');
+    const [shareMenuTarget, setShareMenuTarget] = useState(null);
     const [shareFormOpen, setShareFormOpen] = useState(false);
+    const [shareFormMode, setShareFormMode] = useState('utilisateur');
     const [shareFormTarget, setShareFormTarget] = useState(null);
     const [shareFormData, setShareFormData] = useState({
         email: '',
@@ -151,14 +153,47 @@ function Dashboard() {
         }
 
         setError('');
-        setShareFormTarget({ dossierId, fileName });
+        setShareMenuTarget({ dossierId, fileName });
+    };
+
+    const ouvrirFormulairePartageUtilisateur = () => {
+        if (!shareMenuTarget?.dossierId) {
+            setError('Impossible de déterminer la ressource à partager.');
+            return;
+        }
+
+        setShareFormMode('utilisateur');
+        setShareFormTarget(shareMenuTarget);
         setShareFormData({
             email: '',
             motDePasse: '',
             dateExpiration: ''
         });
         setShareFormEmailExists(null);
+        setShareMenuTarget(null);
         setShareFormOpen(true);
+    };
+
+    const ouvrirFormulaireGenerationLien = () => {
+        if (!shareMenuTarget?.dossierId) {
+            setError('Impossible de déterminer la ressource à partager.');
+            return;
+        }
+
+        setShareFormMode('lien');
+        setShareFormTarget(shareMenuTarget);
+        setShareFormData({
+            email: '',
+            motDePasse: '',
+            dateExpiration: ''
+        });
+        setShareFormEmailExists(null);
+        setShareMenuTarget(null);
+        setShareFormOpen(true);
+    };
+
+    const fermerMenuPartage = () => {
+        setShareMenuTarget(null);
     };
 
     const soumettrFormulairePartage = async (e) => {
@@ -169,16 +204,25 @@ function Dashboard() {
             return;
         }
 
-        if (!shareFormData.email) {
-            setError('Email requis pour le partage.');
+        if (shareFormMode === 'lien' && !shareFormData.motDePasse) {
+            setError('Mot de passe requis pour générer un lien.');
             return;
         }
 
-        const emailExists = await verifierEmailCompte(shareFormData.email);
+        let emailExists = false;
 
-        if (emailExists && shareFormData.motDePasse) {
-            setError('Le mot de passe ne peut être utilisé que pour une adresse non enregistrée.');
-            return;
+        if (shareFormMode === 'utilisateur') {
+            if (!shareFormData.email) {
+                setError('Email requis pour le partage.');
+                return;
+            }
+
+            emailExists = await verifierEmailCompte(shareFormData.email);
+
+            if (emailExists && shareFormData.motDePasse) {
+                setError('Le mot de passe ne peut être utilisé que pour une adresse enregistrée.');
+                return;
+            }
         }
 
         setShareFormLoading(true);
@@ -187,9 +231,11 @@ function Dashboard() {
         try {
             const token = localStorage.getItem('token');
 
-            const body = {
-                email: shareFormData.email
-            };
+            const body = {};
+
+            if (shareFormMode === 'utilisateur') {
+                body.email = shareFormData.email;
+            }
 
             if (shareFormTarget.fileName) {
                 body.fileName = shareFormTarget.fileName;
@@ -216,6 +262,7 @@ function Dashboard() {
 
             setShareMessage(message);
             setShareFormOpen(false);
+            setShareFormMode('utilisateur');
             setShareFormTarget(null);
             window.alert(message);
         } catch (err) {
@@ -228,6 +275,7 @@ function Dashboard() {
 
     const fermerFormulairePartage = () => {
         setShareFormOpen(false);
+        setShareFormMode('utilisateur');
         setShareFormTarget(null);
         setShareFormData({
             email: '',
@@ -744,66 +792,109 @@ function Dashboard() {
                 </div>
             )}
 
+            {shareMenuTarget && (
+                <div className="modal-overlay" onClick={fermerMenuPartage}>
+                    <div
+                        className="modal-contenu"
+                        style={{ maxWidth: '380px' }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <h3>Partager</h3>
+
+                        <div
+                            className="modal-bouttons"
+                            style={{ flexDirection: 'column', gap: '10px' }}
+                        >
+                            <button
+                                type="button"
+                                className="btn-confirmer"
+                                onClick={ouvrirFormulaireGenerationLien}
+                            >
+                                Générer un lien
+                            </button>
+
+                            <button
+                                type="button"
+                                className="btn-annuler"
+                                onClick={ouvrirFormulairePartageUtilisateur}
+                            >
+                                Partager à un utilisateur
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {shareFormOpen && (
                 <div className="modal-overlay" onClick={fermerFormulairePartage}>
                     <div className="modal-contenu" onClick={e => e.stopPropagation()}>
-                        <h3>Partager une ressource</h3>
+                        <h3>{shareFormMode === 'lien' ? 'Générer un lien' : 'Partager à un utilisateur'}</h3>
 
                         <form onSubmit={soumettrFormulairePartage}>
-                            <div className="form-group">
-                                <label htmlFor="share-email">Email</label>
-                                <input
-                                    id="share-email"
-                                    type="email"
-                                    placeholder="adresse@email.com"
-                                    value={shareFormData.email}
-                                    onChange={(e) => handleShareEmailChange(e.target.value)}
-                                    onBlur={handleShareEmailBlur}
-                                    required
-                                />
-                            </div>
+                            {shareFormMode === 'utilisateur' && (
+                                <>
+                                    <div className="form-group">
+                                        <label htmlFor="share-email">Email</label>
+                                        <input
+                                            id="share-email"
+                                            type="email"
+                                            placeholder="adresse@email.com"
+                                            value={shareFormData.email}
+                                            onChange={(e) => handleShareEmailChange(e.target.value)}
+                                            onBlur={handleShareEmailBlur}
+                                            required
+                                        />
+                                    </div>
 
-                            {shareFormEmailExists === true && (
-                                <p className="info-modale">
-                                    Cet email correspond à un utilisateur existant.
-                                    Le partage sera effectué directement dans sa racine.
-                                </p>
+                                    {shareFormEmailExists === true && (
+                                        <p className="info-modale">
+                                            Cet email correspond à un utilisateur existant.
+                                            Le partage sera effectué directement dans sa racine.
+                                        </p>
+                                    )}
+
+                                    {shareFormEmailExists === false && (
+                                        <p className="info-modale">
+                                            Aucun compte trouvé. Un lien de partage sera créé
+                                            et vous pouvez définir un mot de passe.
+                                        </p>
+                                    )}
+                                </>
                             )}
 
-                            {shareFormEmailExists === false && (
-                                <p className="info-modale">
-                                    Aucun compte trouvé. Un lien de partage sera créé
-                                    et vous pouvez définir un mot de passe.
-                                </p>
-                            )}
-
                             <div className="form-group">
-                                <label htmlFor="share-password">Mot de passe optionnel</label>
+                                <label htmlFor="share-password">
+                                    {shareFormMode === 'lien' ? 'Mot de passe obligatoire' : 'Mot de passe facultatif'}
+                                </label>
                                 <input
                                     id="share-password"
                                     type="password"
-                                    placeholder="Laisser vide si aucun"
+                                    placeholder={shareFormMode === 'lien' ? 'Mot de passe du lien' : 'Laisser vide si aucun'}
                                     value={shareFormData.motDePasse}
                                     onChange={(e) => setShareFormData({
                                         ...shareFormData,
                                         motDePasse: e.target.value
                                     })}
-                                    disabled={shareFormEmailExists === true}
+                                    disabled={shareFormMode === 'utilisateur' && shareFormEmailExists === true}
+                                    required={shareFormMode === 'lien'}
+                                    autoFocus={shareFormMode === 'lien'}
                                 />
                             </div>
 
-                            <div className="form-group">
-                                <label htmlFor="share-expiry">Date d'expiration optionnelle</label>
-                                <input
-                                    id="share-expiry"
-                                    type="datetime-local"
-                                    value={shareFormData.dateExpiration}
-                                    onChange={(e) => setShareFormData({
-                                        ...shareFormData,
-                                        dateExpiration: e.target.value
-                                    })}
-                                />
-                            </div>
+                            {shareFormMode === 'utilisateur' && (
+                                <div className="form-group">
+                                    <label htmlFor="share-expiry">Date d'expiration optionnelle</label>
+                                    <input
+                                        id="share-expiry"
+                                        type="datetime-local"
+                                        value={shareFormData.dateExpiration}
+                                        onChange={(e) => setShareFormData({
+                                            ...shareFormData,
+                                            dateExpiration: e.target.value
+                                        })}
+                                    />
+                                </div>
+                            )}
 
                             {error && <p className="erreur-modale">{error}</p>}
 
@@ -822,7 +913,9 @@ function Dashboard() {
                                     className="btn-confirmer"
                                     disabled={shareFormLoading}
                                 >
-                                    {shareFormLoading ? 'Partage en cours...' : 'Partager'}
+                                    {shareFormLoading
+                                        ? (shareFormMode === 'lien' ? 'Génération...' : 'Partage en cours...')
+                                        : (shareFormMode === 'lien' ? 'Générer' : 'Partager')}
                                 </button>
                             </div>
                         </form>
