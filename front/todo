@@ -1,10 +1,51 @@
-- Ajouter dans le dashboard une indication de la taille utilisée / taille restante
-- Fonction de filtre (type de fichier, taille, nom...)
-- Implémenter fonctionnalités fichiers
-- Page de base : Taille utilisée / Taille restante ; Derniers fichiers publiés ; Derniers fichiers visionnés / téléchargés
-- Modifier affichage des paramètres (améliorer esthétique)
-- Gestion déplacement d'un dossier
-- Selection de plusieurs fichier/dossiers en même temps :
-    - Déplacer en masse
-    - Supprimer en masse
-- Gestion clic droit des dossiers & fichiers    
+Page de base (non connecté) :
+- Refaire design
+
+Page d'accueil :
+- Refaire design avec :
+    - Header utilisateur (nom, avatar)
+    - Taille utilisée sur taille restante
+    - Dernier fichiers publiés
+    - Derniers fichiers visionnées / téléchargés
+    - Diagrammes / Stats (Diagramme circulaire du type de fichier)
+
+Dashboard :
+- Déplacer dossier / fichier
+- Recherche dossier / fichier
+- Affichage logo type de fichier
+- Affichage fichier :
+    - Nom
+    - Type de fichier
+    - Taille
+    - Date de création
+    - Modifié le
+- Filtres (croissant / décroissant):
+    - Nom
+    - Type de fichier
+    - Taille
+    - Date de création
+    - Modifié le
+- Fonctionnalités fichiers :
+    - Déplacer vers la corbeille
+    - Créer un lien de partage (y compris de dossier)
+- Selection multiple de fichier & dossier :
+    - Suppression multiple
+    - Déplacement multiple
+
+Corbeille :
+- Restaurer un fichier
+- Supprimer définitivement un fichier
+- Selection multiple de fichier & dossier
+
+Liens :
+- Voir liens actifs fichier / dossier
+- Modifier lien (date d'expiration, mot de passe)
+- Supprimer lien (impossible de supprimer une collaboration)
+
+Parametres :
+- Modifier affichage (esthétique)
+
+
+
+Back :
+- Modifier table dossier pour contenir "Date de création" & "Modifié le"
