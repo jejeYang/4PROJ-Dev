@@ -12,7 +12,12 @@
   "dependencies": {
     "@react-oauth/google": "^0.13.5",
     "axios": "^1.13.2",
+    "file-saver": "^2.0.5",
+    "jszip": "^3.10.1",
+    "math": "^0.0.3",
+    "matter-js": "^0.20.0",
     "primereact": "^10.9.7",
+    "random": "^5.4.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.12.0"
