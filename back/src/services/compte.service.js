@@ -61,7 +61,7 @@ class CompteService {
                     nomCompte: compte.nom,
                     adresseMailCompte: compte.email,
                     mdpCompte: hashedPassword,
-                    stockageCompte: compte.stockage ?? 0,
+                    stockageCompte: 32212254720, // 30GB
                 },
             });
 

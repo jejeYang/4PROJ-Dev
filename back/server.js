@@ -1,8 +1,10 @@
 import express from 'express';
-import './src/utils/bigint.utils.js'; // Patch BigInt JSON serialization
+import { patchBigIntSerialization } from './src/utils/bigint.utils.js';
 import { PORT } from './src/config/env.js';
 import routes from './src/routes/index.js';
 import { errorMiddleware } from './src/middlewares/error.middleware.js';
+
+patchBigIntSerialization();
 
 const app = express();
 
