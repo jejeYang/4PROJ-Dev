@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "SupFile Mobile",
+    "slug": "supfile-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "extra": {
+      "apiUrl": "http://192.168.1.16:3000"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.supfile.mobile"
+    },
+    "android": {
+      "package": "com.supfile.mobile"
+    }
+  }
+}

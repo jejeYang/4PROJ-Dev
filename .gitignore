@@ -1,5 +1,6 @@
 # Node.js
 node_modules/
+./back/node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -36,3 +37,7 @@ coverage/
 *.local
 *.cache
 *.tmp
+
+# Storage files
+.back/storage/
+/back/storage/

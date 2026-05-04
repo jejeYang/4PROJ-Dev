@@ -1,31 +1,35 @@
-const express = require('express');
+import express from 'express';
+import { PORT } from './src/global_properties.js';
+import compteRouter from './src/controller/compte.js';
+import dossierRouter from './src/controller/dossier.js';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-// Middleware
+// CORS
+app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*'); 
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    if (req.method === 'OPTIONS') return res.sendStatus(204);
+    next();
+});
+
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Routes
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'OK' });
-});
-
-app.get('/api/users', (req, res) => {
-    res.json({ users: [] });
-});
-
-app.post('/api/users', (req, res) => {
-    res.status(201).json({ message: 'User created' });
-});
-
-// Error handling
 app.use((err, req, res, next) => {
     console.error(err.stack);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Something broke!' });
 });
 
-// Start server
+app.use(compteRouter);
+app.use(dossierRouter);
+
+app.get('/', (req, res) => {
+    res.json({ message: 'API SupFile', port: PORT });
+});
+
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`🚀 Server is running on port ${PORT}`);
+    console.log(`📍 http://localhost:${PORT}`);
 });
