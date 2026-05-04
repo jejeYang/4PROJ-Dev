@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { saveAs } from 'file-saver';
-import { formatFileSize, obtenirTypeFichier, tronquerNom, separerNomExtension } from '../utils/fichierUtils';
+import { formatFileSize, obtenirTypeFichier, tronquerNom, separerNomExtension, obtenirEmojiFichier } from '../utils/fichierUtils';
 
 const API = 'http://localhost:3000';
 
@@ -832,6 +832,6 @@ export function useDashboard() {
         lancerRecherche, reinitialiserRecherche,
         recherche_active, resultats_recherche, chargement_recherche,
         ouvrirModalDeplacement, naviguerDeplacement, confirmerDeplacement,
-        formatFileSize, tronquerNom, separerNomExtension
+        formatFileSize, tronquerNom, separerNomExtension, obtenirEmojiFichier
     };
 }
