@@ -255,10 +255,12 @@ function Dashboard() {
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
+            let message = response.data?.message || 'Partage effectué avec succès.';
             const lien = response.data?.lien?.url;
-            const message = lien
-                ? `Lien de partage créé : ${window.location.origin}${lien}`
-                : 'Partage effectué avec succès.';
+            
+            if (lien && !response.data?.sharedWithAccount) {
+                message = `Lien de partage créé : ${window.location.origin}${lien}`;
+            }
 
             setShareMessage(message);
             setShareFormOpen(false);

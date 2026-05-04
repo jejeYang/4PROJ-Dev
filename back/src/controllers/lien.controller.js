@@ -98,13 +98,13 @@ class LienController {
                 message: 'Lien de partage créé avec succès.',
                 lien: {
                     idLienGenere: lien.idLienGenere,
-                    url: `/partage/${urlLienGenere}`, // Changé de /api/liens/ à /partage/
+                    url: `/partage/${urlLienGenere}`,
                     type,
                     chemin: cheminDaccesLien,
                     protégé: Boolean(motDePasseParamFinal),
                     dateExpiration: expirationDate,
-                    sharedWithAccount: false,
                 },
+                sharedWithAccount: false,
             });
         } catch (error) {
             next(error);
@@ -205,7 +205,10 @@ class LienController {
             // Si un idSousDossier est fourni, on vérifie qu'il appartient bien au partage original
             let idDossierAExplorer = resource.dossierId;
             if (idSousDossier) {
-                // TODO: Sécurité - Vérifier que idSousDossier est bien un descendant de resource.dossierId
+                const isDescendant = await this.dossierService.estDescendant(idSousDossier, resource.dossierId);
+                if (!isDescendant) {
+                    return res.status(403).json({ error: 'Accès non autorisé à ce dossier.' });
+                }
                 idDossierAExplorer = parseInt(idSousDossier, 10);
             }
 

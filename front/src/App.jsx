@@ -20,6 +20,11 @@ axios.interceptors.response.use(
     (error) => {
       // Redirection (token expiré ou invalide)
         if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+            // Ne pas rediriger si on est sur la page de partage (car l'erreur 401 est normale pour demander le mot de passe)
+            if (window.location.pathname.startsWith('/partage/')) {
+                return Promise.reject(error);
+            }
+
             console.warn("Token expiré ou invalide. Déconnexion automatique.");
             
             localStorage.removeItem('token');
@@ -57,6 +62,7 @@ function AppContent() {
 
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
   const isHome = location.pathname === '/';
+  const isPartagePage = location.pathname.startsWith('/partage/');
 
   return (
     <div className="app-container">
@@ -82,7 +88,7 @@ function AppContent() {
       </nav>
 
       <div className="app-wrapper">
-        {isAuthenticated && !isAuthPage && !isHome && (
+        {isAuthenticated && !isAuthPage && !isHome && !isPartagePage && (
           <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
             <div className="sidebar-content">
               <h3>Menu</h3>
@@ -100,8 +106,8 @@ function AppContent() {
           </aside>
         )}
         
-        <div className={`main-content ${isAuthenticated && !isAuthPage && !isHome ? 'with-sidebar' : ''} ${isAuthPage ? 'auth-page' : ''}`}>
-          {isAuthenticated && !isAuthPage && !isHome && (
+        <div className={`main-content ${isAuthenticated && !isAuthPage && !isHome && !isPartagePage ? 'with-sidebar' : ''} ${isAuthPage ? 'auth-page' : ''}`}>
+          {isAuthenticated && !isAuthPage && !isHome && !isPartagePage && (
             <button className="sidebar-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
               ☰
             </button>
