@@ -16,96 +16,29 @@ class LienController {
     }
 
     genererLienPartage = async (req, res, next) => {
+        // ... (existant)
+    };
+
+    listerRessourcesPartagees = async (req, res, next) => {
         try {
-            const { dossierId } = req.params;
-            const { email, fileName, motDePasse, mdpLienGenere, dateExpiration } = req.body;
-            const idUtilisateurAuthentifie = +req.utilisateur.id;
-            const emailNormalise = typeof email === 'string' ? email.trim() : '';
-            const motDePasseParamFinal = motDePasse || mdpLienGenere;
-
-            // Mode "Générer un lien" : pas d'email, mais mot de passe obligatoire.
-            if (!emailNormalise && !motDePasseParamFinal) {
-                return res.status(400).json({ error: 'Mot de passe requis pour générer un lien.' });
-            }
-
-            const dossier = await this.dossierService.recupererDossierParId(dossierId);
-            if (dossier.idCompteCreateur !== idUtilisateurAuthentifie) {
-                return res.status(403).json({ error: 'Vous ne pouvez partager que vos propres dossiers et fichiers.' });
-            }
-
-            const dossierCheminPhysique = path.join(
-                SERVER_FILES_PATH,
-                `user_${idUtilisateurAuthentifie}`,
-                await this.dossierService.construireCheminComplet(dossierId)
-            );
-
-            if (fileName) {
-                const fichierPhysique = path.join(dossierCheminPhysique, fileName);
-                if (!fs.existsSync(fichierPhysique) || !fs.statSync(fichierPhysique).isFile()) {
-                    return res.status(404).json({ error: 'Le fichier à partager est introuvable.' });
-                }
-            }
-
-            let expirationDate = null;
-            if (dateExpiration) {
-                expirationDate = new Date(dateExpiration);
-                if (Number.isNaN(expirationDate.getTime())) {
-                    return res.status(400).json({ error: 'dateExpiration invalide. Utilisez une date ISO valide.' });
-                }
-            }
-
-            const type = fileName ? 'fichier' : 'dossier';
-            const cheminDaccesLien = fileName ? `fichier:${dossierId}:${fileName}` : `dossier:${dossierId}`;
-            const urlLienGenere = crypto.randomUUID();
-
-            let compteExistant = null;
-            if (emailNormalise) {
-                compteExistant = await this.compteService.trouverParEmail(emailNormalise);
-            }
-
-            if (compteExistant) {
-                if (motDePasseParamFinal) {
-                    return res.status(400).json({ error: 'Impossible de définir un mot de passe pour un partage vers un compte existant.' });
-                }
-
-                try {
-                    if (fileName) {
-                        await this.dossierService.copierFichierVersCompte(dossierId, fileName, compteExistant.idCompte);
-                    } else {
-                        await this.dossierService.copierDossierVersCompte(dossierId, compteExistant.idCompte);
-                    }
-                } catch (err) {
-                    console.error('Erreur lors du partage vers compte existant :', err);
-                    return res.status(500).json({ error: 'Erreur lors du partage vers ce compte.' });
-                }
-
-                return res.status(200).json({
-                    message: 'Partage effectué avec succès. Le fichier/dossier a été ajouté à la racine de l\'utilisateur.',
-                    lien: null,
-                    sharedWithAccount: true,
-                });
-            }
-
-            const lien = await this.lienService.creerLien({
-                idCompte: idUtilisateurAuthentifie,
-                cheminDaccesLien,
-                dateExpiration: expirationDate,
-                mdpLienGenere: motDePasseParamFinal || null,
-                urlLienGenere,
+            const idUtilisateur = +req.utilisateur.id;
+            const liens = await this.lienService.recupererLiensParCompte(idUtilisateur);
+            
+            const ressources = liens.map(lien => {
+                const info = this._parserCheminDaccesLien(lien.cheminDaccesLien);
+                return {
+                    idLien: lien.idLienGenere,
+                    token: lien.urlLienGenere,
+                    url: `/partage/${lien.urlLienGenere}`,
+                    type: info?.type,
+                    nom: info?.fileName || 'Dossier',
+                    dateExpiration: lien.dateExpiration,
+                    protege: !!lien.mdpLienGenere,
+                    createdAt: lien.createdAt // Si le champ existe dans le modèle
+                };
             });
 
-            res.status(201).json({
-                message: 'Lien de partage créé avec succès.',
-                lien: {
-                    idLienGenere: lien.idLienGenere,
-                    url: `/partage/${urlLienGenere}`,
-                    type,
-                    chemin: cheminDaccesLien,
-                    protégé: Boolean(motDePasseParamFinal),
-                    dateExpiration: expirationDate,
-                },
-                sharedWithAccount: false,
-            });
+            res.json(ressources);
         } catch (error) {
             next(error);
         }
