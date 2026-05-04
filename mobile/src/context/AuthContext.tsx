@@ -94,28 +94,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const refreshUser = async () => {
     try {
-      // Vérifier qu'on a un utilisateur ET un token
-      if (!user?.id && !user?.idCompte) {
-        return; // Pas d'utilisateur, pas de rafraîchissement possible
+      // Rafraîchir depuis AsyncStorage uniquement (comme le site web)
+      const storedUser = await AsyncStorage.getItem(USER_KEY);
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
       }
-      
-      if (!token) {
-        return; // Pas de token, pas de rafraîchissement possible
-      }
-
-      const userId = user.id || user.idCompte || 0;
-      const response = await authApi.getProfile(userId);
-      
-      // Normaliser et sauvegarder
-      const normalizedUser: User = {
-        id: response.idCompte || response.id || userId,
-        nom: response.nomCompte || response.nom || user.nom,
-        email: response.adresseMailCompte || response.email || user.email,
-        stockageCompte: response.stockageCompte || user.stockageCompte || 0,
-      };
-      
-      await AsyncStorage.setItem(USER_KEY, JSON.stringify(normalizedUser));
-      setUser(normalizedUser);
     } catch (error: any) {
       if (error?.response?.status === 401) {
         return;

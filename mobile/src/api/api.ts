@@ -53,10 +53,6 @@ export const authApi = {
 
   googleAuth: (idToken: string) =>
     apiClient.post<AuthResponse>(API_ENDPOINTS.GOOGLE_AUTH, { idToken }),
-  
-  // Récupérer le profil de l'utilisateur connecté
-  getProfile: (userId: number) =>
-    apiClient.get<User>(`/api/users/${userId}`),
 };
 
 // API des dossiers

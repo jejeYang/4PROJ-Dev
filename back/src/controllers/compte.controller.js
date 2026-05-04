@@ -47,7 +47,20 @@ class CompteController {
         try {
             const nouveau_compte = req.body;
             const resultat = await this.compteService.creerCompte(nouveau_compte);
-            res.status(201).json({ message: 'Compte créé avec succès', utilisateur: resultat });
+            
+            // Générer un token pour connecter automatiquement l'utilisateur
+            const utilisateur = {
+                id: resultat.idCompte,
+                nom: resultat.nomCompte,
+                email: resultat.adresseMailCompte
+            };
+            const token = this.compteService.genererToken(utilisateur);
+            
+            res.status(201).json({ 
+                message: 'Compte créé avec succès', 
+                utilisateur,
+                token 
+            });
         } catch (error) {
             next(error);
         }
@@ -61,6 +74,7 @@ class CompteController {
             next(error);
         }
     };
+
 
     checkEmail = async (req, res, next) => {
         try {

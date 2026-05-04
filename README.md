@@ -7,3 +7,7 @@ docker compose up --build
 ## Lancer le front :
 cd front
 npm run dev
+
+## Lancer le mobile :
+cd mobile
+npm start

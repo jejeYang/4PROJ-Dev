@@ -8,6 +8,7 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useMobileTheme } from '../context/MobileThemeContext';
@@ -63,11 +64,20 @@ export default function ProfileScreen() {
 
   const handleUpdateProfile = async () => {
     try {
-      await apiClient.put(`/users/${user?.id}`, {
+      const response = await apiClient.put(`/users/${user?.id}`, {
         nom: formData.nom,
         email: formData.email,
       });
 
+      // Mettre à jour AsyncStorage avec les nouvelles données (comme localStorage sur le web)
+      const updatedUser = {
+        ...user,
+        nom: response.data.utilisateur.nomCompte || response.data.utilisateur.nom || formData.nom,
+        email: response.data.utilisateur.adresseMailCompte || response.data.utilisateur.email || formData.email,
+      };
+      await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+      await refreshUser();
+      
       Alert.alert('Succès', 'Profil mis à jour avec succès');
       setIsEditingProfile(false);
     } catch (error: any) {

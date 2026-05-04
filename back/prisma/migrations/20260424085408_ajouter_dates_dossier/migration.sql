@@ -32,7 +32,7 @@ ALTER TABLE "compte" ALTER COLUMN "stockageCompte" SET DATA TYPE INTEGER;
 
 -- AlterTable
 ALTER TABLE "dossier" ADD COLUMN     "dateCreation" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-ADD COLUMN     "modifieLe" TIMESTAMP(3) NOT NULL;
+ADD COLUMN     "modifieLe" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
 -- CreateIndex
 CREATE UNIQUE INDEX "dossier_idDossierParent_cheminDaccesDossier_key" ON "dossier"("idDossierParent", "cheminDaccesDossier");
