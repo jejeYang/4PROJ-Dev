@@ -52,6 +52,7 @@ function Dashboard() {
         dateExpiration: ''
     });
     const [shareFormEmailExists, setShareFormEmailExists] = useState(null);
+    const [shareFormError, setShareFormError] = useState('');
     const [shareFormLoading, setShareFormLoading] = useState(false);
 
     if (loading) {
@@ -136,10 +137,10 @@ function Dashboard() {
     const handleShareEmailChange = (email) => {
         setShareFormData(prev => ({
             ...prev,
-            email,
-            motDePasse: ''
+            email
         }));
         setShareFormEmailExists(null);
+        setShareFormError('');
     };
 
     const handleShareEmailBlur = async () => {
@@ -170,6 +171,7 @@ function Dashboard() {
             dateExpiration: ''
         });
         setShareFormEmailExists(null);
+        setShareFormError('');
         setShareMenuTarget(null);
         setShareFormOpen(true);
     };
@@ -188,6 +190,7 @@ function Dashboard() {
             dateExpiration: ''
         });
         setShareFormEmailExists(null);
+        setShareFormError('');
         setShareMenuTarget(null);
         setShareFormOpen(true);
     };
@@ -205,7 +208,7 @@ function Dashboard() {
         }
 
         if (shareFormMode === 'lien' && !shareFormData.motDePasse) {
-            setError('Mot de passe requis pour générer un lien.');
+            setShareFormError('Mot de passe requis pour générer un lien.');
             return;
         }
 
@@ -213,20 +216,25 @@ function Dashboard() {
 
         if (shareFormMode === 'utilisateur') {
             if (!shareFormData.email) {
-                setError('Email requis pour le partage.');
+                setShareFormError('Email requis pour le partage.');
                 return;
             }
 
             emailExists = await verifierEmailCompte(shareFormData.email);
 
-            if (emailExists && shareFormData.motDePasse) {
-                setError('Le mot de passe ne peut être utilisé que pour une adresse enregistrée.');
+            if (!emailExists) {
+                setShareFormError('Utilisateur inexistant.');
+                return;
+            }
+
+            if (shareFormData.motDePasse) {
+                setShareFormError('Le mot de passe ne peut être utilisé que pour la génération de lien.');
                 return;
             }
         }
 
         setShareFormLoading(true);
-        setError('');
+        setShareFormError('');
 
         try {
             const token = localStorage.getItem('token');
@@ -241,7 +249,7 @@ function Dashboard() {
                 body.fileName = shareFormTarget.fileName;
             }
 
-            if (shareFormData.motDePasse) {
+            if (shareFormMode === 'lien' && shareFormData.motDePasse) {
                 body.motDePasse = shareFormData.motDePasse;
             }
 
@@ -269,9 +277,7 @@ function Dashboard() {
             window.alert(message);
         } catch (err) {
             console.error('Erreur lors du partage :', err);
-            setError(err.response?.data?.error || 'Erreur lors du partage.');
-        } finally {
-            setShareFormLoading(false);
+            setShareFormError(err.response?.data?.error || 'Erreur lors du partage.');
         }
     };
 
@@ -856,49 +862,45 @@ function Dashboard() {
                                     )}
 
                                     {shareFormEmailExists === false && (
-                                        <p className="info-modale">
-                                            Aucun compte trouvé. Un lien de partage sera créé
-                                            et vous pouvez définir un mot de passe.
+                                        <p className="info-modale erreur-modale">
+                                            Utilisateur inexistant.
                                         </p>
                                     )}
+
+                                    <div className="form-group">
+                                        <label htmlFor="share-expiry">Date d'expiration optionnelle</label>
+                                        <input
+                                            id="share-expiry"
+                                            type="datetime-local"
+                                            value={shareFormData.dateExpiration}
+                                            onChange={(e) => setShareFormData({
+                                                ...shareFormData,
+                                                dateExpiration: e.target.value
+                                            })}
+                                        />
+                                    </div>
                                 </>
                             )}
 
-                            <div className="form-group">
-                                <label htmlFor="share-password">
-                                    {shareFormMode === 'lien' ? 'Mot de passe obligatoire' : 'Mot de passe facultatif'}
-                                </label>
-                                <input
-                                    id="share-password"
-                                    type="password"
-                                    placeholder={shareFormMode === 'lien' ? 'Mot de passe du lien' : 'Laisser vide si aucun'}
-                                    value={shareFormData.motDePasse}
-                                    onChange={(e) => setShareFormData({
-                                        ...shareFormData,
-                                        motDePasse: e.target.value
-                                    })}
-                                    disabled={shareFormMode === 'utilisateur' && shareFormEmailExists === true}
-                                    required={shareFormMode === 'lien'}
-                                    autoFocus={shareFormMode === 'lien'}
-                                />
-                            </div>
-
-                            {shareFormMode === 'utilisateur' && (
+                            {shareFormMode === 'lien' && (
                                 <div className="form-group">
-                                    <label htmlFor="share-expiry">Date d'expiration optionnelle</label>
+                                    <label htmlFor="share-password">Mot de passe obligatoire</label>
                                     <input
-                                        id="share-expiry"
-                                        type="datetime-local"
-                                        value={shareFormData.dateExpiration}
+                                        id="share-password"
+                                        type="password"
+                                        placeholder="Mot de passe du lien"
+                                        value={shareFormData.motDePasse}
                                         onChange={(e) => setShareFormData({
                                             ...shareFormData,
-                                            dateExpiration: e.target.value
+                                            motDePasse: e.target.value
                                         })}
+                                        required
+                                        autoFocus
                                     />
                                 </div>
                             )}
 
-                            {error && <p className="erreur-modale">{error}</p>}
+                            {shareFormError && <p className="erreur-modale">{shareFormError}</p>}
 
                             <div className="modal-bouttons">
                                 <button

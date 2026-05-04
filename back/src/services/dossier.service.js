@@ -619,13 +619,7 @@ class DossierService {
             dossier.cheminDaccesDossier
         );
 
-        const cheminDestinationRelatif = dossier.status || dossier.cheminDaccesDossier;
-        const cheminDestinationPhysique = path.join(
-            SERVER_FILES_PATH,
-            `user_${dossier.idCompteCreateur}`,
-            cheminDestinationRelatif
-        );
-
+        let cheminDestinationRelatif = dossier.status || dossier.cheminDaccesDossier;
         const dossierDestinationParentRelatif = path.dirname(cheminDestinationRelatif);
         let destinationParentId = null;
 
@@ -633,6 +627,24 @@ class DossierService {
             const parentDossier = await this.recupererDossierParChemin(dossier.idCompteCreateur, dossierDestinationParentRelatif);
             destinationParentId = parentDossier ? parentDossier.idDossier : null;
         }
+
+        const dossierRacine = await this._recupererDossierRacineUtilisateur(dossier.idCompteCreateur);
+        if (!destinationParentId) {
+            destinationParentId = dossierRacine?.idDossier || null;
+            const dossierRacineChemin = destinationParentId
+                ? await this.construireCheminComplet(destinationParentId)
+                : '';
+            cheminDestinationRelatif = path.join(
+                dossierRacineChemin,
+                dossier.cheminDaccesDossier
+            );
+        }
+
+        const cheminDestinationPhysique = path.join(
+            SERVER_FILES_PATH,
+            `user_${dossier.idCompteCreateur}`,
+            cheminDestinationRelatif
+        );
 
         const parentDestinationPhysique = path.dirname(cheminDestinationPhysique);
         if (!fs.existsSync(parentDestinationPhysique)) {
