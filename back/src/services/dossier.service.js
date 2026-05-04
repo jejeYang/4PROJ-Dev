@@ -1,10 +1,14 @@
-import prisma from '../prisma.js';
+import DossierRepository from "../repositories/dossier.repository.js";
 import fs from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
-import { SERVER_FILES_PATH } from '../global_properties.js';
+import { SERVER_FILES_PATH } from '../config/env.js';
 
-class DtoDossier {
+class DossierService {
+    constructor() {
+        this.dossierRepository = new DossierRepository();
+    }
+
     async creerDossier(dossier) {
         if (!dossier.idCompteCreateur) {
             throw new Error("idCompteCreateur est requis");
@@ -12,12 +16,10 @@ class DtoDossier {
 
         const nomSafe = path.basename(dossier.cheminDaccesDossier);
 
-        const resultat = await prisma.dossier.create({
-            data: {
-                idCompteCreateur: dossier.idCompteCreateur,
-                cheminDaccesDossier: nomSafe,
-                idDossierParent: dossier.idDossierParent || null,
-            },
+        const resultat = await this.dossierRepository.create({
+            idCompteCreateur: dossier.idCompteCreateur,
+            cheminDaccesDossier: nomSafe,
+            idDossierParent: dossier.idDossierParent || null,
         });
 
         let cheminDossierPhysique;
@@ -43,42 +45,28 @@ class DtoDossier {
     }
 
     async recupererDossiers() {
-        return prisma.dossier.findMany();
+        return await this.dossierRepository.findAll();
     }
 
     async recupererDossierParId(dossierId) {
-        return prisma.dossier.findUniqueOrThrow({
-            where: { idDossier: Number.parseInt(dossierId) },
-        });
+        return await this.dossierRepository.findById(dossierId);
     }
 
-    async recupererDossierCompte(idCompteCreateur) {
-        return prisma.dossier.findMany({
-            where: { idCompteCreateur: Number.parseInt(idCompteCreateur) },
-        });
+    async recupererDossiersParCompte(idCompteCreateur) {
+        return await this.dossierRepository.findByCompte(idCompteCreateur);
     }
 
     async recupererSousDossiers(dossierId) {
-        return prisma.dossier.findMany({
-            where: { idDossierParent: Number.parseInt(dossierId) },
-        });
+        return await this.dossierRepository.findSubDossiers(dossierId);
     }
 
     async recupererDossierRacineParCompte(idCompteCreateur) {
-        return prisma.dossier.findMany({
-            where: {
-                idCompteCreateur: Number.parseInt(idCompteCreateur),
-                idDossierParent: null,
-            },
-        });
+        return await this.dossierRepository.findRootByCompte(idCompteCreateur);
     }
 
     async mettreAJourDossier(dossierId, cheminDaccesDossier) {
         const nomSafe = path.basename(cheminDaccesDossier);
-        return prisma.dossier.update({
-            where: { idDossier: Number.parseInt(dossierId) },
-            data: { cheminDaccesDossier: nomSafe },
-        });
+        return await this.dossierRepository.update(dossierId, { cheminDaccesDossier: nomSafe });
     }
 
     async deplacerDossier(dossierId, idNouveauDossierParent) {
@@ -180,9 +168,7 @@ class DtoDossier {
             console.error("Erreur suppression dossier physique", e);
         }
 
-        return prisma.dossier.delete({
-            where: { idDossier: Number.parseInt(dossierId) },
-        });
+        return await this.dossierRepository.delete(dossierId);
     }
 
     async televerserFichier(dossierId, file) {
@@ -219,7 +205,6 @@ class DtoDossier {
     }
 
     async recupererEndpoints(dossierId) {
-        // Fonction non utilisée actuellement, placeholder pour extension future
         return null;
     }
 
@@ -227,11 +212,9 @@ class DtoDossier {
         const dossier = await this.recupererDossierParId(dossierId);
 
         if (dossier.idDossierParent) {
-            // Récursivement construire le chemin du parent
             const cheminParent = await this.construireCheminComplet(dossier.idDossierParent);
             return path.join(cheminParent, dossier.cheminDaccesDossier);
         } else {
-            // C'est un dossier racine
             return dossier.cheminDaccesDossier;
         }
     }
@@ -240,11 +223,9 @@ class DtoDossier {
         try {
             const dossier = await this.recupererDossierParId(dossierId);
 
-            // Construire le chemin physique complet du dossier
             const cheminComplet = await this.construireCheminComplet(dossierId);
             const cheminPhysique = path.join(SERVER_FILES_PATH, `user_${dossier.idCompteCreateur}`, cheminComplet);
 
-            // Lire les fichiers du dossier
             if (!fs.existsSync(cheminPhysique)) {
                 return [];
             }
@@ -272,12 +253,7 @@ class DtoDossier {
     }
 
     async recupererCorbeille(idCompteCreateur) {
-        return prisma.dossier.findFirst({
-            where: {
-                idCompteCreateur: Number.parseInt(idCompteCreateur),
-                cheminDaccesDossier: '.corbeille',
-            },
-        });
+        return await this.dossierRepository.findTrash(idCompteCreateur);
     }
 
     async recupererDossiersCorbeille(idCompteCreateur) {
@@ -285,11 +261,7 @@ class DtoDossier {
         if (!corbeille) {
             return [];
         }
-        return prisma.dossier.findMany({
-            where: {
-                idDossierParent: corbeille.idDossier,
-            },
-        });
+        return await this.dossierRepository.findSubDossiers(corbeille.idDossier);
     }
 
     async recupererDossierParChemin(idCompteCreateur, cheminRelatif) {
@@ -298,12 +270,10 @@ class DtoDossier {
         let current = null;
 
         for (const segment of segments) {
-            current = await prisma.dossier.findFirst({
-                where: {
-                    idCompteCreateur: Number(idCompteCreateur),
-                    cheminDaccesDossier: segment,
-                    idDossierParent: parentId,
-                },
+            current = await this.dossierRepository.findFirst({
+                idCompteCreateur: Number(idCompteCreateur),
+                cheminDaccesDossier: segment,
+                idDossierParent: parentId,
             });
 
             if (!current) {
@@ -356,12 +326,9 @@ class DtoDossier {
             throw error;
         }
 
-        return prisma.dossier.update({
-            where: { idDossier: Number(dossierId) },
-            data: {
-                idDossierParent: corbeille.idDossier,
-                status: cheminSourceRelatif,
-            },
+        return await this.dossierRepository.update(dossierId, {
+            idDossierParent: corbeille.idDossier,
+            status: cheminSourceRelatif,
         });
     }
 
@@ -418,12 +385,9 @@ class DtoDossier {
             throw error;
         }
 
-        return prisma.dossier.update({
-            where: { idDossier: Number(dossierId) },
-            data: {
-                idDossierParent: destinationParentId,
-                status: null,
-            },
+        return await this.dossierRepository.update(dossierId, {
+            idDossierParent: destinationParentId,
+            status: null,
         });
     }
 
@@ -492,13 +456,10 @@ class DtoDossier {
             throw new Error(`Fichier '${nomFichier}' introuvable dans la corbeille`);
         }
 
-        // Restaurer vers la racine de l'utilisateur (on pourrait améliorer pour restaurer à l'emplacement d'origine)
-        const dossierRacine = await prisma.dossier.findFirst({
-            where: {
-                idCompteCreateur: Number(idCompteCreateur),
-                idDossierParent: null,
-                cheminDaccesDossier: { not: '.corbeille' },
-            },
+        const dossierRacine = await this.dossierRepository.findFirst({
+            idCompteCreateur: Number(idCompteCreateur),
+            idDossierParent: null,
+            cheminDaccesDossier: { not: '.corbeille' },
         });
 
         let cheminDestinationPhysique;
@@ -515,7 +476,6 @@ class DtoDossier {
 
             cheminDestinationPhysique = path.join(cheminRacinePhysique, nomFichier);
         } else {
-            // Si pas de dossier racine, restaurer directement dans user_X/
             const cheminUserPhysique = path.join(SERVER_FILES_PATH, `user_${idCompteCreateur}`);
             if (!fs.existsSync(cheminUserPhysique)) {
                 await mkdir(cheminUserPhysique, { recursive: true });
@@ -523,7 +483,6 @@ class DtoDossier {
             cheminDestinationPhysique = path.join(cheminUserPhysique, nomFichier);
         }
 
-        // Gérer les conflits de nom
         if (fs.existsSync(cheminDestinationPhysique)) {
             const ext = path.extname(nomFichier);
             const base = path.basename(nomFichier, ext);
@@ -566,9 +525,7 @@ class DtoDossier {
             return [];
         }
 
-        const dossiersCorbeille = await prisma.dossier.findMany({
-            where: { idDossierParent: corbeille.idDossier },
-        });
+        const dossiersCorbeille = await this.dossierRepository.findSubDossiers(corbeille.idDossier);
 
         const dossiersSupprimes = [];
         for (const dossier of dossiersCorbeille) {
@@ -683,7 +640,6 @@ class DtoDossier {
                     const stat = fs.statSync(cheminFichier);
 
                     if (stat.isDirectory()) {
-                        // Récursivement calculer la taille des sous-dossiers
                         tailleTotale += calculerTaille(cheminFichier);
                     } else {
                         tailleTotale += stat.size;
@@ -701,4 +657,4 @@ class DtoDossier {
     }
 }
 
-export default DtoDossier;
+export default DossierService;

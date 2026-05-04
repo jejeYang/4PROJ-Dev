@@ -1,7 +1,8 @@
 import express from 'express';
-import { PORT } from './src/global_properties.js';
-import compteRouter from './src/controller/compte.js';
-import dossierRouter from './src/controller/dossier.js';
+import './src/utils/bigint.utils.js'; // Patch BigInt JSON serialization
+import { PORT } from './src/config/env.js';
+import routes from './src/routes/index.js';
+import { errorMiddleware } from './src/middlewares/error.middleware.js';
 
 const app = express();
 
@@ -17,17 +18,15 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).json({ error: 'Something broke!' });
-});
-
-app.use(compteRouter);
-app.use(dossierRouter);
+// Mounting routes
+app.use(routes);
 
 app.get('/', (req, res) => {
     res.json({ message: 'API SupFile', port: PORT });
 });
+
+// Global error handler
+app.use(errorMiddleware);
 
 app.listen(PORT, () => {
     console.log(`🚀 Server is running on port ${PORT}`);
