@@ -8,6 +8,7 @@ import Register from './pages/register';
 import Dashboard from './pages/Dashboard';
 import Upload from './pages/Upload';
 import Settings from './pages/Settings';
+import Partage from './pages/Partage';
 import logo from './assets/logo.png';
 import { ThemeProvider } from './context/theme_context';
 import FallingIcons from './components/FallingIcons';
@@ -113,6 +114,7 @@ function AppContent() {
             <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Home />} />
             <Route path="/upload" element={isAuthenticated ? <Upload /> : <Home />} />
             <Route path="/settings" element={isAuthenticated ? <Settings /> : <Home />} />
+            <Route path="/partage/:token" element={<Partage />} />
           </Routes>
         </div>
       </div>

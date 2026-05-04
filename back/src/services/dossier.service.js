@@ -207,6 +207,21 @@ class DossierService {
         }
     }
 
+    async estDescendant(dossierId, ancetreId) {
+        if (parseInt(dossierId) === parseInt(ancetreId)) return true;
+        
+        try {
+            let current = await this.recupererDossierParId(dossierId);
+            while (current && current.idDossierParent) {
+                if (current.idDossierParent === parseInt(ancetreId)) return true;
+                current = await this.recupererDossierParId(current.idDossierParent);
+            }
+        } catch (error) {
+            return false;
+        }
+        return false;
+    }
+
     async augmenterStockageCompte(idCompte, tailleSupplementaire) {
         const compte = await this.compteRepository.findById(idCompte);
         if (!compte) {
@@ -815,6 +830,99 @@ class DossierService {
         fs.renameSync(cheminAncienPhysique, cheminNouveauPhysique);
 
         return { message: `Fichier '${nomFichier}' déplacé avec succès.`, dossierCibleId: idNouveauDossierParent };
+    }
+
+    async copierFichierVersCompte(dossierSourceId, nomFichier, cibleCompteId) {
+        const dossierSource = await this.recupererDossierParId(dossierSourceId);
+        const dossierRacineCible = await this.recupererDossierRacineParCompte(cibleCompteId);
+        
+        if (!dossierRacineCible || dossierRacineCible.length === 0) {
+            throw new Error("Dossier racine de destination introuvable.");
+        }
+        
+        const idDossierCible = dossierRacineCible[0].idDossier;
+        
+        const cheminSourceRelatif = await this.construireCheminComplet(dossierSourceId);
+        const cheminSourcePhysique = path.join(SERVER_FILES_PATH, `user_${dossierSource.idCompteCreateur}`, cheminSourceRelatif, nomFichier);
+        
+        const cheminCibleRelatif = await this.construireCheminComplet(idDossierCible);
+        const cheminCiblePhysique = path.join(SERVER_FILES_PATH, `user_${cibleCompteId}`, cheminCibleRelatif, nomFichier);
+        
+        if (!fs.existsSync(cheminSourcePhysique)) {
+            throw new Error("Fichier source introuvable.");
+        }
+        
+        let finalCible = cheminCiblePhysique;
+        if (fs.existsSync(finalCible)) {
+            const ext = path.extname(nomFichier);
+            const base = path.basename(nomFichier, ext);
+            finalCible = path.join(path.dirname(cheminCiblePhysique), `${base}-partage-${Date.now()}${ext}`);
+        }
+        
+        fs.copyFileSync(cheminSourcePhysique, finalCible);
+        
+        // Mettre à jour le quota du destinataire
+        const stats = fs.statSync(finalCible);
+        const compteCible = await this.compteRepository.findById(cibleCompteId);
+        if (compteCible) {
+            await this.compteRepository.update(cibleCompteId, {
+                stockageCompte: BigInt(compteCible.stockageCompte) - BigInt(stats.size)
+            });
+        }
+        
+        return { message: "Fichier copié avec succès", destinationId: idDossierCible };
+    }
+
+    async copierDossierVersCompte(dossierSourceId, cibleCompteId) {
+        const dossierSource = await this.recupererDossierParId(dossierSourceId);
+        const dossierRacineCible = await this.recupererDossierRacineParCompte(cibleCompteId);
+        
+        if (!dossierRacineCible || dossierRacineCible.length === 0) {
+            throw new Error("Dossier racine de destination introuvable.");
+        }
+
+        const idDossierCibleParent = dossierRacineCible[0].idDossier;
+        
+        // Créer le dossier dans la base de données pour le nouveau propriétaire
+        const nouveauDossier = await this.creerDossier({
+            idCompteCreateur: cibleCompteId,
+            cheminDaccesDossier: `${dossierSource.cheminDaccesDossier}-partage`,
+            idDossierParent: idDossierCibleParent
+        });
+
+        const cheminSourceRelatif = await this.construireCheminComplet(dossierSourceId);
+        const cheminSourcePhysique = path.join(SERVER_FILES_PATH, `user_${dossierSource.idCompteCreateur}`, cheminSourceRelatif);
+        
+        const cheminCibleRelatif = await this.construireCheminComplet(nouveauDossier.idDossier);
+        const cheminCiblePhysique = path.join(SERVER_FILES_PATH, `user_${cibleCompteId}`, cheminCibleRelatif);
+
+        // Copie récursive physique
+        const copierRecursif = (src, dest) => {
+            if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
+            const elements = fs.readdirSync(src);
+            for (const el of elements) {
+                const srcPath = path.join(src, el);
+                const destPath = path.join(dest, el);
+                if (fs.statSync(srcPath).isDirectory()) {
+                    copierRecursif(srcPath, destPath);
+                } else {
+                    fs.copyFileSync(srcPath, destPath);
+                }
+            }
+        };
+
+        copierRecursif(cheminSourcePhysique, cheminCiblePhysique);
+
+        // Mettre à jour le quota (on calcule la taille totale copiée)
+        const tailleCopiee = await this.recupererTailleDossier(nouveauDossier.idDossier);
+        const compteCible = await this.compteRepository.findById(cibleCompteId);
+        if (compteCible) {
+            await this.compteRepository.update(cibleCompteId, {
+                stockageCompte: BigInt(compteCible.stockageCompte) - BigInt(tailleCopiee)
+            });
+        }
+
+        return nouveauDossier;
     }
 
     async rechercherFichiers(dossierId, query, type) {
