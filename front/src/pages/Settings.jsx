@@ -82,7 +82,6 @@ function Settings() {
             };
 
             if (fichierImage) {
-                // ... (ton code pour l'upload d'image reste inchangé) ...
                 const formData = new FormData();
                 formData.append('avatar', fichierImage); 
 

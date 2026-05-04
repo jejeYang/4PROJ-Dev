@@ -18,7 +18,6 @@ axios.interceptors.response.use(
         return response;
     },
     (error) => {
-      // Redirection (token expiré ou invalide)
         if (error.response && (error.response.status === 401 || error.response.status === 403)) {
             console.warn("Token expiré ou invalide. Déconnexion automatique.");
             
