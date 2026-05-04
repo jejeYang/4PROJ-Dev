@@ -1,4 +1,5 @@
 import DossierRepository from "../repositories/dossier.repository.js";
+import CompteRepository from "../repositories/compte.repository.js";
 import fs from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
@@ -7,6 +8,7 @@ import { SERVER_FILES_PATH } from '../config/env.js';
 class DossierService {
     constructor() {
         this.dossierRepository = new DossierRepository();
+        this.compteRepository = new CompteRepository();
     }
 
     async creerDossier(dossier) {
@@ -71,6 +73,7 @@ class DossierService {
 
     async supprimerDossier(dossierId) {
         const dossier = await this.recupererDossierParId(dossierId);
+        const tailleDossier = await this.recupererTailleDossier(dossierId);
 
         const cheminRelatif = await this.construireCheminComplet(dossierId);
         const chemin = path.join(
@@ -87,10 +90,33 @@ class DossierService {
             console.error("Erreur suppression dossier physique", e);
         }
 
-        return await this.dossierRepository.delete(dossierId);
+        const resultat = await this.dossierRepository.delete(dossierId);
+
+        // Restaurer le quota (ajouter car stockageCompte est le quota restant)
+        const compte = await this.compteRepository.findById(dossier.idCompteCreateur);
+        if (compte) {
+            await this.compteRepository.update(dossier.idCompteCreateur, {
+                stockageCompte: BigInt(compte.stockageCompte) + BigInt(tailleDossier)
+            });
+        }
+
+        return resultat;
     }
 
-    async televerserFichier(dossierId, file) {
+    async televerserFichier(dossierId, file, idUtilisateur) {
+        // Mettre à jour le quota (décrémenter car stockageCompte est le quota restant)
+        const compte = await this.compteRepository.findById(idUtilisateur);
+        if (!compte) throw new Error("Compte non trouvé");
+
+        const nouvelleTaille = BigInt(compte.stockageCompte) - BigInt(file.size);
+        if (nouvelleTaille < 0n) {
+            throw new Error("Espace de stockage insuffisant");
+        }
+
+        await this.compteRepository.update(idUtilisateur, {
+            stockageCompte: nouvelleTaille
+        });
+
         return {
             message: 'Fichier téléversé avec succès',
             file: {
@@ -119,7 +145,17 @@ class DossierService {
             throw new Error(`Cible "${fileName}" n'est pas un fichier`);
         }
 
+        const fileSize = stat.size;
         fs.unlinkSync(cheminPhysique);
+
+        // Restaurer le quota
+        const compte = await this.compteRepository.findById(dossier.idCompteCreateur);
+        if (compte) {
+            await this.compteRepository.update(dossier.idCompteCreateur, {
+                stockageCompte: BigInt(compte.stockageCompte) + BigInt(fileSize)
+            });
+        }
+
         return { message: `Fichier '${fileName}' supprimé`, dossierId, fileName };
     }
 
@@ -444,6 +480,7 @@ class DossierService {
             return [];
         }
 
+        // 1. Supprimer tous les dossiers qui sont dans la corbeille (cela restaure déjà leur quota via supprimerDossier)
         const dossiersCorbeille = await this.dossierRepository.findSubDossiers(corbeille.idDossier);
 
         const dossiersSupprimes = [];
@@ -456,9 +493,33 @@ class DossierService {
             }
         }
 
+        // 2. Restaurer le quota pour les fichiers "orphelins" (fichiers mis à la corbeille sans dossier parent)
         try {
             const cheminCorbeillePhysique = path.join(SERVER_FILES_PATH, `user_${idCompteCreateur}`, corbeille.cheminDaccesDossier);
-            await this.supprimerContenuPhysique(cheminCorbeillePhysique);
+            
+            if (fs.existsSync(cheminCorbeillePhysique)) {
+                let tailleFichiersVides = 0;
+                const elements = fs.readdirSync(cheminCorbeillePhysique);
+                for (const elt of elements) {
+                    const eltPath = path.join(cheminCorbeillePhysique, elt);
+                    const stats = fs.statSync(eltPath);
+                    if (!stats.isDirectory()) {
+                        tailleFichiersVides += stats.size;
+                    }
+                }
+
+                if (tailleFichiersVides > 0) {
+                    const compte = await this.compteRepository.findById(idCompteCreateur);
+                    if (compte) {
+                        await this.compteRepository.update(idCompteCreateur, {
+                            stockageCompte: BigInt(compte.stockageCompte) + BigInt(tailleFichiersVides)
+                        });
+                    }
+                }
+
+                // Suppression physique finale
+                await this.supprimerContenuPhysique(cheminCorbeillePhysique);
+            }
         } catch (error) {
             console.error('Erreur lors du nettoyage des fichiers de la corbeille :', error);
         }
