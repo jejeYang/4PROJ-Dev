@@ -36,7 +36,7 @@ export const obtenirEmojiFichier = (nomFichier) => {
     if (!nomFichier || !nomFichier.includes('.')) return '📄';
     const ext = nomFichier.split('.').pop().toLowerCase();
     
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'jfif', 'ico'].includes(ext)) return '📷';
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'jfif', 'ico'].includes(ext)) return '🖼️';
     if (['mp4', 'webm', 'mov', 'avi'].includes(ext)) return '🎥';
     if (['mp3', 'wav', 'm4a', 'ogg'].includes(ext)) return '🎵';
     if (['pdf'].includes(ext)) return '📕';
