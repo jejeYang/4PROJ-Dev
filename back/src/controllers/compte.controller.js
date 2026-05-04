@@ -11,9 +11,15 @@ class CompteController {
             const resultat = await this.compteService.authentifierUtilisateur(email, mdp);
             
             if (resultat) {
+                const utilisateur = resultat.utilisateur;
+                const idUtilisateur = utilisateur.id || utilisateur.idCompte || utilisateur.idUtilisateur;
+
+                utilisateur.avatarUrl = `http://localhost:3000/api/users/avatar/${idUtilisateur}?t=${new Date().getTime()}`;
+                delete utilisateur.avatarBlobCompte;
+
                 res.status(200).json({
                     message: 'Connexion réussie',
-                    utilisateur: resultat.utilisateur,
+                    utilisateur: utilisateur,
                     token: resultat.token
                 });
             } else {
@@ -32,10 +38,17 @@ class CompteController {
             }
 
             const resultat = await this.compteService.authentifierGoogle(idToken);
+            const utilisateur = resultat.utilisateur;
+            const idUtilisateur = utilisateur.id || utilisateur.idCompte || utilisateur.idUtilisateur;
+
+            if (utilisateur.avatarBlobCompte) {
+                utilisateur.avatarUrl = `http://localhost:3000/api/users/avatar/${idUtilisateur}`;
+                delete utilisateur.avatarBlobCompte;
+            }
 
             res.status(200).json({
                 message: 'Connexion Google réussie',
-                utilisateur: resultat.utilisateur,
+                utilisateur: utilisateur,
                 token: resultat.token,
             });
         } catch (error) {
@@ -72,8 +85,9 @@ class CompteController {
             }
 
             const { nom, email } = req.body;
+            
             if (!nom && !email) {
-                return res.status(400).json({ message: 'Au moins un champ doit être fourni' });
+                return res.status(400).json({ message: 'Au moins un champ (nom ou email) doit être fourni' });
             }
 
             const donnees = {};

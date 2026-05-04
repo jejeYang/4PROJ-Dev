@@ -36,22 +36,37 @@ axios.interceptors.response.use(
 
 function AppContent() {
   const token = localStorage.getItem('token');
-  const user = localStorage.getItem('user');
+  const userString = localStorage.getItem('user');
+  const user = userString ? JSON.parse(userString) : null;
+  
   const initialAuth = !!(token && user);
-  const initialUsername = user ? (JSON.parse(user).nom || JSON.parse(user).email || 'User') : '';
+  const initialUsername = user ? (user.nom || user.email || 'User') : '';
+  const initialAvatarUrl = user ? user.avatarUrl : null; 
+
   const [isAuthenticated, setIsAuthenticated] = useState(initialAuth);
   const [username, setUsername] = useState(initialUsername);
+  const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
-  }, []);
+    const handleStorageChange = () => {
+      const updatedUserString = localStorage.getItem('user');
+      if (updatedUserString) {
+        const updatedUser = JSON.parse(updatedUserString);
+        setUsername(updatedUser.nom || updatedUser.email || 'User');
+        setAvatarUrl(updatedUser.avatarUrl || null);
+      }
+    };
+    handleStorageChange();
+  }, [location.pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setIsAuthenticated(false);
     setUsername('');
+    setAvatarUrl(null);
     window.location.href = '/';
   };
 
@@ -69,7 +84,16 @@ function AppContent() {
         <div className="nav-links">
           {isAuthenticated ? (
             <>
-              <span className="nav-username">{username}</span>
+              <div className="nav-user-info">
+                  {avatarUrl ? (
+                      <img src={avatarUrl} alt="Avatar" className="nav-avatar-img" />
+                  ) : (
+                      <div className="nav-avatar-initiale">
+                          {username.charAt(0).toUpperCase()}
+                      </div>
+                  )}
+                  <span className="nav-username">{username}</span>
+              </div>
               <button onClick={handleLogout} className="nav-link logout-btn">Logout</button>
             </>
           ) : (
