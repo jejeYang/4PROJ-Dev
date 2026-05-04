@@ -69,17 +69,13 @@ body {
   margin: 0;
   padding: 0;
   text-align: left;
+  color: var(--text-primary-color);
+  background-color: var(--bg-primary-color);
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: var(--text-primary-color);
-    background-color: var(--bg-primary-color);
-  }
-  a:hover {
-    color: var(--btn-hover);
-  }
-  button {
-    background-color: var(--btn-primary-color);
-  }
+a:hover {
+  color: var(--btn-hover);
+}
+button {
+  background-color: var(--btn-primary-color);
 }
