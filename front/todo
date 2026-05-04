@@ -1,6 +1,7 @@
 General :
 - Ajouter des commentaires propres
 - Conteneuriser le front
+- Remplacer les emoji par une bibliothèque (ex : Flaticon)
 
 Page d'accueil :
 - Refaire design avec :
@@ -11,24 +12,13 @@ Page d'accueil :
     - Diagrammes / Stats (Diagramme circulaire du type de fichier)
 
 Dashboard :
-- Filtres (croissant / décroissant):
-    - Nom
-    - Type de fichier
-    - Taille
-    - Date de création
-    - Modifié le
-- Fonctionnalités fichiers :
-    - Créer un lien de partage (y compris de dossier)
+- Fonctionnalités :
+    - Créer un lien de partage (Dossier, Fichier)
 
 Liens :
 - Voir liens actifs fichier / dossier
-- Modifier lien (date d'expiration, mot de passe)
-- Supprimer lien (impossible de supprimer une collaboration)
-
-Paramètres :
-- Ajout photo de profile
-- Modification de photo de profile
-
+- Supprimer lien
 
 Back :
 - Restaurer un élement doit le remettre dans le dossier dans lequel il était plutôt qu'à la racine
+- Récupérer la date de création d'un fichier
