@@ -5,107 +5,36 @@ import '../styles/Dashboard.css';
 
 function Dashboard() {
     const {
-        loading,
-        creating,
-        error,
-        setError,
-
-        etat_survole_upload,
-        dossier_survole_upload,
-        setDossierSurvoleUpload,
-
-        ouvre_modal,
-        setOuvreModal,
-
-        menu_nom_dossier,
-        setChangeNomDossier,
-        nouveau_nom,
-        setRenommeDossier,
-
-        dossier_actuel,
-        contenu_dossier,
-        fil_ariane,
-
-        taille_dossiers,
-        dossiers,
-        fichiers_base,
-        dossier_racine,
-
-        menu_options_dossier,
-        setMenuOptionsDossier,
-        menu_options_fichier,
-        setMenuOptionsFichier,
-
-        fichier_preview,
-        chargement_preview,
-        corbeille_info,
-
-        dossier_cible_deplacement,
-        chemin_deplacement,
-        sous_dossiers_deplacement,
-
-        naviguerVersUpload,
-        handleDragEnterGlobal,
-        handleDragLeaveGlobal,
-        handleDragOverGlobal,
-        handleDropGlobal,
-
-        gestionClicDossier,
-        gestionClicBreadcrumb,
-
-        selection,
-        estSelectionne,
-        toggleSelection,
-        toggleSelectionTout,
-
-        ouvrirModalSuppressionMultiple,
-        supprimerSelection,
-        telechargerSelection,
-        action_en_cours,
-
-        ouvrirModalRestaurerMultiple,
-        restaurerSelection,
-
-        ouvrirModalSuppressionDefinitiveMultiple,
-        supprimerDefinitivementSelection,
-
+        loading, creating, error, setError,
+        etat_survole_upload, dossier_survole_upload, setDossierSurvoleUpload,
+        ouvre_modal, setOuvreModal,
+        menu_nom_dossier, setChangeNomDossier, nouveau_nom, setRenommeDossier,
+        dossier_actuel, contenu_dossier, fil_ariane,
+        taille_dossiers, dossiers, fichiers_base, dossier_racine,
+        menu_options_dossier, setMenuOptionsDossier,
+        menu_options_fichier, setMenuOptionsFichier,
+        fichier_preview, chargement_preview, corbeille_info,
+        dossier_cible_deplacement, chemin_deplacement, sous_dossiers_deplacement,
+        naviguerVersUpload, handleDragEnterGlobal, handleDragLeaveGlobal, handleDragOverGlobal, handleDropGlobal,
+        gestionClicDossier, gestionClicBreadcrumb,
+        selection, estSelectionne, toggleSelection, toggleSelectionTout,
+        ouvrirModalSuppressionMultiple, supprimerSelection, telechargerSelection, action_en_cours,
+        ouvrirModalRestaurerMultiple, restaurerSelection,
+        ouvrirModalSuppressionDefinitiveMultiple, supprimerDefinitivementSelection,
         gestionCreeDossier,
-
-        ouvrirModalRenommerDossier,
-        confirmerRenommageDossier,
-
+        ouvrirModalRenommerDossier, confirmerRenommageDossier,
         ouvrirModalSuppressionDossier,
-        ouvrirModalSuppressionDefinitiveDossier,
-        confirmerSuppressionDefinitiveDossier,
-
+        ouvrirModalSuppressionDefinitiveDossier, confirmerSuppressionDefinitiveDossier,
         restaurerDossier,
-
-        ouvrirModalViderCorbeille,
-        confirmerViderCorbeille,
-
-        telechargerFichier,
-        restaurerFichier,
-
+        ouvrirModalViderCorbeille, confirmerViderCorbeille,
+        telechargerFichier, restaurerFichier,
         ouvrirModalSuppressionFichier,
-        ouvrirModalSuppressionDefinitiveFichier,
-        confirmerSuppressionDefinitiveFichier,
-
-        ouvrirApercu,
-        fermerApercu,
-
-        ouvrirModalDeplacement,
-        naviguerDeplacement,
-        confirmerDeplacement,
-
-        lancerRecherche,
-        reinitialiserRecherche,
-        recherche_active,
-        resultats_recherche,
-        chargement_recherche,
-
-        formatFileSize,
-        tronquerNom,
-        separerNomExtension,
+        ouvrirModalSuppressionDefinitiveFichier, confirmerSuppressionDefinitiveFichier,
+        ouvrirApercu, fermerApercu,
+        ouvrirModalDeplacement, naviguerDeplacement, confirmerDeplacement,
+        lancerRecherche, reinitialiserRecherche,
+        recherche_active, resultats_recherche, chargement_recherche,
+        formatFileSize, tronquerNom, separerNomExtension,
     } = useDashboard();
 
     const [modal_recherche_ouverte, setModalRechercheOuverte] = useState(false);
@@ -118,7 +47,7 @@ function Dashboard() {
     const [shareFormData, setShareFormData] = useState({
         email: '',
         motDePasse: '',
-        dateExpiration: '',
+        dateExpiration: ''
     });
     const [shareFormEmailExists, setShareFormEmailExists] = useState(null);
     const [shareFormLoading, setShareFormLoading] = useState(false);
@@ -133,36 +62,26 @@ function Dashboard() {
 
     const displayItems = recherche_active
         ? {
-            dossiers: (resultats_recherche?.dossiers || []).filter(
+            dossiers: (resultats_recherche.dossiers || []).filter(
                 d => d.idDossierParent === id_dossier_courant
             ),
-            fichiers: (resultats_recherche?.fichiers || []).filter(
+            fichiers: (resultats_recherche.fichiers || []).filter(
                 f => f.idDossier === id_dossier_courant
-            ),
+            )
         }
         : dossier_actuel
             ? {
-                dossiers: contenu_dossier?.dossiers || [],
-                fichiers: contenu_dossier?.fichiers || [],
+                dossiers: contenu_dossier.dossiers || [],
+                fichiers: contenu_dossier.fichiers || []
             }
             : {
-                dossiers: dossiers || [],
-                fichiers: fichiers_base || [],
+                dossiers,
+                fichiers: fichiers_base
             };
 
-    const allItems = [
-        ...displayItems.dossiers,
-        ...displayItems.fichiers,
-    ];
-
-    const estDansCorbeille =
-        dossier_actuel?.cheminDaccesDossier === '.corbeille'
-        || fil_ariane.some(d => d.cheminDaccesDossier === '.corbeille');
-
-    const toutEstSelectionne =
-        allItems.length > 0
-        && displayItems.dossiers.every(d => estSelectionne(d, 'dossier'))
-        && displayItems.fichiers.every(f => estSelectionne(f, 'fichier'));
+    const allItems = [...displayItems.dossiers, ...displayItems.fichiers];
+    const estDansCorbeille = fil_ariane.some(d => d.cheminDaccesDossier === '.corbeille');
+    const toutEstSelectionne = allItems.length > 0 && selection.length === allItems.length;
 
     const soumettreRecherche = async (e) => {
         e.preventDefault();
@@ -190,15 +109,9 @@ function Dashboard() {
         }
 
         try {
-            const token = localStorage.getItem('token');
-
-            const response = await axios.get(
-                'http://localhost:3000/api/comptes/check-email',
-                {
-                    params: { email },
-                    headers: token ? { Authorization: `Bearer ${token}` } : {},
-                }
-            );
+            const response = await axios.get('http://localhost:3000/api/comptes/check-email', {
+                params: { email }
+            });
 
             const exists = response.data?.exists === true;
             setShareFormEmailExists(exists);
@@ -206,13 +119,13 @@ function Dashboard() {
             if (exists) {
                 setShareFormData(prev => ({
                     ...prev,
-                    motDePasse: '',
+                    motDePasse: ''
                 }));
             }
 
             return exists;
         } catch (err) {
-            console.error('Erreur lors de la vérification de l\'email :', err);
+            console.error('Erreur lors de la vérification de l’email :', err);
             setShareFormEmailExists(null);
             return false;
         }
@@ -222,7 +135,7 @@ function Dashboard() {
         setShareFormData(prev => ({
             ...prev,
             email,
-            motDePasse: '',
+            motDePasse: ''
         }));
         setShareFormEmailExists(null);
     };
@@ -231,26 +144,30 @@ function Dashboard() {
         await verifierEmailCompte(shareFormData.email);
     };
 
-    const partagerRessource = ({ dossierId, fileName = null }) => {
+    const partagerRessource = ({ dossierId, fileName }) => {
         if (!dossierId) {
-            setError('Impossible de déterminer la ressource à partager.');
+            setError('Impossible de déterminer le dossier à partager.');
             return;
         }
 
         setError('');
-        setShareMessage('');
         setShareFormTarget({ dossierId, fileName });
         setShareFormData({
             email: '',
             motDePasse: '',
-            dateExpiration: '',
+            dateExpiration: ''
         });
         setShareFormEmailExists(null);
         setShareFormOpen(true);
     };
 
-    const soumettreFormulairePartage = async (e) => {
+    const soumettrFormulairePartage = async (e) => {
         e.preventDefault();
+
+        if (!shareFormTarget?.dossierId) {
+            setError('Impossible de déterminer la ressource à partager.');
+            return;
+        }
 
         if (!shareFormData.email) {
             setError('Email requis pour le partage.');
@@ -271,7 +188,7 @@ function Dashboard() {
             const token = localStorage.getItem('token');
 
             const body = {
-                email: shareFormData.email,
+                email: shareFormData.email
             };
 
             if (shareFormTarget.fileName) {
@@ -289,14 +206,10 @@ function Dashboard() {
             const response = await axios.post(
                 `http://localhost:3000/api/dossiers/${shareFormTarget.dossierId}/partager`,
                 body,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
+                { headers: { Authorization: `Bearer ${token}` } }
             );
 
-            const lien = response.data?.lien?.url || response.data?.url;
+            const lien = response.data?.lien?.url;
             const message = lien
                 ? `Lien de partage créé : ${window.location.origin}${lien}`
                 : 'Partage effectué avec succès.';
@@ -319,7 +232,7 @@ function Dashboard() {
         setShareFormData({
             email: '',
             motDePasse: '',
-            dateExpiration: '',
+            dateExpiration: ''
         });
         setShareFormEmailExists(null);
     };
@@ -345,7 +258,7 @@ function Dashboard() {
                     <h1>Mon Espace</h1>
 
                     {fil_ariane.length > 0 && (
-                        <nav className="breadcrumb" aria-label="Fil d'ariane">
+                        <nav className="breadcrumb" aria-label="Fil d’ariane">
                             <button
                                 className="breadcrumb-objet"
                                 onClick={() => gestionClicBreadcrumb(-1)}
@@ -383,10 +296,7 @@ function Dashboard() {
                                 onClick={() => {
                                     setChangeNomDossier('');
                                     setError('');
-                                    setOuvreModal({
-                                        type: 'creation-dossier',
-                                        data: null,
-                                    });
+                                    setOuvreModal({ type: 'creation-dossier', data: null });
                                 }}
                             >
                                 Créer un dossier
@@ -403,7 +313,7 @@ function Dashboard() {
                 </div>
             </div>
 
-            {error && !ouvre_modal?.type && !shareFormOpen && (
+            {error && !ouvre_modal.type && !shareFormOpen && (
                 <div className="dashboard-erreur-globale">
                     <span>{error}</span>
                     <button
@@ -416,23 +326,21 @@ function Dashboard() {
                 </div>
             )}
 
-            {action_en_cours?.active && (
+            {action_en_cours.active && (
                 <div className="modal-overlay">
                     <div className="modal-contenu modal-progression">
                         <h3>{action_en_cours.type}</h3>
-
                         <div className="box-barre-progression">
                             <div
                                 className="barre-progression"
                                 style={{ width: `${action_en_cours.progression}%` }}
                             />
                         </div>
-
                         <p
                             style={{
                                 textAlign: 'center',
                                 marginTop: '10px',
-                                color: 'var(--text-primary-color)',
+                                color: 'var(--text-primary-color)'
                             }}
                         >
                             {action_en_cours.progression}%
@@ -441,16 +349,16 @@ function Dashboard() {
                 </div>
             )}
 
-            {ouvre_modal?.type && !action_en_cours?.active && (
+            {ouvre_modal.type && !action_en_cours.active && (
                 <div
                     className="modal-overlay"
                     onClick={() => !creating && setOuvreModal({ type: null, data: null })}
                 >
                     <div className="modal-contenu" onClick={e => e.stopPropagation()}>
+
                         {ouvre_modal.type === 'creation-dossier' && (
                             <form onSubmit={gestionCreeDossier}>
                                 <h3>Nouveau dossier</h3>
-
                                 <input
                                     type="text"
                                     placeholder="Nom du dossier"
@@ -483,10 +391,9 @@ function Dashboard() {
                             </form>
                         )}
 
-                        {(ouvre_modal.type === 'renommage-dossier' || ouvre_modal.type === 'rename') && (
+                        {ouvre_modal.type === 'renommage-dossier' && (
                             <div>
                                 <h3>Renommer le dossier</h3>
-
                                 <input
                                     type="text"
                                     value={nouveau_nom}
@@ -522,14 +429,7 @@ function Dashboard() {
 
                         {ouvre_modal.type === 'deplacement' && (
                             <div>
-                                <h3>
-                                    Déplacer {
-                                        Array.isArray(ouvre_modal.data)
-                                            ? ouvre_modal.data.length
-                                            : 1
-                                    } élément(s)
-                                </h3>
-
+                                <h3>Déplacer {ouvre_modal.data.length} élément(s)</h3>
                                 <p>
                                     Destination actuelle : {
                                         dossier_cible_deplacement
@@ -612,10 +512,10 @@ function Dashboard() {
                         {ouvre_modal.type === 'confirmation-suppression-multiple' && (
                             <div>
                                 <h3>Déplacer vers la corbeille ?</h3>
-
                                 <p>
                                     Voulez-vous vraiment déplacer les{' '}
-                                    <strong>{ouvre_modal.data}</strong> éléments sélectionnés vers la corbeille ?
+                                    <strong>{ouvre_modal.data}</strong>{' '}
+                                    éléments sélectionnés vers la corbeille ?
                                 </p>
 
                                 {error && <p className="erreur-modale suppression">{error}</p>}
@@ -638,14 +538,11 @@ function Dashboard() {
                             </div>
                         )}
 
-                        {(ouvre_modal.type === 'confirmation-suppression-dossier'
-                            || ouvre_modal.type === 'delete_permanent') && (
+                        {ouvre_modal.type === 'confirmation-suppression-dossier' && (
                             <div>
                                 <h3>Supprimer définitivement ?</h3>
-
                                 <p>
                                     Voulez-vous vraiment supprimer le dossier
-                                    {' '}
                                     "{ouvre_modal.data?.cheminDaccesDossier}" ?
                                     Cette action est irréversible.
                                 </p>
@@ -673,10 +570,8 @@ function Dashboard() {
                         {ouvre_modal.type === 'confirmation-suppression-fichier' && (
                             <div>
                                 <h3>Supprimer définitivement ?</h3>
-
                                 <p>
                                     Voulez-vous vraiment supprimer le fichier
-                                    {' '}
                                     "{ouvre_modal.data?.nom}" ?
                                     Cette action est irréversible.
                                 </p>
@@ -704,10 +599,10 @@ function Dashboard() {
                         {ouvre_modal.type === 'confirmation-restauration-multiple' && (
                             <div>
                                 <h3>Restaurer la sélection ?</h3>
-
                                 <p>
                                     Voulez-vous vraiment restaurer les{' '}
-                                    <strong>{ouvre_modal.data}</strong> éléments sélectionnés ?
+                                    <strong>{ouvre_modal.data}</strong>{' '}
+                                    éléments sélectionnés vers leurs emplacements d'origine ?
                                 </p>
 
                                 {error && <p className="erreur-modale suppression">{error}</p>}
@@ -733,11 +628,10 @@ function Dashboard() {
                         {ouvre_modal.type === 'confirmation-suppression-definitive-multiple' && (
                             <div>
                                 <h3>Supprimer définitivement ?</h3>
-
                                 <p>
                                     Voulez-vous vraiment supprimer définitivement les{' '}
-                                    <strong>{ouvre_modal.data}</strong> éléments sélectionnés ?
-                                    Cette action est irréversible.
+                                    <strong>{ouvre_modal.data}</strong>{' '}
+                                    éléments sélectionnés ? Cette action est irréversible.
                                 </p>
 
                                 {error && <p className="erreur-modale suppression">{error}</p>}
@@ -761,12 +655,12 @@ function Dashboard() {
                             </div>
                         )}
 
-                        {(ouvre_modal.type === 'vidage-corbeille' || ouvre_modal.type === 'empty_trash') && (
+                        {ouvre_modal.type === 'vidage-corbeille' && (
                             <div>
                                 <h3>Vider la corbeille ?</h3>
-
                                 <p>
-                                    Tous les éléments présents dans la corbeille seront définitivement supprimés.
+                                    Tous les éléments présents dans la corbeille seront
+                                    définitivement supprimés.
                                 </p>
 
                                 {error && <p className="erreur-modale suppression">{error}</p>}
@@ -794,10 +688,7 @@ function Dashboard() {
                                 <h3>Déplacement en cours...</h3>
                                 <p>
                                     Déplacement du dossier
-                                    {' '}
-                                    "{ouvre_modal.data?.cheminDaccesDossier}"
-                                    {' '}
-                                    vers la corbeille
+                                    "{ouvre_modal.data?.cheminDaccesDossier}" vers la corbeille
                                 </p>
                             </div>
                         )}
@@ -806,10 +697,7 @@ function Dashboard() {
                             <div>
                                 <h3>Dossier déplacé</h3>
                                 <p>
-                                    Dossier
-                                    {' '}
-                                    "{ouvre_modal.data?.cheminDaccesDossier}"
-                                    {' '}
+                                    Dossier "{ouvre_modal.data?.cheminDaccesDossier}"
                                     déplacé vers la corbeille
                                 </p>
 
@@ -828,10 +716,7 @@ function Dashboard() {
                             <div>
                                 <h3>Déplacement en cours...</h3>
                                 <p>
-                                    Déplacement du fichier
-                                    {' '}
-                                    "{ouvre_modal.data?.nom}"
-                                    {' '}
+                                    Déplacement du fichier "{ouvre_modal.data?.nom}"
                                     vers la corbeille
                                 </p>
                             </div>
@@ -841,10 +726,7 @@ function Dashboard() {
                             <div>
                                 <h3>Fichier déplacé</h3>
                                 <p>
-                                    Fichier
-                                    {' '}
-                                    "{ouvre_modal.data?.nom}"
-                                    {' '}
+                                    Fichier "{ouvre_modal.data?.nom}"
                                     déplacé vers la corbeille
                                 </p>
 
@@ -867,7 +749,7 @@ function Dashboard() {
                     <div className="modal-contenu" onClick={e => e.stopPropagation()}>
                         <h3>Partager une ressource</h3>
 
-                        <form onSubmit={soumettreFormulairePartage}>
+                        <form onSubmit={soumettrFormulairePartage}>
                             <div className="form-group">
                                 <label htmlFor="share-email">Email</label>
                                 <input
@@ -890,8 +772,8 @@ function Dashboard() {
 
                             {shareFormEmailExists === false && (
                                 <p className="info-modale">
-                                    Aucun compte trouvé. Un lien de partage sera créé.
-                                    Vous pouvez définir un mot de passe.
+                                    Aucun compte trouvé. Un lien de partage sera créé
+                                    et vous pouvez définir un mot de passe.
                                 </p>
                             )}
 
@@ -904,7 +786,7 @@ function Dashboard() {
                                     value={shareFormData.motDePasse}
                                     onChange={(e) => setShareFormData({
                                         ...shareFormData,
-                                        motDePasse: e.target.value,
+                                        motDePasse: e.target.value
                                     })}
                                     disabled={shareFormEmailExists === true}
                                 />
@@ -918,7 +800,7 @@ function Dashboard() {
                                     value={shareFormData.dateExpiration}
                                     onChange={(e) => setShareFormData({
                                         ...shareFormData,
-                                        dateExpiration: e.target.value,
+                                        dateExpiration: e.target.value
                                     })}
                                 />
                             </div>
@@ -964,7 +846,7 @@ function Dashboard() {
                             recherche_active
                                 ? {
                                     backgroundColor: 'var(--select-primary-color)',
-                                    borderColor: 'var(--btn-primary-color)',
+                                    borderColor: 'var(--btn-primary-color)'
                                 }
                                 : {}
                         }
@@ -1145,7 +1027,7 @@ function Dashboard() {
 
                         {displayItems.dossiers.map((dossier) => (
                             <div
-                                key={`dossier-${dossier.idDossier}`}
+                                key={dossier.idDossier}
                                 className={`dossier-ligne ${dossier_survole_upload === dossier.idDossier ? 'drag-over' : ''} ${estSelectionne(dossier, 'dossier') ? 'ligne-selectionnee' : ''}`}
                                 onClick={() => gestionClicDossier(dossier)}
                                 onDragEnter={(e) => {
@@ -1193,7 +1075,6 @@ function Dashboard() {
 
                                 <div className="col-extension">dossier</div>
                                 <div className="col-id">ID: {dossier.idDossier}</div>
-
                                 <div className="col-taille">
                                     {taille_dossiers[dossier.idDossier] !== undefined
                                         ? formatFileSize(taille_dossiers[dossier.idDossier])
@@ -1203,15 +1084,15 @@ function Dashboard() {
                                 <div className="col-actions">
                                     {menu_options_dossier === dossier.idDossier && (
                                         <div
-                                            className="actions className="actions-rapides"
+                                            className="actions-rapides"
                                             onClick={(e) => e.stopPropagation()}
-                                        />
+                                        >
                                             {!estDansCorbeille ? (
                                                 <>
                                                     <button
                                                         className="action-icon-btn"
                                                         onClick={() => partagerRessource({
-                                                            dossierId: dossier.idDossier,
+                                                            dossierId: dossier.idDossier
                                                         })}
                                                         title="Partager"
                                                     >
@@ -1287,7 +1168,7 @@ function Dashboard() {
 
                             return (
                                 <div
-                                    key={`file-${fichier.nom}-${index}`}
+                                    key={`file-${fichier.idFichier || fichier.nom || index}`}
                                     className={`dossier-ligne fichier-ligne ${estSelectionne(fichier, 'fichier') ? 'ligne-selectionnee' : ''}`}
                                     onClick={() => ouvrirApercu(fichier)}
                                     style={{ cursor: chargement_preview ? 'wait' : 'pointer' }}
@@ -1334,7 +1215,7 @@ function Dashboard() {
                                                             className="action-icon-btn"
                                                             onClick={() => partagerRessource({
                                                                 dossierId: id_dossier_courant,
-                                                                fileName: fichier.nom,
+                                                                fileName: fichier.nom
                                                             })}
                                                             title="Partager"
                                                         >
@@ -1445,7 +1326,6 @@ function Dashboard() {
                     >
                         <div className="preview-header">
                             <h3>{fichier_preview.nom}</h3>
-
                             <button
                                 className="btn-fermer-preview"
                                 onClick={fermerApercu}
@@ -1471,8 +1351,7 @@ function Dashboard() {
                                 <iframe src={fichier_preview.url} title={fichier_preview.nom} />
                             )}
 
-                            {(fichier_preview.type === 'non_supporte'
-                                || fichier_preview.type === 'unsupported') && (
+                            {(fichier_preview.type === 'non_supporte' || fichier_preview.type === 'unsupported') && (
                                 <div>
                                     L'affichage de ce type de fichier n'est pas supporté.
                                 </div>
