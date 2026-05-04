@@ -64,7 +64,7 @@ export default function ProfileScreen() {
 
   const handleUpdateProfile = async () => {
     try {
-      const response = await apiClient.put(`/users/${user?.id}`, {
+      await apiClient.put(`/users/${user?.id}`, {
         nom: formData.nom,
         email: formData.email,
       });
@@ -72,8 +72,8 @@ export default function ProfileScreen() {
       // Mettre à jour AsyncStorage avec les nouvelles données (comme localStorage sur le web)
       const updatedUser = {
         ...user,
-        nom: response.data.utilisateur.nomCompte || response.data.utilisateur.nom || formData.nom,
-        email: response.data.utilisateur.adresseMailCompte || response.data.utilisateur.email || formData.email,
+        nom: formData.nom,
+        email: formData.email,
       };
       await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
       await refreshUser();

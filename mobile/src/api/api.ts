@@ -117,12 +117,12 @@ export const dossierApi = {
     apiClient.post(`/api/corbeille/fichiers/${encodeURIComponent(nomFichier)}/restaurer`),
 
   // Déplacer un dossier vers un autre dossier
-  moveDossier: (idDossier: number, idDossierDestination: number | null) =>
-    apiClient.put(`/api/dossiers/${idDossier}/deplacer`, { idDossierDestination }),
+  moveDossier: (idDossier: number, idNouveauDossierParent: number) =>
+    apiClient.put(`/api/dossiers/${idDossier}/deplacer`, { idNouveauDossierParent }),
 
   // Déplacer un fichier vers un autre dossier
-  moveFichier: (idDossier: number, nomFichier: string, idDossierDestination: number) =>
-    apiClient.put(`/api/dossiers/${idDossier}/fichiers/${encodeURIComponent(nomFichier)}/deplacer`, { idDossierDestination }),
+  moveFichier: (idDossierActuel: number, nomFichier: string, idNouveauDossierParent: number) =>
+    apiClient.put(`/api/dossiers/${idDossierActuel}/fichiers/${encodeURIComponent(nomFichier)}/deplacer`, { idNouveauDossierParent }),
 
   // Télécharger un dossier en ZIP
   downloadZip: (idDossier: number) =>
@@ -134,4 +134,21 @@ export const dossierApi = {
   // Vider la corbeille
   emptyTrash: () =>
     apiClient.delete('/api/corbeille/vider'),
+};
+
+// API des liens de partage
+export const lienApi = {
+  // Créer un lien de partage pour un dossier ou fichier
+  createShareLink: (dossierId: number, data: {
+    email: string;
+    fileName?: string;
+    motDePasse?: string;
+    mdpLienGenere?: string;
+    dateExpiration?: string;
+  }) =>
+    apiClient.post(`/api/dossiers/${dossierId}/partager`, data),
+
+  // Accéder à un lien de partage
+  accessShareLink: (token: string) =>
+    apiClient.get(`/api/liens/${token}`),
 };

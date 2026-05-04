@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useMobileTheme } from '../context/MobileThemeContext';
 
@@ -22,7 +22,7 @@ export default function DashboardScreen({ navigation }: any) {
             style={[styles.actionCard, { backgroundColor: theme.isDark ? '#2C2C2E' : '#FFFFFF' }]}
             onPress={() => navigation.navigate('Documents')}
           >
-            <Text style={styles.cardIcon}>📊</Text>
+            <Image source={require('../assets/espace-dossier.png')} style={styles.cardIconImage} />
             <Text style={[styles.cardTitle, { color: theme.textColor }]}>Mon Espace</Text>
             <Text style={[styles.cardDescription, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
               Voir mes fichiers
@@ -33,7 +33,7 @@ export default function DashboardScreen({ navigation }: any) {
             style={[styles.actionCard, styles.primaryCard, { backgroundColor: theme.primaryColor }]}
             onPress={() => navigation.navigate('Upload')}
           >
-            <Text style={styles.cardIcon}>📤</Text>
+            <Image source={require('../assets/uploader-des-fichiers.png')} style={[styles.cardIconImage]} />
             <Text style={[styles.cardTitle, { color: '#FFFFFF' }]}>Uploader</Text>
             <Text style={[styles.cardDescription, { color: '#FFFFFF', opacity: 0.9 }]}>
               Ajouter des fichiers
@@ -80,6 +80,11 @@ const styles = StyleSheet.create({
   },
   cardIcon: {
     fontSize: 40,
+    marginBottom: 12,
+  },
+  cardIconImage: {
+    width: 40,
+    height: 40,
     marginBottom: 12,
   },
   cardTitle: {

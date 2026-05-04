@@ -10,15 +10,17 @@ import {
   TextInput,
   Modal,
   ScrollView,
+  Image,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { dossierApi, Dossier, Fichier } from '../api/api';
+import { dossierApi, lienApi, Dossier, Fichier } from '../api/api';
 import { API_BASE_URL } from '../config';
 import { useMobileTheme } from '../context/MobileThemeContext';
 import { useAuth } from '../context/AuthContext';
+import * as Clipboard from 'expo-clipboard';
 
 interface BreadcrumbItem {
   id: number | null;
@@ -45,6 +47,24 @@ export default function DocumentsScreen({ navigation }: any) {
   const [isInTrash, setIsInTrash] = useState(false);
   const [corbeilleId, setCorbeilleId] = useState<number | null>(null);
   const [trashSize, setTrashSize] = useState(0);
+  
+  // États pour le déplacement
+  const [showMoveModal, setShowMoveModal] = useState(false);
+  const [itemToMove, setItemToMove] = useState<DisplayItem | null>(null);
+  const [moveDestination, setMoveDestination] = useState<number | null>(null);
+  const [moveBreadcrumb, setMoveBreadcrumb] = useState<BreadcrumbItem[]>([{ id: null, name: 'Mes Documents' }]);
+  const [moveAvailableFolders, setMoveAvailableFolders] = useState<Dossier[]>([]);
+  
+  // États pour les liens de partage
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [itemToShare, setItemToShare] = useState<DisplayItem | null>(null);
+  const [shareEmail, setShareEmail] = useState('');
+  const [shareLink, setShareLink] = useState('');
+  
+  // État pour le menu d'options
+  const [showOptionsModal, setShowOptionsModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<DisplayItem | null>(null);
+  
   const { theme } = useMobileTheme();
   const { user } = useAuth();
 
@@ -426,56 +446,182 @@ export default function DocumentsScreen({ navigation }: any) {
     }
   };
 
-  const showItemOptions = (item: DisplayItem) => {
-    const options: any[] = [];
-
-    // Option Ouvrir
-    if (item.type === 'folder') {
-      options.push({
-        text: 'Ouvrir',
-        onPress: () => {
-          if (item.dossier) {
-            navigateToFolder(item.dossier);
-          }
-        },
-      });
-    } else {
-      options.push({
-        text: 'Télécharger',
-        onPress: () => handleFilePress(item),
-      });
-    }
-
-    // Options selon si on est dans la corbeille ou pas
-    if (isInTrash) {
-      // Dans la corbeille : Restaurer et Supprimer définitivement
-      options.push({
-        text: 'Restaurer',
-        onPress: () => handleRestore(item),
-      });
-      options.push({
-        text: 'Supprimer définitivement',
-        style: 'destructive',
-        onPress: () => handleDeletePermanently(item),
-      });
-    } else {
-      // Hors corbeille : Télécharger ZIP (pour dossiers) et Déplacer vers corbeille
-      if (item.type === 'folder') {
-        options.push({
-          text: 'Télécharger en ZIP',
-          onPress: () => handleDownloadZip(item),
+  const openMoveModal = async (item: DisplayItem) => {
+    setItemToMove(item);
+    setMoveDestination(userRootFolderId);
+    setMoveBreadcrumb([{ id: null, name: 'Mes Documents' }]);
+    
+    try {
+      if (userRootFolderId) {
+        const folders = await dossierApi.getSousDossiers(userRootFolderId);
+        // Filtrer pour ne pas afficher le dossier à déplacer lui-même et la corbeille
+        const availableFolders = folders.filter(f => {
+          const folderName = f.cheminDaccesDossier.split('/').pop() || f.cheminDaccesDossier;
+          return folderName !== '.corbeille' && 
+                 (item.type !== 'folder' || f.idDossier !== item.dossier?.idDossier);
         });
+        setMoveAvailableFolders(availableFolders);
       }
-      options.push({
-        text: 'Déplacer vers la corbeille',
-        style: 'destructive',
-        onPress: () => handleMoveToTrash(item),
-      });
+      setShowMoveModal(true);
+    } catch (error: any) {
+      Alert.alert('Erreur', 'Impossible de charger les dossiers');
+    }
+  };
+
+  const navigateInMoveModal = async (folderId: number | null, folderName: string) => {
+    setMoveDestination(folderId || userRootFolderId);
+    
+    if (folderId) {
+      // Naviguer vers un sous-dossier
+      const newBreadcrumb = [...moveBreadcrumb, { id: folderId, name: folderName }];
+      setMoveBreadcrumb(newBreadcrumb);
+      
+      try {
+        const folders = await dossierApi.getSousDossiers(folderId);
+        const availableFolders = folders.filter(f => {
+          const fname = f.cheminDaccesDossier.split('/').pop() || f.cheminDaccesDossier;
+          return fname !== '.corbeille' && 
+                 (itemToMove?.type !== 'folder' || f.idDossier !== itemToMove.dossier?.idDossier);
+        });
+        setMoveAvailableFolders(availableFolders);
+      } catch (error: any) {
+        Alert.alert('Erreur', 'Impossible de charger les dossiers');
+      }
+    } else {
+      // Retour à la racine
+      setMoveBreadcrumb([{ id: null, name: 'Mes Documents' }]);
+      if (userRootFolderId) {
+        const folders = await dossierApi.getSousDossiers(userRootFolderId);
+        const availableFolders = folders.filter(f => {
+          const fname = f.cheminDaccesDossier.split('/').pop() || f.cheminDaccesDossier;
+          return fname !== '.corbeille' && 
+                 (itemToMove?.type !== 'folder' || f.idDossier !== itemToMove.dossier?.idDossier);
+        });
+        setMoveAvailableFolders(availableFolders);
+      }
+    }
+  };
+
+  const confirmMove = async () => {
+    if (!itemToMove || moveDestination === null) return;
+    
+    try {
+      if (itemToMove.type === 'folder' && itemToMove.dossier) {
+        await dossierApi.moveDossier(itemToMove.dossier.idDossier, moveDestination);
+        Alert.alert('Succès', 'Dossier déplacé avec succès');
+      } else if (itemToMove.type === 'file') {
+        const sourceFolder = currentDossierId || userRootFolderId;
+        if (sourceFolder) {
+          await dossierApi.moveFichier(sourceFolder, itemToMove.name, moveDestination);
+          Alert.alert('Succès', 'Fichier déplacé avec succès');
+        }
+      }
+      
+      setShowMoveModal(false);
+      setItemToMove(null);
+      loadContent();
+    } catch (error: any) {
+      Alert.alert('Erreur', error.response?.data?.error || 'Impossible de déplacer l\'élément');
+    }
+  };
+  
+  const openShareModal = (item: DisplayItem) => {
+    setItemToShare(item);
+    setShareEmail('');
+    setShareLink('');
+    setShowShareModal(true);
+  };
+
+  const createShareLink = async () => {
+    if (!itemToShare || !shareEmail.trim()) {
+      Alert.alert('Erreur', 'Veuillez entrer une adresse email');
+      return;
     }
 
-    options.push({ text: 'Annuler', style: 'cancel' });
+    try {
+      const dossierId = itemToShare.type === 'folder' 
+        ? itemToShare.dossier?.idDossier 
+        : currentDossierId || userRootFolderId;
+      
+      if (!dossierId) {
+        Alert.alert('Erreur', 'Impossible de déterminer le dossier');
+        return;
+      }
 
-    Alert.alert(item.name, 'Que voulez-vous faire ?', options);
+      const data: any = {
+        email: shareEmail,
+      };
+
+      // Si c'est un fichier, ajouter le nom du fichier
+      if (itemToShare.type === 'file') {
+        data.fileName = itemToShare.name;
+      }
+
+      const response = await lienApi.createShareLink(dossierId, data);
+      
+      if (response.data?.lien?.url) {
+        const fullLink = `${API_BASE_URL}${response.data.lien.url}`;
+        setShareLink(fullLink);
+        
+        // Copier automatiquement dans le presse-papier
+        await Clipboard.setStringAsync(fullLink);
+        Alert.alert('Succès', 'Lien créé et copié dans le presse-papier !');
+      }
+    } catch (error: any) {
+      Alert.alert('Erreur', error.response?.data?.error || 'Impossible de créer le lien');
+    }
+  };
+
+  const copyShareLink = async () => {
+    if (shareLink) {
+      await Clipboard.setStringAsync(shareLink);
+      Alert.alert('Succès', 'Lien copié dans le presse-papier');
+    }
+  };
+
+  const showItemOptions = (item: DisplayItem) => {
+    setSelectedItem(item);
+    setShowOptionsModal(true);
+  };
+
+  const handleOptionPress = async (action: string) => {
+    setShowOptionsModal(false);
+    
+    if (!selectedItem) return;
+
+    // Petit délai pour permettre au modal de se fermer proprement
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    switch (action) {
+      case 'open':
+        if (selectedItem.type === 'folder' && selectedItem.dossier) {
+          navigateToFolder(selectedItem.dossier);
+        } else {
+          handleFilePress(selectedItem);
+        }
+        break;
+      case 'download':
+        handleFilePress(selectedItem);
+        break;
+      case 'zip':
+        handleDownloadZip(selectedItem);
+        break;
+      case 'move':
+        openMoveModal(selectedItem);
+        break;
+      case 'share':
+        openShareModal(selectedItem);
+        break;
+      case 'trash':
+        handleMoveToTrash(selectedItem);
+        break;
+      case 'restore':
+        handleRestore(selectedItem);
+        break;
+      case 'delete':
+        handleDeletePermanently(selectedItem);
+        break;
+    }
   };
 
   const renderBreadcrumb = () => (
@@ -505,35 +651,73 @@ export default function DocumentsScreen({ navigation }: any) {
   );
 
   const renderFileItem = ({ item }: { item: DisplayItem }) => (
-    <TouchableOpacity
+    <View
       style={[styles.fileItem, { backgroundColor: theme.isDark ? '#2C2C2E' : '#FFFFFF' }]}
-      onPress={() => {
-        if (item.type === 'folder' && item.dossier) {
-          navigateToFolder(item.dossier);
-        } else {
-          handleFilePress(item);
-        }
-      }}
-      onLongPress={() => showItemOptions(item)}
     >
-      <View style={styles.fileIcon}>
-        <Text style={styles.iconText}>{item.type === 'folder' ? '📁' : '📄'}</Text>
-      </View>
-      <View style={styles.fileInfo}>
-        <Text style={[styles.fileName, { color: theme.textColor }]} numberOfLines={1}>
-          {item.name}
-        </Text>
-        {item.size && (
-          <Text style={[styles.fileSize, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
-            {formatFileSize(item.size)}
+      <TouchableOpacity
+        style={styles.fileItemContent}
+        onPress={() => {
+          if (item.type === 'folder' && item.dossier) {
+            navigateToFolder(item.dossier);
+          } else {
+            handleFilePress(item);
+          }
+        }}
+        onLongPress={() => showItemOptions(item)}
+      >
+        <View style={styles.fileIcon}>
+          <Image 
+            source={item.type === 'folder' ? require('../assets/dossier.png') : getFileIcon(item.name)} 
+            style={styles.iconImage}
+          />
+        </View>
+        <View style={styles.fileInfo}>
+          <Text style={[styles.fileName, { color: theme.textColor }]} numberOfLines={1}>
+            {item.name}
           </Text>
-        )}
-      </View>
+          {item.size && (
+            <Text style={[styles.fileSize, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
+              {formatFileSize(item.size)}
+            </Text>
+          )}
+        </View>
+      </TouchableOpacity>
+      
+      {!isInTrash && (
+        <TouchableOpacity
+          style={styles.trashButton}
+          onPress={() => handleMoveToTrash(item)}
+        >
+          <Image source={require('../assets/corbeille.png')} style={styles.trashIconImage} />
+        </TouchableOpacity>
+      )}
+      
       <TouchableOpacity onPress={() => showItemOptions(item)} style={styles.moreButton}>
         <Text style={{ fontSize: 20, color: theme.textColor }}>⋮</Text>
       </TouchableOpacity>
-    </TouchableOpacity>
+    </View>
   );
+
+  const getFileIcon = (fileName: string) => {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    
+    // Extensions d'images
+    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico'];
+    // Extensions de documents
+    const docExtensions = ['pdf', 'doc', 'docx', 'txt', 'rtf', 'odt', 'xls', 'xlsx', 'ppt', 'pptx', 'csv'];
+    // Extensions de vidéos
+    const videoExtensions = ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm', 'm4v'];
+    
+    if (extension && imageExtensions.includes(extension)) {
+      return require('../assets/image.png');
+    } else if (extension && docExtensions.includes(extension)) {
+      return require('../assets/docs.png');
+    } else if (extension && videoExtensions.includes(extension)) {
+      return require('../assets/referencement-video.png');
+    } else {
+      return require('../assets/lien.png');
+    }
+  };
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 B';
@@ -588,19 +772,28 @@ export default function DocumentsScreen({ navigation }: any) {
               style={[styles.actionButton, { backgroundColor: theme.primaryColor }]}
               onPress={() => setShowCreateModal(true)}
             >
-              <Text style={styles.actionButtonText}>📁 Nouveau</Text>
+              <View style={styles.actionButtonContent}>
+                <Image source={require('../assets/dossier.png')} style={styles.actionButtonIcon} />
+                <Text style={styles.actionButtonText}> Nouveau</Text>
+              </View>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: theme.primaryColor }]}
               onPress={() => navigation.navigate('Upload')}
             >
-              <Text style={styles.actionButtonText}>📤 Upload</Text>
+              <View style={styles.actionButtonContent}>
+                <Image source={require('../assets/uploader-des-fichiers.png')} style={styles.actionButtonIcon} />
+                <Text style={styles.actionButtonText}> Upload</Text>
+              </View>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: '#FF3B30' }]}
               onPress={navigateToTrash}
             >
-              <Text style={styles.actionButtonText}>🗑️ Corbeille</Text>
+              <View style={styles.actionButtonContent}>
+                <Image source={require('../assets/corbeille.png')} style={styles.actionButtonIcon} />
+                <Text style={styles.actionButtonText}> Corbeille</Text>
+              </View>
             </TouchableOpacity>
           </>
         ) : (
@@ -628,7 +821,7 @@ export default function DocumentsScreen({ navigation }: any) {
         renderItem={renderFileItem}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>📂</Text>
+            <Image source={require('../assets/dossier.png')} style={styles.emptyIconImage} />
             <Text style={[styles.emptyText, { color: theme.textColor }]}>
               Aucun document
             </Text>
@@ -688,6 +881,276 @@ export default function DocumentsScreen({ navigation }: any) {
           </View>
         </View>
       </Modal>
+
+      {/* Modal de déplacement */}
+      <Modal
+        visible={showMoveModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowMoveModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.backgroundColor, maxHeight: '80%' }]}>
+            <Text style={[styles.modalTitle, { color: theme.textColor }]}>
+              Déplacer "{itemToMove?.name}"
+            </Text>
+            
+            {/* Navigation dans les dossiers */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={[styles.moveBreadcrumb, { backgroundColor: theme.isDark ? '#2C2C2E' : '#F2F2F7' }]}
+            >
+              {moveBreadcrumb.map((crumb, index) => (
+                <TouchableOpacity
+                  key={index}
+                  onPress={() => navigateInMoveModal(crumb.id, crumb.name)}
+                >
+                  <Text style={[styles.breadcrumbText, { color: theme.textColor }]}>
+                    {crumb.name} {index < moveBreadcrumb.length - 1 ? ' / ' : ''}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* Liste des dossiers disponibles */}
+            <ScrollView style={styles.folderList}>
+              {moveAvailableFolders.map((folder) => (
+                <TouchableOpacity
+                  key={folder.idDossier}
+                  style={[styles.folderItem, { backgroundColor: theme.isDark ? '#2C2C2E' : '#F2F2F7' }]}
+                  onPress={() => navigateInMoveModal(folder.idDossier, folder.cheminDaccesDossier.split('/').pop() || folder.cheminDaccesDossier)}
+                >
+                  <Image source={require('../assets/dossier.png')} style={styles.folderIconImage} />
+                  <Text style={[styles.folderName, { color: theme.textColor }]}>
+                    {folder.cheminDaccesDossier.split('/').pop() || folder.cheminDaccesDossier}
+                  </Text>
+                  <Text style={[styles.folderArrow, { color: theme.textColor }]}>›</Text>
+                </TouchableOpacity>
+              ))}
+              {moveAvailableFolders.length === 0 && (
+                <Text style={[styles.emptyText, { color: theme.textColor, textAlign: 'center', marginTop: 20 }]}>
+                  Aucun sous-dossier
+                </Text>
+              )}
+            </ScrollView>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setShowMoveModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: theme.primaryColor }]}
+                onPress={confirmMove}
+              >
+                <Text style={styles.modalButtonText}>Déplacer ici</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de création de lien de partage */}
+      <Modal
+        visible={showShareModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowShareModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.backgroundColor }]}>
+            <Text style={[styles.modalTitle, { color: theme.textColor }]}>
+              Partager "{itemToShare?.name}"
+            </Text>
+            
+            {!shareLink ? (
+              <>
+                <Text style={[styles.modalDescription, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
+                  Entrez l'adresse email de la personne avec qui vous souhaitez partager
+                </Text>
+                <TextInput
+                  style={[
+                    styles.modalInput,
+                    {
+                      backgroundColor: theme.isDark ? '#2C2C2E' : '#F2F2F7',
+                      color: theme.textColor,
+                    },
+                  ]}
+                  placeholder="email@example.com"
+                  placeholderTextColor={theme.isDark ? '#8E8E93' : '#6C6C70'}
+                  value={shareEmail}
+                  onChangeText={setShareEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoFocus
+                />
+              </>
+            ) : (
+              <>
+                <Text style={[styles.modalDescription, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
+                  Lien de partage créé :
+                </Text>
+                <View style={[styles.linkContainer, { backgroundColor: theme.isDark ? '#2C2C2E' : '#F2F2F7' }]}>
+                  <Text style={[styles.linkText, { color: theme.primaryColor }]} numberOfLines={2}>
+                    {shareLink}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.modalButton, { backgroundColor: theme.primaryColor, marginTop: 10 }]}
+                  onPress={copyShareLink}
+                >
+                  <View style={styles.modalButtonContent}>
+                    <Image source={require('../assets/copier-le-lien.png')} style={styles.modalButtonIcon} />
+                    <Text style={styles.modalButtonText}> Copier le lien</Text>
+                  </View>
+                </TouchableOpacity>
+              </>
+            )}
+
+            <View style={styles.modalButtons}>
+              {!shareLink ? (
+                <>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.cancelButton]}
+                    onPress={() => {
+                      setShowShareModal(false);
+                      setShareEmail('');
+                      setShareLink('');
+                    }}
+                  >
+                    <Text style={styles.cancelButtonText}>Annuler</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalButton, { backgroundColor: theme.primaryColor }]}
+                    onPress={createShareLink}
+                  >
+                    <Text style={styles.modalButtonText}>Créer le lien</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.modalButton, { backgroundColor: theme.primaryColor }]}
+                  onPress={() => {
+                    setShowShareModal(false);
+                    setShareEmail('');
+                    setShareLink('');
+                  }}
+                >
+                  <Text style={styles.modalButtonText}>Fermer</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal d'options */}
+      <Modal
+        visible={showOptionsModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowOptionsModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowOptionsModal(false)}
+        >
+          <View
+            style={[styles.optionsModalContent, { backgroundColor: theme.isDark ? '#1C1C1E' : '#FFFFFF' }]}
+            onStartShouldSetResponder={() => true}
+          >
+            <View style={styles.optionsHeader}>
+              <Text style={[styles.optionsTitle, { color: theme.textColor }]}>
+                {selectedItem?.name}
+              </Text>
+            </View>
+
+            <ScrollView style={styles.optionsList}>
+              {selectedItem && (
+                <>
+                  {isInTrash ? (
+                    // Options dans la corbeille
+                    <>
+                      <TouchableOpacity
+                        style={[styles.optionItem, { borderBottomColor: theme.isDark ? '#2C2C2E' : '#E5E5EA' }]}
+                        onPress={() => handleOptionPress('restore')}
+                      >
+                        <Image source={require('../assets/restaurer.png')} style={styles.optionIconImage} />
+                        <Text style={[styles.optionText, { color: theme.textColor }]}>Restaurer</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.optionItem, { borderBottomColor: theme.isDark ? '#2C2C2E' : '#E5E5EA' }]}
+                        onPress={() => handleOptionPress('delete')}
+                      >
+                        <Image source={require('../assets/corbeille.png')} style={styles.optionIconImage} />
+                        <Text style={[styles.optionText, { color: '#FF3B30' }]}>Supprimer définitivement</Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : (
+                    // Options hors corbeille
+                    <>
+                      {selectedItem.type === 'folder' ? (
+                        <TouchableOpacity
+                          style={[styles.optionItem, { borderBottomColor: theme.isDark ? '#2C2C2E' : '#E5E5EA' }]}
+                          onPress={() => handleOptionPress('open')}
+                        >
+                          <Image source={require('../assets/dossier.png')} style={styles.optionIconImage} />
+                          <Text style={[styles.optionText, { color: theme.textColor }]}>Ouvrir</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <TouchableOpacity
+                          style={[styles.optionItem, { borderBottomColor: theme.isDark ? '#2C2C2E' : '#E5E5EA' }]}
+                          onPress={() => handleOptionPress('download')}
+                        >
+                          <Image source={require('../assets/telecharger.png')} style={styles.optionIconImage} />
+                          <Text style={[styles.optionText, { color: theme.textColor }]}>Télécharger</Text>
+                        </TouchableOpacity>
+                      )}
+
+                      {selectedItem.type === 'folder' && (
+                        <TouchableOpacity
+                          style={[styles.optionItem, { borderBottomColor: theme.isDark ? '#2C2C2E' : '#E5E5EA' }]}
+                          onPress={() => handleOptionPress('zip')}
+                        >
+                          <Image source={require('../assets/telecharger-zip.png')} style={styles.optionIconImage} />
+                          <Text style={[styles.optionText, { color: theme.textColor }]}>Télécharger en ZIP</Text>
+                        </TouchableOpacity>
+                      )}
+
+                      <TouchableOpacity
+                        style={[styles.optionItem, { borderBottomColor: theme.isDark ? '#2C2C2E' : '#E5E5EA' }]}
+                        onPress={() => handleOptionPress('move')}
+                      >
+                        <Image source={require('../assets/deplacer-le-fichier.png')} style={styles.optionIconImage} />
+                        <Text style={[styles.optionText, { color: theme.textColor }]}>Déplacer</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[styles.optionItem, { borderBottomColor: theme.isDark ? '#2C2C2E' : '#E5E5EA' }]}
+                        onPress={() => handleOptionPress('share')}
+                      >
+                        <Image source={require('../assets/lien.png')} style={styles.optionIconImage} />
+                        <Text style={[styles.optionText, { color: theme.textColor }]}>Créer un lien de partage</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </>
+              )}
+            </ScrollView>
+
+            <TouchableOpacity
+              style={[styles.cancelOptionButton, { borderTopColor: theme.isDark ? '#2C2C2E' : '#E5E5EA' }]}
+              onPress={() => setShowOptionsModal(false)}
+            >
+              <Text style={[styles.cancelOptionText, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>Annuler</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -730,6 +1193,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  actionButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  actionButtonIcon: {
+    width: 18,
+    height: 18,
+    marginRight: 4,
+  },
   actionButtonText: {
     color: '#FFFFFF',
     fontSize: 14,
@@ -759,8 +1231,17 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
+  fileItemContent: {
+    flexDirection: 'row',
+    flex: 1,
+    alignItems: 'center',
+  },
   fileIcon: {
     marginRight: 12,
+  },
+  iconImage: {
+    width: 32,
+    height: 32,
   },
   iconText: {
     fontSize: 32,
@@ -776,6 +1257,14 @@ const styles = StyleSheet.create({
   fileSize: {
     fontSize: 13,
   },
+  trashButton: {
+    padding: 8,
+    marginLeft: 4,
+  },
+  trashIconImage: {
+    width: 20,
+    height: 20,
+  },
   moreButton: {
     padding: 8,
   },
@@ -788,8 +1277,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 40,
   },
-  emptyIcon: {
-    fontSize: 60,
+  emptyIconImage: {
+    width: 60,
+    height: 60,
     marginBottom: 16,
   },
   emptyText: {
@@ -841,6 +1331,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  modalButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  modalButtonIcon: {
+    width: 18,
+    height: 18,
+    tintColor: '#FFFFFF',
+  },
   cancelButton: {
     backgroundColor: '#8E8E93',
   },
@@ -851,6 +1350,97 @@ const styles = StyleSheet.create({
   },
   modalButtonText: {
     color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  moveBreadcrumb: {
+    padding: 10,
+    marginBottom: 10,
+    borderRadius: 8,
+  },
+  folderList: {
+    maxHeight: 300,
+    marginVertical: 10,
+  },
+  folderItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    marginVertical: 4,
+    borderRadius: 8,
+  },
+  folderIconImage: {
+    width: 20,
+    height: 20,
+    marginRight: 10,
+  },
+  folderName: {
+    flex: 1,
+    fontSize: 16,
+  },
+  folderArrow: {
+    fontSize: 20,
+    opacity: 0.5,
+  },
+  modalDescription: {
+    fontSize: 14,
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  linkContainer: {
+    padding: 15,
+    borderRadius: 8,
+    marginVertical: 10,
+  },
+  linkText: {
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  optionsModalContent: {
+    width: '90%',
+    maxHeight: '70%',
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  optionsHeader: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  optionsTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  optionsList: {
+    maxHeight: 400,
+  },
+  optionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+  },
+  optionIconImage: {
+    width: 24,
+    height: 24,
+    marginRight: 12,
+  },
+  optionText: {
+    fontSize: 16,
+    flex: 1,
+  },
+  cancelOptionButton: {
+    padding: 16,
+    borderTopWidth: 1,
+    alignItems: 'center',
+  },
+  cancelOptionText: {
     fontSize: 16,
     fontWeight: '600',
   },
