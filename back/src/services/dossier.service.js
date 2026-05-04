@@ -268,42 +268,75 @@ class DossierService {
     }
 
     async copierDossierVersCompte(sourceDossierId, cibleCompteId) {
-        const dossierSource = await this.recupererDossierParId(sourceDossierId);
-        const cheminSourceRelatif = await this.construireCheminComplet(sourceDossierId);
-        const sourcePhysique = path.join(SERVER_FILES_PATH, `user_${dossierSource.idCompteCreateur}`, cheminSourceRelatif);
+    const dossierSource = await this.recupererDossierParId(sourceDossierId);
+    const cheminSourceRelatif = await this.construireCheminComplet(sourceDossierId);
 
-        if (!fs.existsSync(sourcePhysique) || !fs.statSync(sourcePhysique).isDirectory()) {
-            throw new Error('Dossier source introuvable pour partage');
-        }
+    const sourcePhysique = path.resolve(
+        SERVER_FILES_PATH,
+        `user_${dossierSource.idCompteCreateur}`,
+        cheminSourceRelatif
+    );
 
-        const racineCible = await this.recupererDossierRacineParCompte(cibleCompteId);
-        if (!racineCible || racineCible.length === 0) {
-            throw new Error('Dossier racine de l\'utilisateur cible introuvable');
-        }
+    if (!fs.existsSync(sourcePhysique) || !fs.statSync(sourcePhysique).isDirectory()) {
+        throw new Error('Dossier source introuvable pour partage');
+    }
 
-        const dossierRacineCible = racineCible[0];
-        const dossierCiblePhysique = path.join(SERVER_FILES_PATH, `user_${cibleCompteId}`, dossierRacineCible.cheminDaccesDossier);
-        if (!fs.existsSync(dossierCiblePhysique)) {
-            await mkdir(dossierCiblePhysique, { recursive: true });
-        }
+    const racineCible = await this.recupererDossierRacineParCompte(cibleCompteId);
+    if (!racineCible || racineCible.length === 0) {
+        throw new Error('Dossier racine de l\'utilisateur cible introuvable');
+    }
 
-        const nomCible = await this._genererNomUniqueDossier(dossierRacineCible.idDossier, dossierSource.cheminDaccesDossier);
-        const nouveauDossier = await this.dossierRepository.create({
-            idCompteCreateur: cibleCompteId,
-            idCompteAcces: dossierSource.idCompteCreateur,
-            cheminDaccesDossier: nomCible,
-            idDossierParent: dossierRacineCible.idDossier,
-        });
+    const dossierRacineCible = racineCible[0];
 
-        const destinationDossierPhysique = path.join(dossierCiblePhysique, nomCible);
-        await mkdir(destinationDossierPhysique, { recursive: true });
-        await fs.promises.symlink(sourcePhysique, destinationDossierPhysique, 'junction');
+    const dossierCiblePhysique = path.resolve(
+        SERVER_FILES_PATH,
+        `user_${cibleCompteId}`,
+        dossierRacineCible.cheminDaccesDossier
+    );
+
+    await mkdir(dossierCiblePhysique, { recursive: true });
+
+    const nomCible = await this._genererNomUniqueDossier(
+        dossierRacineCible.idDossier,
+        dossierSource.cheminDaccesDossier
+    );
+
+    const destinationDossierPhysique = path.join(dossierCiblePhysique, nomCible);
+
+    if (fs.existsSync(destinationDossierPhysique)) {
+        throw new Error(`Le dossier cible "${nomCible}" existe déjà physiquement`);
+    }
+
+    const nouveauDossier = await this.dossierRepository.create({
+        idCompteCreateur: cibleCompteId,
+        idCompteAcces: dossierSource.idCompteCreateur,
+        cheminDaccesDossier: nomCible,
+        idDossierParent: dossierRacineCible.idDossier,
+    });
+
+    try {
+        const typeLien = process.platform === 'win32' ? 'junction' : 'dir';
+
+        await fs.promises.symlink(
+            sourcePhysique,
+            destinationDossierPhysique,
+            typeLien
+        );
 
         return {
             dossier: nouveauDossier,
+            chemin: path.join(dossierRacineCible.cheminDaccesDossier, nomCible),
+            nom: nomCible,
             collaboratif: true,
         };
+    } catch (error) {
+        await this.dossierRepository.delete(nouveauDossier.idDossier);
+
+        throw new Error(
+            `Erreur lors de la création du lien symbolique du dossier partagé : ${error.message}`
+        );
     }
+}
 
     async _copierDossierRecursif(sourceDossierId, targetDossierId, cibleCompteId) {
         const sourceDossier = await this.recupererDossierParId(sourceDossierId);
