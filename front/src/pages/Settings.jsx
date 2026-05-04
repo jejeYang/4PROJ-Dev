@@ -8,6 +8,7 @@ function Settings() {
     const fileInputRef = useRef(null);
     const [nouvelleImagePreview, setNouvelleImagePreview] = useState(null);
     const [fichierImage, setFichierImage] = useState(null);
+    const [erreurImage, setErreurImage] = useState(false);
 
     const [utilisateur, setUtilisateur] = useState(() => {
         const donnees_sauvegardees = localStorage.getItem('user');
@@ -33,7 +34,7 @@ function Settings() {
     const naviguer = useNavigate();
     const { toggle: est_sombre, toggleFunction: changerTheme } = useContext(ThemeContext);
 
-    const urlAvatarBackend = utilisateur ? `http://localhost:3000/api/users/avatar/${utilisateur.id}` : null;
+    const urlAvatarBackend = utilisateur ? `http://localhost:3000/api/users/avatar/${utilisateur.id || utilisateur.idCompte || utilisateur.idUtilisateur}` : null;
 
     const gestionChangementProfil = (e) => {
         setDonneesFormulaire({ ...donnees_formulaire, [e.target.name]: e.target.value });
@@ -54,6 +55,7 @@ function Settings() {
             const reader = new FileReader();
             reader.onloadend = () => {
                 setNouvelleImagePreview(reader.result);
+                setErreurImage(false);
             };
             reader.readAsDataURL(fichier);
         }
@@ -66,7 +68,7 @@ function Settings() {
             const headersBase = { Authorization: `Bearer ${jeton_authentification}` };
             
             const reponseTexte = await axios.put(
-                `http://localhost:3000/api/users/${utilisateur.id}`,
+                `http://localhost:3000/api/users/${utilisateur.id || utilisateur.idCompte || utilisateur.idUtilisateur}`,
                 {
                     nom: donnees_formulaire.nom,
                     email: donnees_formulaire.email
@@ -76,9 +78,9 @@ function Settings() {
 
             let utilisateur_mis_a_jour = { 
                 ...utilisateur, 
-                ...(reponseTexte.data.utilisateur || {}), 
-                nom: donnees_formulaire.nom, 
-                email: donnees_formulaire.email 
+                ...(reponseTexte.data.utilisateur || {}),
+                nom: donnees_formulaire.nom,
+                email: donnees_formulaire.email
             };
 
             if (fichierImage) {
@@ -88,7 +90,12 @@ function Settings() {
                 await axios.post(
                     'http://localhost:3000/api/users/avatar', 
                     formData,
-                    { headers: { ...headersBase, 'Content-Type': 'multipart/form-data' } }
+                    { 
+                        headers: { 
+                            ...headersBase,
+                            'Content-Type': 'multipart/form-data' 
+                        } 
+                    }
                 );
                 
                 utilisateur_mis_a_jour.avatarUrl = `${urlAvatarBackend}?t=${new Date().getTime()}`;
@@ -100,8 +107,8 @@ function Settings() {
             setUtilisateur(utilisateur_mis_a_jour);
             setFichierImage(null); 
             setNouvelleImagePreview(null);
+            setErreurImage(false);
 
-            console.log("📢 Signal 'profilMisAJour' envoyé !");
             window.dispatchEvent(new Event('profilMisAJour'));
 
             setMessageNotification('Profil mis à jour avec succès');
@@ -157,6 +164,8 @@ function Settings() {
 
     if (!utilisateur) return <div>Vous n'êtes pas connecté.</div>;
 
+    const initialeAvatar = (utilisateur.nom || utilisateur.email || 'U').charAt(0).toUpperCase();
+
     return (
         <div className="conteneur-parametres">
             <header className="en-tete-parametres">
@@ -174,10 +183,15 @@ function Settings() {
                                 <div className="espace-avatar">
                                     {nouvelleImagePreview ? (
                                         <img src={nouvelleImagePreview} alt="Aperçu avatar" className="image-avatar-siteweb" />
-                                    ) : utilisateur.avatarUrl ? (
-                                        <img src={utilisateur.avatarUrl} alt="Avatar utilisateur" className="image-avatar-siteweb" />
+                                    ) : (utilisateur.avatarUrl && !erreurImage) ? (
+                                        <img 
+                                            src={utilisateur.avatarUrl} 
+                                            alt="Avatar utilisateur" 
+                                            className="image-avatar-siteweb" 
+                                            onError={() => setErreurImage(true)}
+                                        />
                                     ) : (
-                                        donnees_formulaire.nom.charAt(0).toUpperCase()
+                                        initialeAvatar
                                     )}
                                 </div>
                                 <div className="bouton-editer-avatar" onClick={declencherSelectionFichier} title="Changer la photo de profil">

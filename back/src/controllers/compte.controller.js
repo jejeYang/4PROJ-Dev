@@ -10,21 +10,25 @@ class CompteController {
             const { email, mdp } = req.body;
             const resultat = await this.compteService.authentifierUtilisateur(email, mdp);
             
-            if (resultat) {
-                const utilisateur = resultat.utilisateur;
-                const idUtilisateur = utilisateur.id || utilisateur.idCompte || utilisateur.idUtilisateur;
-
-                utilisateur.avatarUrl = `http://localhost:3000/api/users/avatar/${idUtilisateur}?t=${new Date().getTime()}`;
-                delete utilisateur.avatarBlobCompte;
-
-                res.status(200).json({
-                    message: 'Connexion réussie',
-                    utilisateur: utilisateur,
-                    token: resultat.token
-                });
-            } else {
-                res.status(401).json({ message: 'Email ou mot de passe incorrect' });
+            // Sécurité : On vérifie si les identifiants sont bons
+            if (!resultat) {
+                return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
             }
+
+            const utilisateur = resultat.utilisateur;
+            const idUtilisateur = utilisateur.id || utilisateur.idCompte || utilisateur.idUtilisateur;
+
+            // Si l'utilisateur n'a pas déjà une URL d'avatar valide (ex: un lien Google), on lui assigne la route locale
+            if (!utilisateur.avatarUrl || !utilisateur.avatarUrl.startsWith('http')) {
+                utilisateur.avatarUrl = `http://localhost:3000/api/users/avatar/${idUtilisateur}?t=${Date.now()}`;
+            }
+            delete utilisateur.avatarBlobCompte; // Nettoyage du blob pour alléger la réponse
+
+            res.status(200).json({
+                message: 'Connexion réussie',
+                utilisateur: utilisateur,
+                token: resultat.token
+            });
         } catch (error) {
             next(error);
         }
@@ -38,13 +42,20 @@ class CompteController {
             }
 
             const resultat = await this.compteService.authentifierGoogle(idToken);
+            
+            // Sécurité (Manquante avant) : On vérifie si le token Google a bien été validé
+            if (!resultat) {
+                return res.status(401).json({ message: 'Échec de l\'authentification Google' });
+            }
+
             const utilisateur = resultat.utilisateur;
             const idUtilisateur = utilisateur.id || utilisateur.idCompte || utilisateur.idUtilisateur;
 
-            if (utilisateur.avatarBlobCompte) {
-                utilisateur.avatarUrl = `http://localhost:3000/api/users/avatar/${idUtilisateur}`;
-                delete utilisateur.avatarBlobCompte;
+            // Même logique que le login classique : on préserve l'image Google si elle existe
+            if (!utilisateur.avatarUrl || !utilisateur.avatarUrl.startsWith('http')) {
+                utilisateur.avatarUrl = `http://localhost:3000/api/users/avatar/${idUtilisateur}?t=${Date.now()}`;
             }
+            delete utilisateur.avatarBlobCompte;
 
             res.status(200).json({
                 message: 'Connexion Google réussie',

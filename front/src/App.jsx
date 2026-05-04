@@ -19,8 +19,6 @@ axios.interceptors.response.use(
     },
     (error) => {
         if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-            console.warn("Token expiré ou invalide. Déconnexion automatique.");
-            
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             
@@ -28,149 +26,154 @@ axios.interceptors.response.use(
                 window.location.href = '/login';
             }
         }
-        
         return Promise.reject(error);
     }
 );
 
 function AppContent() {
-  const token = localStorage.getItem('token');
-  const userString = localStorage.getItem('user');
-  const user = userString ? JSON.parse(userString) : null;
-  
-  const initialAuth = !!(token && user);
-  const initialUsername = user ? (user.nom || user.email || 'User') : '';
-  const initialAvatarUrl = user ? user.avatarUrl : null; 
+    const token = localStorage.getItem('token');
+    const userString = localStorage.getItem('user');
+    const user = userString ? JSON.parse(userString) : null;
+    
+    const initialAuth = !!(token && user);
+    const initialUsername = user ? (user.nom || user.email || 'User') : '';
+    const initialAvatarUrl = user ? user.avatarUrl : null; 
 
-  const [isAuthenticated, setIsAuthenticated] = useState(initialAuth);
-  const [username, setUsername] = useState(initialUsername);
-  const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const location = useLocation();
+    const [isAuthenticated, setIsAuthenticated] = useState(initialAuth);
+    const [username, setUsername] = useState(initialUsername);
+    const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [erreurImage, setErreurImage] = useState(false);
+    const location = useLocation();
 
-  useEffect(() => {
-    const handleStorageChange = () => {
-      console.log("👂 Signal reçu dans App.jsx ! Rafraîchissement en cours...");
-      const updatedUserString = localStorage.getItem('user');
-      
-      if (updatedUserString) {
-        const updatedUser = JSON.parse(updatedUserString);
-        console.log("Nouveau nom à afficher :", updatedUser.nom || updatedUser.email);
-        
-        setUsername(updatedUser.nom || updatedUser.email || 'User');
-        setAvatarUrl(updatedUser.avatarUrl || null);
-      }
+    useEffect(() => {
+        setErreurImage(false);
+    }, [avatarUrl]);
+
+    useEffect(() => {
+        const handleStorageChange = () => {
+            const updatedUserString = localStorage.getItem('user');
+            if (updatedUserString) {
+                const updatedUser = JSON.parse(updatedUserString);
+                setUsername(updatedUser.nom || updatedUser.email || 'User');
+                setAvatarUrl(updatedUser.avatarUrl || null);
+                setErreurImage(false);
+            }
+        };
+
+        handleStorageChange();
+        window.addEventListener('profilMisAJour', handleStorageChange);
+
+        return () => {
+            window.removeEventListener('profilMisAJour', handleStorageChange);
+        };
+    }, [location.pathname]);
+
+    const handleLogout = () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setIsAuthenticated(false);
+        setUsername('');
+        setAvatarUrl(null);
+        window.location.href = '/';
     };
 
-    handleStorageChange();
+    const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
+    const isHome = location.pathname === '/';
 
-    window.addEventListener('profilMisAJour', handleStorageChange);
+    return (
+        <div className="app-container">
+            {isHome && (<FallingIcons />)}
+            
+            <nav className="navbar">
+                <Link to="/" className="nav-brand">
+                    <img src={logo} alt="SupFile Logo" className="nav-logo" />
+                </Link>
+                <div className="nav-links">
+                    {isAuthenticated ? (
+                        <>
+                            <div className="nav-user-info">
+                                {avatarUrl && !erreurImage ? (
+                                    <img 
+                                        src={avatarUrl} 
+                                        alt="Avatar" 
+                                        className="nav-avatar-img" 
+                                        onError={() => setErreurImage(true)} 
+                                    />
+                                ) : (
+                                    <div className="nav-avatar-initiale">
+                                        {username ? username.charAt(0).toUpperCase() : 'U'}
+                                    </div>
+                                )}
+                                <span className="nav-username">{username}</span>
+                            </div>
+                            <button onClick={handleLogout} className="nav-link logout-btn">Logout</button>
+                        </>
+                    ) : (
+                        <>
+                            <Link to="/register" className="nav-link">Créer un compte</Link>
+                            <Link to="/login" className="nav-link">Connexion</Link>
+                        </>
+                    )}
+                </div>
+            </nav>
 
-    return () => {
-      window.removeEventListener('profilMisAJour', handleStorageChange);
-    };
-  }, [location.pathname]);
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setIsAuthenticated(false);
-    setUsername('');
-    setAvatarUrl(null);
-    window.location.href = '/';
-  };
-
-  const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
-  const isHome = location.pathname === '/';
-
-  return (
-    <div className="app-container">
-      {isHome && (<FallingIcons />)}
-      
-      <nav className="navbar">
-        <Link to="/" className="nav-brand">
-          <img src={logo} alt="SupFile Logo" className="nav-logo" />
-        </Link>
-        <div className="nav-links">
-          {isAuthenticated ? (
-            <>
-              <div className="nav-user-info">
-                  {avatarUrl ? (
-                      <img src={avatarUrl} alt="Avatar" className="nav-avatar-img" />
-                  ) : (
-                      <div className="nav-avatar-initiale">
-                          {username.charAt(0).toUpperCase()}
-                      </div>
-                  )}
-                  <span className="nav-username">{username}</span>
-              </div>
-              <button onClick={handleLogout} className="nav-link logout-btn">Logout</button>
-            </>
-          ) : (
-            <>
-              <Link to="/register" className="nav-link">Créer un compte</Link>
-              <Link to="/login" className="nav-link">Connexion</Link>
-            </>
-          )}
-        </div>
-      </nav>
-
-      <div className="app-wrapper">
-        {isAuthenticated && !isAuthPage && !isHome && (
-          <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
-            <div className="sidebar-content">
-              <h3>Menu</h3>
-              <Link to="/dashboard" className={`sidebar-link ${location.pathname === '/dashboard' ? 'active' : ''}`}>
-                Tableau de bord
-              </Link>
-              <Link to="/upload" className={`sidebar-link ${location.pathname === '/upload' ? 'active' : ''}`}>
-                Uploader
-              </Link>
-              <Link to="/partages" className={`sidebar-link ${location.pathname === '/partages' ? 'active' : ''}`}>
-                Partages
-              </Link>
-              <Link to="/settings" className={`sidebar-link ${location.pathname === '/settings' ? 'active' : ''}`}>
-                Paramètres
-              </Link>
+            <div className="app-wrapper">
+                {isAuthenticated && !isAuthPage && !isHome && (
+                    <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+                        <div className="sidebar-content">
+                            <h3>Menu</h3>
+                            <Link to="/dashboard" className={`sidebar-link ${location.pathname === '/dashboard' ? 'active' : ''}`}>
+                                Tableau de bord
+                            </Link>
+                            <Link to="/upload" className={`sidebar-link ${location.pathname === '/upload' ? 'active' : ''}`}>
+                                Uploader
+                            </Link>
+                            <Link to="/partages" className={`sidebar-link ${location.pathname === '/partages' ? 'active' : ''}`}>
+                                Partages
+                            </Link>
+                            <Link to="/settings" className={`sidebar-link ${location.pathname === '/settings' ? 'active' : ''}`}>
+                                Paramètres
+                            </Link>
+                        </div>
+                        <button className="sidebar-close" onClick={() => setSidebarOpen(false)}>✕</button>
+                    </aside>
+                )}
+                
+                <div className={`main-content ${isAuthenticated && !isAuthPage && !isHome ? 'with-sidebar' : ''} ${isAuthPage ? 'auth-page' : ''}`}>
+                    {isAuthenticated && !isAuthPage && !isHome && (
+                        <button className="sidebar-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
+                            ☰
+                        </button>
+                    )}
+                    
+                    <Routes>
+                        <Route path="/" element={<Home />} />
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/register" element={<Register />} />
+                        <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Home />} />
+                        <Route path="/upload" element={isAuthenticated ? <Upload /> : <Home />} />
+                        <Route path="/settings" element={isAuthenticated ? <Settings /> : <Home />} />
+                        <Route path="/partages" element={<Partage />} />
+                    </Routes>
+                </div>
             </div>
-            <button className="sidebar-close" onClick={() => setSidebarOpen(false)}>✕</button>
-          </aside>
-        )}
-        
-        <div className={`main-content ${isAuthenticated && !isAuthPage && !isHome ? 'with-sidebar' : ''} ${isAuthPage ? 'auth-page' : ''}`}>
-          {isAuthenticated && !isAuthPage && !isHome && (
-            <button className="sidebar-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
-              ☰
-            </button>
-          )}
-          
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Home />} />
-            <Route path="/upload" element={isAuthenticated ? <Upload /> : <Home />} />
-            <Route path="/settings" element={isAuthenticated ? <Settings /> : <Home />} />
-            <Route path="/partages" element={<Partage />} />
-          </Routes>
-        </div>
-      </div>
 
-      <footer className="footer">
-        Conditions d'utilisation | © 2026 SUPFile
-      </footer>
-    </div>
-  );
+            <footer className="footer">
+                Conditions d'utilisation | © 2026 SUPFile
+            </footer>
+        </div>
+    );
 }
 
 function App() {
-  return (
-    <ThemeProvider>
-      <Router>
-        <AppContent />
-      </Router>
-    </ThemeProvider>
-  );
+    return (
+        <ThemeProvider>
+            <Router>
+                <AppContent />
+            </Router>
+        </ThemeProvider>
+    );
 }
 
 export default App;
