@@ -3,15 +3,16 @@
     justify-content: center;
     align-items: center;
     padding: 2rem;
-    background: var(--bg-secondary-color);
+    background: var(--bg-primary-color);
     min-height: -webkit-fill-available;
 }
 
 .carte-upload {
-    background: var(--bg-primary-color);
+    background: var(--bg-secondary-color);
     padding: 1rem 2.5rem;
     border-radius: 12px;
     box-shadow: 0 4px 20px var(--shadow-color);
+    border: 1px solid var(--border-color);
     width: 100%;
     max-width: 600px;
 }
@@ -96,7 +97,7 @@
 
 .zone-glisser-deposer.active {
     border-color: var(--accent-cyan);
-    background-color: var(--btn-color);
+    background-color: var(--btn-primary-color);
 }
 
 .contenu-glisser-deposer {
@@ -118,7 +119,7 @@
 }
 
 .etiquette-fichier {
-    color: var(--btn-color);
+    color: var(--btn-primary-color);
     font-weight: 600;
     cursor: pointer;
     text-decoration: underline;
@@ -161,7 +162,7 @@
 }
 
 .taille-fichier {
-    color: var(--btn-color);
+    color: var(--btn-primary-color);
     font-size: 0.9rem;
     margin: 0 1rem;
     min-width: 80px;
@@ -200,7 +201,7 @@
 
 .barre-progression {
     height: 100%;
-    background-color: var(--btn-color);
+    background-color: var(--btn-primary-color);
     color: var(--btn-text);
     display: flex;
     align-items: center;
@@ -214,7 +215,7 @@
 .bouton-televerser {
     width: 100%;
     padding: 1rem;
-    background-color: var(--btn-color);
+    background-color: var(--btn-primary-color);
     border-radius: 6px;
     font-weight: 600;
     font-size: 1rem;

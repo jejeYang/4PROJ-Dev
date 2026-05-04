@@ -6,52 +6,49 @@ import { ThemeContext } from '../context/theme_context';
 
 function Settings() {
     const [utilisateur, setUtilisateur] = useState(() => {
-        const donneesSauvegardees = localStorage.getItem('user');
-        return donneesSauvegardees ? JSON.parse(donneesSauvegardees) : null;
+        const donnees_sauvegardees = localStorage.getItem('user');
+        return donnees_sauvegardees ? JSON.parse(donnees_sauvegardees) : null;
     });
 
-    const [donneesFormulaire, setDonneesFormulaire] = useState(() => {
-        const donneesSauvegardees = localStorage.getItem('user');
-        if (donneesSauvegardees) {
-            const parsed = JSON.parse(donneesSauvegardees);
+    const [donnees_formulaire, setDonneesFormulaire] = useState(() => {
+        const donnees_sauvegardees = localStorage.getItem('user');
+        if (donnees_sauvegardees) {
+            const parsed = JSON.parse(donnees_sauvegardees);
             return { nom: parsed.nom, email: parsed.email };
         }
         return { nom: '', email: '' };
     });
 
-    const [donneesMotDePasse, setDonneesMotDePasse] = useState({ 
-        ancienMotDePasse: '', 
-        nouveauMotDePasse: '', 
-        confirmerMotDePasse: '' 
+    const [donnees_mot_de_passe, setDonneesMotDePasse] = useState({ 
+        ancien_mot_de_passe: '', 
+        nouveau_mot_de_passe: '', 
+        confirmer_mot_de_passe: '' 
     });
     
-    const [messageNotification, setMessageNotification] = useState('');
+    const [message_notification, setMessageNotification] = useState('');
     const naviguer = useNavigate();
-    const { toggle, toggleFunction } = useContext(ThemeContext);
+    const { toggle: est_sombre, toggleFunction: changerTheme } = useContext(ThemeContext);
 
     const gestionChangementProfil = (e) => {
-        setDonneesFormulaire({ ...donneesFormulaire, [e.target.name]: e.target.value });
+        setDonneesFormulaire({ ...donnees_formulaire, [e.target.name]: e.target.value });
     };
 
     const gestionChangementMotDePasse = (e) => {
-        setDonneesMotDePasse({ ...donneesMotDePasse, [e.target.name]: e.target.value });
+        setDonneesMotDePasse({ ...donnees_mot_de_passe, [e.target.name]: e.target.value });
     };
 
     const mettreAJourProfil = async (e) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('token');
-            // Correction ESLint : on utilise await sans assigner à 'response' car on ne s'en sert pas
+            const jeton_authentification = localStorage.getItem('token');
             await axios.put(
                 `http://localhost:3000/api/users/${utilisateur.id}`,
-                donneesFormulaire,
-                { headers: { Authorization: `Bearer ${token}` } }
+                donnees_formulaire,
+                { headers: { Authorization: `Bearer ${jeton_authentification}` } }
             );
-            
-            const utilisateurMisAJour = { ...utilisateur, ...donneesFormulaire };
-            localStorage.setItem('user', JSON.stringify(utilisateurMisAJour));
-            setUtilisateur(utilisateurMisAJour);
-
+            const utilisateur_mis_a_jour = { ...utilisateur, ...donnees_formulaire };
+            localStorage.setItem('user', JSON.stringify(utilisateur_mis_a_jour));
+            setUtilisateur(utilisateur_mis_a_jour);
             setMessageNotification('Profil mis à jour avec succès');
             setTimeout(() => setMessageNotification(''), 3000);
         } catch (erreur) {
@@ -61,22 +58,26 @@ function Settings() {
 
     const changerMotDePasse = async (e) => {
         e.preventDefault();
-        if (donneesMotDePasse.nouveauMotDePasse !== donneesMotDePasse.confirmerMotDePasse) {
+        if (donnees_mot_de_passe.nouveau_mot_de_passe !== donnees_mot_de_passe.confirmer_mot_de_passe) {
             setMessageNotification('Les mots de passe ne correspondent pas');
             return;
         }
         try {
-            const token = localStorage.getItem('token');
+            const jeton_authentification = localStorage.getItem('token');
             await axios.post(
                 'http://localhost:3000/api/change-password',
                 {
-                    oldPassword: donneesMotDePasse.ancienMotDePasse,
-                    newPassword: donneesMotDePasse.nouveauMotDePasse
+                    oldPassword: donnees_mot_de_passe.ancien_mot_de_passe,
+                    newPassword: donnees_mot_de_passe.nouveau_mot_de_passe
                 },
-                { headers: { Authorization: `Bearer ${token}` } }
+                { headers: { Authorization: `Bearer ${jeton_authentification}` } }
             );
             setMessageNotification('Mot de passe changé avec succès');
-            setDonneesMotDePasse({ ancienMotDePasse: '', nouveauMotDePasse: '', confirmerMotDePasse: '' });
+            setDonneesMotDePasse({ 
+                ancien_mot_de_passe: '', 
+                nouveau_mot_de_passe: '', 
+                confirmer_mot_de_passe: '' 
+            });
             setTimeout(() => setMessageNotification(''), 3000);
         } catch (erreur) {
             setMessageNotification('Erreur: ' + (erreur.response?.data?.message || erreur.message));
@@ -85,18 +86,16 @@ function Settings() {
 
     const supprimerCompte = () => {
         if (window.confirm('Êtes-vous sûr ? Cette action est irréversible.')) {
-            if (window.confirm('Êtes-vous vraiment sûr ?')) {
-                try {
-                    const token = localStorage.getItem('token');
-                    axios.delete('http://localhost:3000/api/users', {
-                        headers: { Authorization: `Bearer ${token}` }
-                    });
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('user');
-                    naviguer('/');
-                } catch { 
-                    setMessageNotification('Erreur lors de la suppression');
-                }
+            try {
+                const jeton_authentification = localStorage.getItem('token');
+                axios.delete('http://localhost:3000/api/users', {
+                    headers: { Authorization: `Bearer ${jeton_authentification}` }
+                });
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                naviguer('/');
+            } catch { 
+                setMessageNotification('Erreur lors de la suppression');
             }
         }
     };
@@ -104,96 +103,106 @@ function Settings() {
     if (!utilisateur) return <div>Vous n'êtes pas connecté.</div>;
 
     return (
-        <div className="settings-container">
-            <div className="settings-header">
+        <div className="conteneur-parametres">
+            <header className="en-tete-parametres">
                 <h1>Paramètres</h1>
-            </div>
+                <p>Gérez vos informations personnelles et la sécurité de votre compte</p>
+            </header>
 
-            {messageNotification && <div className="message">{messageNotification}</div>}
+            {message_notification && <div className="notification-message">{message_notification}</div>}
 
-            <div className="settings-grid">
-                {/* Paramètres du profil */}
-                <div className="settings-card">
-                    <h2>Informations du profil</h2>
-                    <form onSubmit={mettreAJourProfil}>
-                        <div className="form-group">
-                            <label>Nom d'utilisateur</label>
-                            <input
-                                type="text"
-                                name="nom"
-                                value={donneesFormulaire.nom}
-                                onChange={gestionChangementProfil}
-                                required
-                            />
+            <div className="disposition-parametres">
+                <div className="colonne-principale-parametres">
+                    <section className="carte-parametres section-profil">
+                        <div className="en-tete-visuel-profil">
+                            <div className="espace-avatar">
+                                {donnees_formulaire.nom.charAt(0).toUpperCase()}
+                            </div>
+                            <h3>Mon Profil</h3>
                         </div>
-                        <div className="form-group">
-                            <label>Email</label>
-                            <input
-                                type="email"
-                                name="email"
-                                value={donneesFormulaire.email}
-                                onChange={gestionChangementProfil}
-                                required
-                            />
-                        </div>
-                        <button type="submit" className="btn-primary">
-                            Mettre à jour
-                        </button>
-                    </form>
+                        
+                        <form onSubmit={mettreAJourProfil} className="formulaire-parametres">
+                            <div className="groupe-formulaire">
+                                <label>Nom d'utilisateur</label>
+                                <input 
+                                    type="text" 
+                                    name="nom" 
+                                    value={donnees_formulaire.nom} 
+                                    onChange={gestionChangementProfil} 
+                                    required 
+                                />
+                            </div>
+                            <div className="groupe-formulaire">
+                                <label>Email professionnel</label>
+                                <input 
+                                    type="email" 
+                                    name="email" 
+                                    value={donnees_formulaire.email} 
+                                    onChange={gestionChangementProfil} 
+                                    required 
+                                />
+                            </div>
+                            <button type="submit" className="btn-mise-a-jour">Mettre à jour le profil</button>
+                        </form>
+                    </section>
+
+                    <section className="carte-parametres">
+                        <h3>Sécurité du mot de passe</h3>
+                        <form onSubmit={changerMotDePasse} className="formulaire-parametres">
+                            <div className="groupe-formulaire">
+                                <label>Ancien mot de passe</label>
+                                <input 
+                                    type="password" 
+                                    name="ancien_mot_de_passe" 
+                                    value={donnees_mot_de_passe.ancien_mot_de_passe} 
+                                    onChange={gestionChangementMotDePasse} 
+                                    required 
+                                />
+                            </div>
+                            <div className="rangee-groupe-formulaire">
+                                <div className="groupe-formulaire">
+                                    <label>Nouveau</label>
+                                    <input 
+                                        type="password" 
+                                        name="nouveau_mot_de_passe" 
+                                        value={donnees_mot_de_passe.nouveau_mot_de_passe} 
+                                        onChange={gestionChangementMotDePasse} 
+                                        required 
+                                    />
+                                </div>
+                                <div className="groupe-formulaire">
+                                    <label>Confirmation</label>
+                                    <input 
+                                        type="password" 
+                                        name="confirmer_mot_de_passe" 
+                                        value={donnees_mot_de_passe.confirmer_mot_de_passe} 
+                                        onChange={gestionChangementMotDePasse} 
+                                        required 
+                                    />
+                                </div>
+                            </div>
+                            <button type="submit" className="btn-mise-a-jour">Changer le mot de passe</button>
+                        </form>
+                    </section>
                 </div>
 
-                <div className="settings-card">
-                    <h2>Changer le mot de passe</h2>
-                    <form onSubmit={changerMotDePasse}>
-                        <div className="form-group">
-                            <label>Ancien mot de passe</label>
-                            <input
-                                type="password"
-                                name="ancienMotDePasse"
-                                value={donneesMotDePasse.ancienMotDePasse}
-                                onChange={gestionChangementMotDePasse}
-                                required
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label>Nouveau mot de passe</label>
-                            <input
-                                type="password"
-                                name="nouveauMotDePasse"
-                                value={donneesMotDePasse.nouveauMotDePasse}
-                                onChange={gestionChangementMotDePasse}
-                                required
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label>Confirmer le mot de passe</label>
-                            <input
-                                type="password"
-                                name="confirmerMotDePasse"
-                                value={donneesMotDePasse.confirmerMotDePasse}
-                                onChange={gestionChangementMotDePasse}
-                                required
-                            />
-                        </div>
-                        <button type="submit" className="btn-primary">
-                            Changer le mot de passe
-                        </button>
-                    </form>
-                </div>
+                <div className="colonne-laterale-parametres">
+                    <section className="carte-parametres zone-danger">
+                        <h3>Zone de danger</h3>
+                        <p>La suppression de votre compte est définitive. Toutes vos données seront effacées.</p>
+                        <button onClick={supprimerCompte} className="btn-danger">Supprimer mon compte</button>
+                    </section>
 
-                <div className="settings-card danger">
-                    <h2>Zone de danger</h2>
-                    <p>Supprimer votre compte supprimera tous vos fichiers et données.</p>
-                    <button onClick={supprimerCompte} className="btn-danger">
-                        Supprimer le compte
-                    </button>
-                </div>
-
-                <div className="settings-card">
-                    <h2>Thème</h2>
-                    <button onClick={toggleFunction} className="btn-primary">
-                        {toggle ? 'Passer au thème clair' : 'Passer au thème sombre'}
-                    </button>
+                    <section className="carte-parametres changeur-theme">
+                        <h3>Apparence</h3>
+                        <p>Personnalisez votre interface</p>
+                        <div className="conteneur-bascule" onClick={changerTheme}>
+                            <div className={`piste-bascule ${est_sombre ? 'actif' : ''}`}>
+                                <div className="bille-bascule"></div>
+                            </div>
+                            <span>Thème {est_sombre ? 'Sombre' : 'Clair'}</span>
+                        </div>
+                    </section>
                 </div>
             </div>
         </div>
