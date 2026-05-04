@@ -15,6 +15,9 @@ router.get('/dossiers/:dossierId/fichiers', authentifierToken, DossierController
 router.delete('/dossiers/:dossierId/fichiers/:fileName', authentifierToken, DossierController.deleteFichier);
 router.get('/dossiers/:dossierId/taille', authentifierToken, DossierController.getTailleDossier);
 router.put('/dossiers/:dossierId', authentifierToken, DossierController.updateDossier);
+router.put('/dossiers/:dossierId/deplacer', authentifierToken, DossierController.deplacerDossier);
+router.put('/dossiers/:dossierId/fichiers/:nomFichier/deplacer', authentifierToken, DossierController.deplacerFichier);
+router.get('/dossiers/:dossierId/rechercher', authentifierToken, DossierController.rechercherFichiers);
 router.delete('/dossiers/:dossierId', authentifierToken, DossierController.deleteDossier);
 
 // ===== GESTION DES FICHIERS =====

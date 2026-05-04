@@ -197,6 +197,86 @@ class DossierController {
         }
     };
 
+    deplacerDossier = async (req, res, next) => {
+        try {
+            const { dossierId } = req.params;
+            const { idNouveauDossierParent } = req.body;
+            const idUtilisateurAuthentifie = +req.utilisateur.id;
+
+            if (!idNouveauDossierParent) {
+                return res.status(400).json({ error: 'idNouveauDossierParent est requis' });
+            }
+
+            // Vérifier que le dossier source appartient à l'user
+            const dossierSource = await this.dossierService.recupererDossierParId(dossierId);
+            if (dossierSource.idCompteCreateur !== idUtilisateurAuthentifie) {
+                return res.status(403).json({ error: 'Le dossier source ne vous appartient pas' });
+            }
+
+            // Vérifier que le dossier cible appartient à l'user
+            const dossierCible = await this.dossierService.recupererDossierParId(idNouveauDossierParent);
+            if (dossierCible.idCompteCreateur !== idUtilisateurAuthentifie) {
+                return res.status(403).json({ error: 'Le dossier de destination ne vous appartient pas' });
+            }
+
+            const resultat = await this.dossierService.deplacerDossier(dossierId, idNouveauDossierParent);
+            res.json(resultat);
+        } catch (error) {
+            console.error('Erreur lors du déplacement du dossier :', error);
+            const status = error.message.includes('existe déjà') || error.message.includes('sous-dossiers') ? 409 : 500;
+            res.status(status).json({ error: error.message || 'Erreur lors du déplacement' });
+        }
+    };
+
+    deplacerFichier = async (req, res, next) => {
+        try {
+            const { dossierId, nomFichier } = req.params;
+            const { idNouveauDossierParent } = req.body;
+            const idUtilisateurAuthentifie = +req.utilisateur.id;
+
+            if (!idNouveauDossierParent) {
+                return res.status(400).json({ error: 'idNouveauDossierParent est requis' });
+            }
+
+            const dossierSource = await this.dossierService.recupererDossierParId(dossierId);
+            if (dossierSource.idCompteCreateur !== idUtilisateurAuthentifie) {
+                return res.status(403).json({ error: 'Le dossier source ne vous appartient pas' });
+            }
+
+            const dossierCible = await this.dossierService.recupererDossierParId(idNouveauDossierParent);
+            if (dossierCible.idCompteCreateur !== idUtilisateurAuthentifie) {
+                return res.status(403).json({ error: 'Le dossier de destination ne vous appartient pas' });
+            }
+
+            const nomFichierDecode = decodeURIComponent(nomFichier);
+            const resultat = await this.dossierService.deplacerFichier(dossierId, nomFichierDecode, idNouveauDossierParent);
+            res.json(resultat);
+        } catch (error) {
+            console.error('Erreur lors du déplacement du fichier :', error);
+            const status = error.message.includes('existe déjà') ? 409 : 500;
+            res.status(status).json({ error: error.message || 'Erreur lors du déplacement' });
+        }
+    };
+
+    rechercherFichiers = async (req, res, next) => {
+        try {
+            const { dossierId } = req.params;
+            const { q, type } = req.query;
+            const idUtilisateurAuthentifie = +req.utilisateur.id;
+
+            const dossier = await this.dossierService.recupererDossierParId(dossierId);
+            if (dossier.idCompteCreateur !== idUtilisateurAuthentifie) {
+                return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
+            }
+
+            const resultats = await this.dossierService.rechercherFichiers(dossierId, q, type);
+            res.json(resultats);
+        } catch (error) {
+            console.error('Erreur lors de la recherche :', error);
+            res.status(500).json({ error: error.message || 'Erreur lors de la recherche' });
+        }
+    };
+
     // ===== GESTION DES FICHIERS =====
 
     getFichier = async (req, res, next) => {
