@@ -101,7 +101,6 @@ function Settings() {
             setFichierImage(null); 
             setNouvelleImagePreview(null);
 
-            console.log("📢 Signal 'profilMisAJour' envoyé !");
             window.dispatchEvent(new Event('profilMisAJour'));
 
             setMessageNotification('Profil mis à jour avec succès');

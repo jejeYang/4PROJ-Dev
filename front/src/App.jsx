@@ -50,12 +50,10 @@ function AppContent() {
 
   useEffect(() => {
     const handleStorageChange = () => {
-      console.log("👂 Signal reçu dans App.jsx ! Rafraîchissement en cours...");
       const updatedUserString = localStorage.getItem('user');
       
       if (updatedUserString) {
         const updatedUser = JSON.parse(updatedUserString);
-        console.log("Nouveau nom à afficher :", updatedUser.nom || updatedUser.email);
         
         setUsername(updatedUser.nom || updatedUser.email || 'User');
         setAvatarUrl(updatedUser.avatarUrl || null);
