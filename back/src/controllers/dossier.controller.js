@@ -336,7 +336,7 @@ class DossierController {
             fs.renameSync(ancienChemin, nouveauChemin);
             req.file.path = nouveauChemin;
 
-            const resultat = await this.dossierService.televerserFichier(dossierId, req.file);
+            const resultat = await this.dossierService.televerserFichier(dossierId, req.file, idUtilisateurAuthentifie);
             res.status(201).json(resultat);
         } catch (error) {
             next(error);
@@ -355,6 +355,14 @@ class DossierController {
             if (req.idCompteCreateur !== idUtilisateurAuthentifie) {
                 await Promise.all(req.files.map(f => fsPromises.unlink(f.path).catch(() => {})));
                 return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
+            }
+
+            // Vérification globale du quota avant de commencer
+            const totalSize = req.files.reduce((acc, f) => acc + f.size, 0);
+            const compte = await this.dossierService.compteRepository.findById(idUtilisateurAuthentifie);
+            if (BigInt(compte.stockageCompte) < BigInt(totalSize)) {
+                await Promise.all(req.files.map(f => fsPromises.unlink(f.path).catch(() => {})));
+                return res.status(400).json({ error: "Espace de stockage insuffisant pour l'ensemble des fichiers" });
             }
 
             const fichiersExistants = await this.dossierService.recupererFichiersDossier(dossierId);
@@ -383,7 +391,7 @@ class DossierController {
             });
 
             const resultats = await Promise.all(
-                fichiersDeplaces.map(file => this.dossierService.televerserFichier(dossierId, file))
+                fichiersDeplaces.map(file => this.dossierService.televerserFichier(dossierId, file, idUtilisateurAuthentifie))
             );
 
             res.status(201).json({ message: 'Fichiers téléversés avec succès', files: resultats });
