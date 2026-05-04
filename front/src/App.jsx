@@ -18,7 +18,6 @@ axios.interceptors.response.use(
         return response;
     },
     (error) => {
-      // Redirection (token expiré ou invalide)
         if (error.response && (error.response.status === 401 || error.response.status === 403)) {
             console.warn("Token expiré ou invalide. Déconnexion automatique.");
             
@@ -51,14 +50,25 @@ function AppContent() {
 
   useEffect(() => {
     const handleStorageChange = () => {
+      console.log("👂 Signal reçu dans App.jsx ! Rafraîchissement en cours...");
       const updatedUserString = localStorage.getItem('user');
+      
       if (updatedUserString) {
         const updatedUser = JSON.parse(updatedUserString);
+        console.log("Nouveau nom à afficher :", updatedUser.nom || updatedUser.email);
+        
         setUsername(updatedUser.nom || updatedUser.email || 'User');
         setAvatarUrl(updatedUser.avatarUrl || null);
       }
     };
+
     handleStorageChange();
+
+    window.addEventListener('profilMisAJour', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('profilMisAJour', handleStorageChange);
+    };
   }, [location.pathname]);
 
   const handleLogout = () => {
