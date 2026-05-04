@@ -13,7 +13,7 @@ model Compte {
   nomCompte          String        @db.VarChar(100)
   adresseMailCompte  String        @unique @db.VarChar(255)
   mdpCompte          String        @db.VarChar(255)
-  stockageCompte     Int           @default(0)
+  stockageCompte     BigInt        @default(0)
   avatarBlobCompte   Bytes?
 
   dossiersCrees      Dossier[]     @relation("CompteCreateur")
@@ -44,6 +44,8 @@ model Dossier {
   idDossierParent      Int?
   cheminDaccesDossier  String
   status               String?   @db.VarChar(50)
+  dateCreation         DateTime  @default(now())
+  modifieLe            DateTime  @updatedAt
 
   compteCreateur       Compte    @relation("CompteCreateur", fields: [idCompteCreateur], references: [idCompte], onDelete: Cascade)
   compteAcces          Compte?   @relation("CompteAcces", fields: [idCompteAcces], references: [idCompte], onDelete: SetNull)
