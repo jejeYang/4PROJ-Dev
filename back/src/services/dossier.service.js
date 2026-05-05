@@ -1,5 +1,6 @@
 import DossierRepository from "../repositories/dossier.repository.js";
 import CompteRepository from "../repositories/compte.repository.js";
+import LienService from "./lien.service.js";
 import fs from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
@@ -9,6 +10,7 @@ class DossierService {
     constructor() {
         this.dossierRepository = new DossierRepository();
         this.compteRepository = new CompteRepository();
+        this.lienService = new LienService();
     }
 
     async creerDossier(dossier) {
@@ -75,6 +77,12 @@ class DossierService {
         const dossier = await this.recupererDossierParId(dossierId);
         const tailleDossier = await this.recupererTailleDossier(dossierId);
 
+        // Suppression des liens de partage associés à ce dossier et ses descendants
+        const idsADelete = [Number(dossierId), ...(await this.recupererIdsDescendants(dossierId))];
+        for (const id of idsADelete) {
+            await this.lienService.supprimerLiensDossier(id);
+        }
+
         const cheminRelatif = await this.construireCheminComplet(dossierId);
         const chemin = path.join(
             SERVER_FILES_PATH,
@@ -133,6 +141,9 @@ class DossierService {
     async supprimerFichier(dossierId, fileName) {
         const dossier = await this.recupererDossierParId(dossierId);
 
+        // Suppression des liens de partage associés à ce fichier
+        await this.lienService.supprimerLienFichier(dossierId, fileName);
+
         const cheminComplet = await this.construireCheminComplet(dossierId);
         const cheminPhysique = path.join(SERVER_FILES_PATH, `user_${dossier.idCompteCreateur}`, cheminComplet, fileName);
 
@@ -172,6 +183,16 @@ class DossierService {
         } else {
             return dossier.cheminDaccesDossier;
         }
+    }
+
+    async recupererIdsDescendants(dossierId) {
+        const sousDossiers = await this.recupererSousDossiers(dossierId);
+        let ids = sousDossiers.map(d => Number(d.idDossier));
+        for (const sd of sousDossiers) {
+            const subIds = await this.recupererIdsDescendants(sd.idDossier);
+            ids = ids.concat(subIds);
+        }
+        return ids;
     }
 
     async recupererFichiersDossier(dossierId) {

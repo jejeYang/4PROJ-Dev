@@ -49,6 +49,15 @@ class LienService {
             dateExpiration: new Date(),
         });
     }
+
+    async supprimerLiensDossier(dossierId) {
+        return await this.lienRepository.deleteByDossierId(dossierId);
+    }
+
+    async supprimerLienFichier(dossierId, fileName) {
+        const chemin = `fichier:${dossierId}:${fileName}`;
+        return await this.lienRepository.deleteByChemin(chemin);
+    }
 }
 
 export default LienService;

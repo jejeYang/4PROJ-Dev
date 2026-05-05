@@ -16,7 +16,49 @@ class LienController {
     }
 
     genererLienPartage = async (req, res, next) => {
-        // ... (existant)
+        try {
+            const { dossierId } = req.params;
+            const { email, fileName, motDePasse, dateExpiration } = req.body;
+            const idUtilisateur = +req.utilisateur.id;
+
+            let resource;
+            if (fileName) {
+                resource = { type: 'fichier', dossierId: parseInt(dossierId), fileName };
+            } else {
+                resource = { type: 'dossier', dossierId: parseInt(dossierId) };
+            }
+
+            if (email) {
+                // Partage à un utilisateur existant
+                const cible = await this.compteService.trouverParEmail(email);
+                if (cible) {
+                    const result = await this._partagerRessourceVersUtilisateur(resource, cible.idCompte);
+                    return res.json({ ...result, sharedWithAccount: true });
+                }
+            }
+
+            // Génération d'un lien public (si pas d'email ou si compte n'existe pas)
+            const token = crypto.randomBytes(16).toString('hex');
+            const cheminDaccesLien = fileName ? `fichier:${dossierId}:${fileName}` : `dossier:${dossierId}`;
+
+            const lien = await this.lienService.creerLien({
+                idCompte: idUtilisateur,
+                cheminDaccesLien: cheminDaccesLien,
+                dateExpiration,
+                mdpLienGenere: motDePasse,
+                urlLienGenere: token
+            });
+
+            res.json({
+                message: 'Lien de partage généré.',
+                lien: {
+                    url: `/liens/${token}`,
+                    token: token
+                }
+            });
+        } catch (error) {
+            next(error);
+        }
     };
 
     listerRessourcesPartagees = async (req, res, next) => {
@@ -34,10 +76,9 @@ class LienController {
                     nom: info?.fileName || 'Dossier',
                     dateExpiration: lien.dateExpiration,
                     protege: !!lien.mdpLienGenere,
-                    createdAt: lien.createdAt // Si le champ existe dans le modèle
-                };
-            });
-
+                    createdAt: lien.dateCreation
+                    };
+                    });
             res.json(ressources);
         } catch (error) {
             next(error);
