@@ -156,7 +156,7 @@ function Dashboard() {
                                 style={{ width: `${action_en_cours.progression}%` }} 
                             />
                         </div>
-                        <p style={{ textAlign: 'center', marginTop: '10px', color: 'var(--text-primary-color)' }}>
+                        <p className="pourcentage-progression">
                             {action_en_cours.progression}%
                         </p>
                     </div>
@@ -332,7 +332,9 @@ function Dashboard() {
             )}
 
             {cible_menu_partage && (
-                <div className="modal-overlay" onClick={fermerMenuPartage}>
+                <div className="modal-overlay" onMouseDown={(e) => { 
+                    if (e.target === e.currentTarget) fermerMenuPartage(); 
+                }}>
                     <div className="modal-contenu" style={{ maxWidth: '380px' }} onClick={e => e.stopPropagation()}>
                         <h3>Partager</h3>
                         <div className="modal-bouttons" style={{ flexDirection: 'column', gap: '10px' }}>
@@ -348,7 +350,9 @@ function Dashboard() {
             )}
 
             {formulaire_partage_ouvert && (
-                <div className="modal-overlay" onClick={fermerFormulairePartage}>
+                <div className="modal-overlay" onMouseDown={(e) => { 
+                    if (e.target === e.currentTarget) fermerFormulairePartage(); 
+                }}>
                     <div className="modal-contenu" onClick={e => e.stopPropagation()}>
                         <h3>{mode_formulaire_partage === 'lien' ? 'Générer un lien' : 'Partager à un utilisateur'}</h3>
                         <form onSubmit={soumettreFormulairePartage}>
@@ -429,8 +433,7 @@ function Dashboard() {
                         className="btn-recherche"
                         style={recherche_active ? { backgroundColor: 'var(--select-primary-color)', borderColor: 'var(--btn-primary-color)' } : {}}
                         onClick={() => setModalRechercheOuverte(true)}
-                        title="Rechercher"
-                    >🔍</button>
+                    >Rechercher</button>
                 </div>
 
                 {message_partage && (
