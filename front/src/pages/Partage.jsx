@@ -15,32 +15,32 @@ function Partage() {
             return;
         }
 
+        // Fonction placeholder temporaire pour simuler le chargement des données de partage
+        const chargerDonneesTest = () => {
+            const fausses_donnees = [
+                {
+                    id_lien: 1,
+                    chemin_acces: "Mon Espace › Documents › rapport_2026.pdf",
+                    date_creation: "2026-04-15T10:00:00",
+                    date_expiration: "2026-05-15T10:00:00",
+                    id_utilisateur_cible: 42,
+                    mot_de_passe: "123456"
+                },
+                {
+                    id_lien: 2,
+                    chemin_acces: "Mon Espace › Images › logo.png",
+                    date_creation: "2026-04-20T14:30:00",
+                    date_expiration: null,
+                    id_utilisateur_cible: null,
+                    mot_de_passe: ""
+                }
+            ];
+            setLiensPartage(fausses_donnees);
+            setChargementEnCours(false);
+        };
+
         chargerDonneesTest();
     }, [navigate]);
-
-    const chargerDonneesTest = () => {
-        // Simulation de données provenant de l'API
-        const fausses_donnees = [
-            {
-                id_lien: 1,
-                chemin_acces: "Mon Espace › Documents › rapport_2026.pdf",
-                date_creation: "2026-04-15T10:00:00",
-                date_expiration: "2026-05-15T10:00:00",
-                id_utilisateur_cible: 42,
-                mot_de_passe: "123456"
-            },
-            {
-                id_lien: 2,
-                chemin_acces: "Mon Espace › Images › logo.png",
-                date_creation: "2026-04-20T14:30:00",
-                date_expiration: null,
-                id_utilisateur_cible: null, // Lien invité
-                mot_de_passe: "" // Pas de mot de passe
-            }
-        ];
-        setLiensPartage(fausses_donnees);
-        setChargementEnCours(false);
-    };
 
     const supprimerLien = (id_lien_a_supprimer) => {
         if (window.confirm('Voulez-vous vraiment supprimer ce lien de partage ?')) {

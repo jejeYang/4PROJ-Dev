@@ -170,7 +170,7 @@ function Settings() {
         <div className="conteneur-parametres">
             <header className="en-tete-parametres">
                 <h1>Paramètres</h1>
-                <p>Gérez vos informations personnelles et la sécurité de votre compte</p>
+                <p>Gérez vos informations personnelles</p>
             </header>
 
             {message_notification && <div className="notification-message">{message_notification}</div>}
@@ -282,7 +282,6 @@ function Settings() {
 
                     <section className="carte-parametres changeur-theme">
                         <h3>Apparence</h3>
-                        <p>Personnalisez votre interface</p>
                         <div className="conteneur-bascule" onClick={changerTheme}>
                             <div className={`piste-bascule ${est_sombre ? 'actif' : ''}`}>
                                 <div className="bille-bascule"></div>
