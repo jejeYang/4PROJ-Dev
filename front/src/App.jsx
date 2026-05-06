@@ -8,10 +8,11 @@ import Register from './pages/register';
 import Dashboard from './pages/Dashboard';
 import Upload from './pages/Upload';
 import Settings from './pages/Settings';
+import Partage from './pages/Partage';
+import Lien from './pages/Lien';
 import logo from './assets/logo.png';
 import { ThemeProvider } from './context/theme_context';
 import FallingIcons from './components/FallingIcons';
-import Partage from './pages/Partage';
 
 axios.interceptors.response.use(
     (response) => {
@@ -19,6 +20,13 @@ axios.interceptors.response.use(
     },
     (error) => {
         if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+            // Ne pas rediriger si on est sur la page de lien de partage (car l'erreur 401 est normale pour demander le mot de passe)
+            if (window.location.pathname.startsWith('/lien/')) {
+                return Promise.reject(error);
+            }
+
+            console.warn("Token expiré ou invalide. Déconnexion automatique.");
+            
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             
@@ -47,6 +55,9 @@ function AppContent() {
     const location = useLocation();
 
 
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
+  const isHome = location.pathname === '/';
+  const isLienPartage = location.pathname.startsWith('/lien/');
 
     useEffect(() => {
         const handleStorageChange = () => {
@@ -117,7 +128,7 @@ function AppContent() {
             </nav>
 
             <div className="app-wrapper">
-                {isAuthenticated && !isAuthPage && !isHome && (
+                {isAuthenticated && !isAuthPage && !isHome && !isLienPartage && (
                     <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
                         <div className="sidebar-content">
                             <h3>Menu</h3>
@@ -138,8 +149,8 @@ function AppContent() {
                     </aside>
                 )}
                 
-                <div className={`main-content ${isAuthenticated && !isAuthPage && !isHome ? 'with-sidebar' : ''} ${isAuthPage ? 'auth-page' : ''}`}>
-                    {isAuthenticated && !isAuthPage && !isHome && (
+                <div className={`main-content ${isAuthenticated && !isAuthPage && !isHome && !isLienPartage ? 'with-sidebar' : ''} ${isAuthPage ? 'auth-page' : ''}`}>
+                    {isAuthenticated && !isAuthPage && !isHome && !isLienPartage && (
                         <button className="sidebar-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
                             ☰
                         </button>
@@ -153,6 +164,7 @@ function AppContent() {
                         <Route path="/upload" element={isAuthenticated ? <Upload /> : <Home />} />
                         <Route path="/settings" element={isAuthenticated ? <Settings /> : <Home />} />
                         <Route path="/partages" element={<Partage />} />
+                        <Route path="/lien/:token" element={<Lien />} />
                     </Routes>
                 </div>
             </div>

@@ -35,6 +35,23 @@ class LienRepository {
     async findAll() {
         return prisma.lienGenere.findMany();
     }
+
+    async deleteByChemin(chemin) {
+        return prisma.lienGenere.deleteMany({
+            where: { cheminDaccesLien: chemin },
+        });
+    }
+
+    async deleteByDossierId(dossierId) {
+        return prisma.lienGenere.deleteMany({
+            where: {
+                OR: [
+                    { cheminDaccesLien: `dossier:${dossierId}` },
+                    { cheminDaccesLien: { startsWith: `fichier:${dossierId}:` } },
+                ],
+            },
+        });
+    }
 }
 
 export default LienRepository;

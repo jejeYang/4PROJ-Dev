@@ -36,6 +36,10 @@ class LienService {
         return await this.lienRepository.findAll();
     }
 
+    async recupererLiensParCompte(idCompte) {
+        return await this.lienRepository.findByCompte(idCompte);
+    }
+
     async recupererParToken(token) {
         return await this.lienRepository.findByToken(token);
     }
@@ -44,6 +48,15 @@ class LienService {
         return await this.lienRepository.update(idLienGenere, {
             dateExpiration: new Date(),
         });
+    }
+
+    async supprimerLiensDossier(dossierId) {
+        return await this.lienRepository.deleteByDossierId(dossierId);
+    }
+
+    async supprimerLienFichier(dossierId, fileName) {
+        const chemin = `fichier:${dossierId}:${fileName}`;
+        return await this.lienRepository.deleteByChemin(chemin);
     }
 }
 
