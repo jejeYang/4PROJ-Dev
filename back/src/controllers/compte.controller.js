@@ -180,14 +180,16 @@ class CompteController {
     deleteUser = async (req, res, next) => {
         try {
             const idUtilisateurAuthentifie = +req.utilisateur.id;
-            const { mdp } = req.body;
+            const emailUtilisateur = req.utilisateur.email;
+            const { mot_de_passe } = req.body;
 
-            if (!mdp) {
+            if (!mot_de_passe) {
                 return res.status(400).json({ message: 'Le mot de passe est requis pour confirmer la suppression' });
             }
 
-            const utilisateur = await this.compteService.authentifierUtilisateur(req.utilisateur.email, mdp);
-            if (!utilisateur) {
+            const estValide = await this.compteService.authentifierUtilisateur(emailUtilisateur, mot_de_passe);
+            
+            if (!estValide) {
                 return res.status(401).json({ message: 'Le mot de passe est incorrect' });
             }
 
