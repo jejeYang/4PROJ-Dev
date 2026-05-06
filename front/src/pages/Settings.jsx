@@ -9,6 +9,8 @@ function Settings() {
     const [nouvelleImagePreview, setNouvelleImagePreview] = useState(null);
     const [fichierImage, setFichierImage] = useState(null);
     const [erreurImage, setErreurImage] = useState(false);
+    const [afficherModalSuppression, setAfficherModalSuppression] = useState(false);
+    const [motDePasseSuppression, setMotDePasseSuppression] = useState('');
 
     const [utilisateur, setUtilisateur] = useState(() => {
         const donnees_sauvegardees = localStorage.getItem('user');
@@ -146,19 +148,24 @@ function Settings() {
         }
     };
 
-    const supprimerCompte = () => {
-        if (window.confirm('Êtes-vous sûr ? Cette action est irréversible.')) {
-            try {
-                const jeton_authentification = localStorage.getItem('token');
-                axios.delete('http://localhost:3000/api/users', {
-                    headers: { Authorization: `Bearer ${jeton_authentification}` }
-                });
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                naviguer('/');
-            } catch { 
-                setMessageNotification('Erreur lors de la suppression');
-            }
+    const confirmerSuppressionCompte = async (e) => {
+        e.preventDefault();
+        try {
+            const jeton_authentification = localStorage.getItem('token');
+            await axios.delete('http://localhost:3000/api/users', {
+                headers: { Authorization: `Bearer ${jeton_authentification}` },
+                data: { mot_de_passe: motDePasseSuppression }
+            });
+            
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+
+            window.location.href = '/';
+            
+        } catch (erreur) { 
+            setMessageNotification('Erreur : Mot de passe incorrect');
+            setAfficherModalSuppression(false);
+            setMotDePasseSuppression('');
         }
     };
 
@@ -168,6 +175,31 @@ function Settings() {
 
     return (
         <div className="conteneur-parametres">
+            {afficherModalSuppression && (
+                <div className="overlay-modal">
+                    <div className="carte-parametres modal-danger">
+                        <h3>⚠️ Action Irréversible</h3>
+                        <p>Attention : Toutes vos données seront définitivement effacées. Veuillez saisir votre mot de passe pour confirmer.</p>
+                        <form onSubmit={confirmerSuppressionCompte}>
+                            <div className="groupe-formulaire">
+                                <input 
+                                    type="password" 
+                                    placeholder="Mot de passe de confirmation"
+                                    value={motDePasseSuppression}
+                                    onChange={(e) => setMotDePasseSuppression(e.target.value)}
+                                    required 
+                                    autoFocus
+                                />
+                            </div>
+                            <div className="rangee-boutons-modal">
+                                <button type="button" onClick={() => setAfficherModalSuppression(false)} className="btn-annuler">Annuler</button>
+                                <button type="submit" className="btn-danger">Supprimer mon compte</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             <header className="en-tete-parametres">
                 <h1>Paramètres</h1>
                 <p>Gérez vos informations personnelles</p>
@@ -277,7 +309,7 @@ function Settings() {
                     <section className="carte-parametres zone-danger">
                         <h3>Zone de danger</h3>
                         <p>La suppression de votre compte est définitive. Toutes vos données seront effacées.</p>
-                        <button onClick={supprimerCompte} className="btn-danger">Supprimer mon compte</button>
+                        <button onClick={() => setAfficherModalSuppression(true)} className="btn-danger">Supprimer mon compte</button>
                     </section>
 
                     <section className="carte-parametres changeur-theme">
