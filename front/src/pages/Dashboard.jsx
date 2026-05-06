@@ -14,8 +14,8 @@ function Dashboard() {
         menu_options_fichier, setMenuOptionsFichier,
         fichier_preview, chargement_preview, corbeille_info,
         dossier_cible_deplacement, chemin_deplacement, sous_dossiers_deplacement,
-        barre_de_progression, formulaire_partage_ouvert,
-        mode_formulaire_partage, setModeFormulairePartage, donnees_formulaire_partage, setDonneesFormulairePartage, chargement_partage,
+        formulaire_partage_ouvert,
+        mode_formulaire_partage, setModeFormulairePartage, donnees_formulaire_partage, setDonneesFormulairePartage,
         gestionChangementEmailPartage, gestionBlurEmailPartage, partagerRessource,
         soumettreFormulairePartage, fermerFormulairePartage,
         naviguerVersUpload, handleDragEnterGlobal, handleDragLeaveGlobal, handleDragOverGlobal, handleDropGlobal,
@@ -331,7 +331,7 @@ function Dashboard() {
             )}
 
 
-            {formulaire_partage_ouvert && (
+            {formulaire_partage_ouvert && !action_en_cours.active && (
                 <div className="modal-overlay" onMouseDown={(e) => { 
                     if (e.target === e.currentTarget) fermerFormulairePartage(); 
                 }}>
@@ -420,23 +420,21 @@ function Dashboard() {
 
                             {error && <p className="erreur-modale">{error}</p>}
 
-                            {chargement_partage && (
-                                <div className="box-barre-progression" style={{ marginTop: '1rem', marginBottom: '1rem' }}>
-                                    <div 
-                                        className="barre-progression" 
-                                        style={{ width: `${barre_de_progression}%` }}
-                                    >
-                                        {barre_de_progression > 5 ? `${barre_de_progression}%` : ''}
-                                    </div>
-                                </div>
-                            )}
-
                             <div className="modal-bouttons">
-                                <button type="button" className="btn-annuler" onClick={fermerFormulairePartage} disabled={chargement_partage}>
+                                <button 
+                                    type="button" 
+                                    className="btn-annuler" 
+                                    onClick={fermerFormulairePartage} 
+                                    disabled={action_en_cours.active} 
+                                >
                                     Annuler
                                 </button>
-                                <button type="submit" className="btn-confirmer" disabled={chargement_partage}>
-                                    {chargement_partage 
+                                <button 
+                                    type="submit" 
+                                    className="btn-confirmer" 
+                                    disabled={action_en_cours.active} 
+                                >
+                                    {action_en_cours.active 
                                         ? 'En cours...' 
                                         : (mode_formulaire_partage === 'lien' ? 'Générer' : 'Confirmer')
                                     }

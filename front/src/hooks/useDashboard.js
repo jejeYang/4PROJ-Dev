@@ -98,7 +98,7 @@ export function useDashboard() {
     };
 
     // ===== INITIALISATION DES SOUS-HOOKS =====
-    const partage = usePartage({ authHeader, setError });
+    const partage = usePartage({ authHeader, setError, setActionEnCours });
     
     const dragDrop = useDragDrop({ 
         authHeader, dossier_actuel, dossier_racine, setError, setContenuDossier, setFichiersBase, setTailleDossiers 

@@ -3,15 +3,13 @@ import axios from 'axios';
 
 const API = 'http://localhost:3000';
 
-export function usePartage({ setError }) {
-    const [barre_de_progression, setBarreProgression] = useState(0);
+export function usePartage({ setError, setActionEnCours }) {
     const [cible_menu_partage] = useState(null);
     const [formulaire_partage_ouvert, setFormulairePartageOuvert] = useState(false);
     const [mode_formulaire_partage, setModeFormulairePartage] = useState('utilisateur');
     const [cible_formulaire_partage, setCibleFormulairePartage] = useState(null);
     const [donnees_formulaire_partage, setDonneesFormulairePartage] = useState({ email: '', motDePasse: '', dateExpiration: '' });
     const [email_existant_partage, setEmailExistantPartage] = useState(null);
-    const [chargement_partage, setChargementPartage] = useState(false);
 
     const verifierEmailCompte = async (email) => {
         if (!email) {
@@ -104,8 +102,7 @@ export function usePartage({ setError }) {
             }
         }
 
-        setChargementPartage(true);
-        setBarreProgression(0);
+        setActionEnCours({ active: true, type: 'Partage en cours...', progression: 0 }); 
         setError('');
 
         try {
@@ -124,7 +121,7 @@ export function usePartage({ setError }) {
                     headers: { Authorization: `Bearer ${token}` },
                     onUploadProgress: (progressEvent) => {
                         const pourcentage = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-                        setBarreProgression(pourcentage);
+                        setActionEnCours(prev => ({ ...prev, progression: pourcentage })); 
                     }
                 }
             );
@@ -151,8 +148,7 @@ export function usePartage({ setError }) {
             setError(err.response?.data?.error || 'Erreur lors du partage.');
         } finally {
             setTimeout(() => {
-                setChargementPartage(false);
-                setBarreProgression(0);
+                setActionEnCours({ active: false, type: '', progression: 0 }); 
             }, 500);
         }
     };
@@ -168,12 +164,11 @@ export function usePartage({ setError }) {
             dateExpiration: ''
         });
         setEmailExistantPartage(null);
-        setBarreProgression(0);
     };
 
     return {
-        barre_de_progression, cible_menu_partage, formulaire_partage_ouvert,
-        mode_formulaire_partage, setModeFormulairePartage, donnees_formulaire_partage, setDonneesFormulairePartage, chargement_partage,
+        cible_menu_partage, formulaire_partage_ouvert,
+        mode_formulaire_partage, setModeFormulairePartage, donnees_formulaire_partage, setDonneesFormulairePartage,
         gestionChangementEmailPartage, gestionBlurEmailPartage, partagerRessource,
         soumettreFormulairePartage, fermerFormulairePartage
     };
