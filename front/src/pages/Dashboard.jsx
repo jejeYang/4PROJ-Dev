@@ -14,7 +14,7 @@ function Dashboard() {
         menu_options_fichier, setMenuOptionsFichier,
         fichier_preview, chargement_preview, corbeille_info,
         dossier_cible_deplacement, chemin_deplacement, sous_dossiers_deplacement,
-        message_partage, formulaire_partage_ouvert,
+        barre_de_progression, formulaire_partage_ouvert,
         mode_formulaire_partage, setModeFormulairePartage, donnees_formulaire_partage, setDonneesFormulairePartage, chargement_partage,
         gestionChangementEmailPartage, gestionBlurEmailPartage, partagerRessource,
         soumettreFormulairePartage, fermerFormulairePartage,
@@ -420,6 +420,17 @@ function Dashboard() {
 
                             {error && <p className="erreur-modale">{error}</p>}
 
+                            {chargement_partage && (
+                                <div className="box-barre-progression" style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+                                    <div 
+                                        className="barre-progression" 
+                                        style={{ width: `${barre_de_progression}%` }}
+                                    >
+                                        {barre_de_progression > 5 ? `${barre_de_progression}%` : ''}
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="modal-bouttons">
                                 <button type="button" className="btn-annuler" onClick={fermerFormulairePartage} disabled={chargement_partage}>
                                     Annuler
@@ -460,12 +471,6 @@ function Dashboard() {
                         </button>
                     )}
                 </div>
-
-                {message_partage && (
-                    <p className="partage-message" >
-                        {message_partage}
-                    </p>
-                )}
 
                 {modal_recherche_ouverte && (
                     <div className="modal-overlay" onMouseDown={(e) => { 

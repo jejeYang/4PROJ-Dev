@@ -4,7 +4,7 @@ import axios from 'axios';
 const API = 'http://localhost:3000';
 
 export function usePartage({ setError }) {
-    const [message_partage, setMessagePartage] = useState('');
+    const [barre_de_progression, setBarreProgression] = useState(0);
     const [cible_menu_partage] = useState(null);
     const [formulaire_partage_ouvert, setFormulairePartageOuvert] = useState(false);
     const [mode_formulaire_partage, setModeFormulairePartage] = useState('utilisateur');
@@ -26,7 +26,7 @@ export function usePartage({ setError }) {
         }
 
         try {
-            const response = await axios.get('http://localhost:3000/api/comptes/check-email', {
+            const response = await axios.get('http://localhost:3000/api/check-email', {
                 params: { email }
             });
 
@@ -42,8 +42,8 @@ export function usePartage({ setError }) {
 
             return exists;
         } catch (erreur) {
-            console.error('Erreur lors de la vérification de l’email :', erreur);
-            setError('Erreur lors de la vérification de l’email : ' + (erreur.response?.data?.error || erreur.message));
+            console.error('Erreur lors de la vérification de l\'email :', erreur);
+            setError('Erreur lors de la vérification de l\'email : ' + (erreur.response?.data?.error || erreur.message));
             setEmailExistantPartage(null);
             return false;
         }
@@ -105,59 +105,55 @@ export function usePartage({ setError }) {
         }
 
         setChargementPartage(true);
+        setBarreProgression(0);
         setError('');
 
         try {
             const token = localStorage.getItem('token');
             const body = {};
 
-            if (mode_formulaire_partage === 'utilisateur') {
-                body.email = donnees_formulaire_partage.email;
-            }
-
-            if (cible_formulaire_partage.fileName) {
-                body.fileName = cible_formulaire_partage.fileName;
-            }
-
-            if (donnees_formulaire_partage.motDePasse) {
-                body.motDePasse = donnees_formulaire_partage.motDePasse;
-            }
-
-            if (donnees_formulaire_partage.dateExpiration) {
-                body.dateExpiration = donnees_formulaire_partage.dateExpiration;
-            }
+            if (mode_formulaire_partage === 'utilisateur') body.email = donnees_formulaire_partage.email;
+            if (cible_formulaire_partage.fileName) body.fileName = cible_formulaire_partage.fileName;
+            if (donnees_formulaire_partage.motDePasse) body.motDePasse = donnees_formulaire_partage.motDePasse;
+            if (donnees_formulaire_partage.dateExpiration) body.dateExpiration = donnees_formulaire_partage.dateExpiration;
 
             const response = await axios.post(
                 `http://localhost:3000/api/dossiers/${cible_formulaire_partage.dossierId}/partager`,
                 body,
-                { headers: { Authorization: `Bearer ${token}` } }
+                { 
+                    headers: { Authorization: `Bearer ${token}` },
+                    onUploadProgress: (progressEvent) => {
+                        const pourcentage = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                        setBarreProgression(pourcentage);
+                    }
+                }
             );
 
-            let message = response.data?.message || 'Partage effectué avec succès.';
             const lien = response.data?.lien?.url;
             
             if (mode_formulaire_partage === 'lien' && lien && !response.data?.sharedWithAccount) {
                 const urlComplete = `${window.location.origin}${lien}`;
-                message = `Lien copié dans le presse-papiers : ${urlComplete}`;
                 try {
                     await navigator.clipboard.writeText(urlComplete);
-                } catch (erreur) {
-                    console.error('Erreur de copie :', erreur);
-                    setError('Erreur lors de la copie du lien : ' + (erreur.response?.data?.error || erreur.message));
-                    message = `Lien de partage généré : ${urlComplete}`;
+                } catch (err) {
+                    console.error('Erreur de copie:', err);
                 }
             }
 
-            setMessagePartage(message);
-            setFormulairePartageOuvert(false);
-            setModeFormulairePartage('utilisateur');
-            setCibleFormulairePartage(null);
-            window.alert(message);
-        } catch (erreur) {
-            console.error('Erreur lors du partage :', erreur);
-            setError('Erreur lors du partage : ' + (erreur.response?.data?.error || erreur.message));
+            setTimeout(() => {
+                setFormulairePartageOuvert(false);
+                setModeFormulairePartage('utilisateur');
+                setCibleFormulairePartage(null);
+            }, 500);
+
+        } catch (err) {
+            console.error('Erreur lors du partage :', err);
+            setError(err.response?.data?.error || 'Erreur lors du partage.');
         } finally {
-            setChargementPartage(false);
+            setTimeout(() => {
+                setChargementPartage(false);
+                setBarreProgression(0);
+            }, 500);
         }
     };
 
@@ -172,10 +168,11 @@ export function usePartage({ setError }) {
             dateExpiration: ''
         });
         setEmailExistantPartage(null);
+        setBarreProgression(0);
     };
 
     return {
-        message_partage, cible_menu_partage, formulaire_partage_ouvert,
+        barre_de_progression, cible_menu_partage, formulaire_partage_ouvert,
         mode_formulaire_partage, setModeFormulairePartage, donnees_formulaire_partage, setDonneesFormulairePartage, chargement_partage,
         gestionChangementEmailPartage, gestionBlurEmailPartage, partagerRessource,
         soumettreFormulairePartage, fermerFormulairePartage
