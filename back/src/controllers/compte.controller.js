@@ -43,7 +43,7 @@ class CompteController {
 
             const resultat = await this.compteService.authentifierGoogle(idToken);
             
-            // Sécurité (Manquante avant) : On vérifie si le token Google a bien été validé
+            // On vérifie si le token Google a bien été validé
             if (!resultat) {
                 return res.status(401).json({ message: 'Échec de l\'authentification Google' });
             }

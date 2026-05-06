@@ -46,9 +46,7 @@ function AppContent() {
     const [erreurImage, setErreurImage] = useState(false);
     const location = useLocation();
 
-    useEffect(() => {
-        setErreurImage(false);
-    }, [avatarUrl]);
+
 
     useEffect(() => {
         const handleStorageChange = () => {
