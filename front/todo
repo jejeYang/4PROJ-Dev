@@ -25,10 +25,6 @@ Lien :
 - Afficher l'élement partagé
 - Clean le css
 
-Paramètres :
-- Modifier la popup de confirmation
-- Demander le mot de passe pour supprimer son compte
-
 Back :
 - Restaurer un élement doit le remettre dans le dossier dans lequel il était plutôt qu'à la racine
 - Récupérer la date de création d'un fichier
