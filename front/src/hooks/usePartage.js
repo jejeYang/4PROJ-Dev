@@ -3,9 +3,9 @@ import axios from 'axios';
 
 const API = 'http://localhost:3000';
 
-export function usePartage({ authHeader, setError }) {
+export function usePartage({ setError }) {
     const [message_partage, setMessagePartage] = useState('');
-    const [cible_menu_partage, setCibleMenuPartage] = useState(null);
+    const [cible_menu_partage] = useState(null);
     const [formulaire_partage_ouvert, setFormulairePartageOuvert] = useState(false);
     const [mode_formulaire_partage, setModeFormulairePartage] = useState('utilisateur');
     const [cible_formulaire_partage, setCibleFormulairePartage] = useState(null);
@@ -14,49 +14,71 @@ export function usePartage({ authHeader, setError }) {
     const [chargement_partage, setChargementPartage] = useState(false);
 
     const verifierEmailCompte = async (email) => {
-        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            setEmailExistantPartage(null); return false;
+        if (!email) {
+            setEmailExistantPartage(null);
+            return false;
         }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            setEmailExistantPartage(null);
+            return false;
+        }
+
         try {
-            const reponse = await axios.get(`${API}/api/comptes/check-email`, { params: { email }, headers: authHeader() });
-            const existe = reponse.data?.exists === true;
-            setEmailExistantPartage(existe);
-            if (existe) setDonneesFormulairePartage(prev => ({ ...prev, motDePasse: '' }));
-            return existe;
+            const response = await axios.get('http://localhost:3000/api/comptes/check-email', {
+                params: { email }
+            });
+
+            const exists = response.data?.exists === true;
+            setEmailExistantPartage(exists);
+
+            if (exists) {
+                setDonneesFormulairePartage(prev => ({
+                    ...prev,
+                    motDePasse: ''
+                }));
+            }
+
+            return exists;
         } catch (erreur) {
-            console.error('Erreur lors de la récupération des données :', erreur);
-            setEmailExistantPartage(null); return false;
+            console.error('Erreur lors de la vérification de l’email :', erreur);
+            setError('Erreur lors de la vérification de l’email : ' + (erreur.response?.data?.error || erreur.message));
+            setEmailExistantPartage(null);
+            return false;
         }
     };
 
     const gestionChangementEmailPartage = (email) => {
-        setDonneesFormulairePartage(prev => ({ ...prev, email, motDePasse: '' }));
+        setDonneesFormulairePartage(prev => ({
+            ...prev,
+            email,
+            motDePasse: ''
+        }));
         setEmailExistantPartage(null);
     };
 
-    const gestionBlurEmailPartage = async () => await verifierEmailCompte(donnees_formulaire_partage.email);
+    const gestionBlurEmailPartage = async () => {
+        await verifierEmailCompte(donnees_formulaire_partage.email);
+    }
 
     const partagerRessource = ({ id_dossier, nom_fichier }) => {
-        if (!id_dossier) { setError('Impossible de déterminer le dossier à partager.'); return; }
-        setError(''); setCibleMenuPartage({ id_dossier, nom_fichier });
-    };
-
-    const ouvrirFormulairePartageUtilisateur = () => {
-        setModeFormulairePartage('utilisateur'); setCibleFormulairePartage(cible_menu_partage);
+        if (!id_dossier) {
+            setError('Impossible de déterminer le dossier à partager.');
+            return;
+        }
+        setError('');
+        setCibleFormulairePartage({ dossierId: id_dossier, fileName: nom_fichier });
+        setModeFormulairePartage('utilisateur');
         setDonneesFormulairePartage({ email: '', motDePasse: '', dateExpiration: '' });
-        setEmailExistantPartage(null); setCibleMenuPartage(null); setFormulairePartageOuvert(true);
-    };
-
-    const ouvrirFormulaireGenerationLien = () => {
-        setModeFormulairePartage('lien'); setCibleFormulairePartage(cible_menu_partage);
-        setDonneesFormulairePartage({ email: '', motDePasse: '', dateExpiration: '' });
-        setEmailExistantPartage(null); setCibleMenuPartage(null); setFormulairePartageOuvert(true);
+        setEmailExistantPartage(null);
+        setFormulairePartageOuvert(true);
     };
 
     const soumettreFormulairePartage = async (e) => {
         e.preventDefault();
-        
-        if (!cible_formulaire_partage?.id_dossier) {
+
+        if (!cible_formulaire_partage?.dossierId) {
             setError('Impossible de déterminer la ressource à partager.');
             return;
         }
@@ -66,14 +88,17 @@ export function usePartage({ authHeader, setError }) {
             return;
         }
 
-        let email_existe = false;
+        let emailExists = false;
+
         if (mode_formulaire_partage === 'utilisateur') {
             if (!donnees_formulaire_partage.email) {
                 setError('Email requis pour le partage.');
                 return;
             }
-            email_existe = await verifierEmailCompte(donnees_formulaire_partage.email);
-            if (email_existe && donnees_formulaire_partage.motDePasse) {
+
+            emailExists = await verifierEmailCompte(donnees_formulaire_partage.email);
+
+            if (emailExists && donnees_formulaire_partage.motDePasse) {
                 setError('Le mot de passe ne peut être utilisé que pour une adresse enregistrée.');
                 return;
             }
@@ -81,36 +106,78 @@ export function usePartage({ authHeader, setError }) {
 
         setChargementPartage(true);
         setError('');
-        try {
-            const corps_requete = {};
-            if (mode_formulaire_partage === 'utilisateur') corps_requete.email = donnees_formulaire_partage.email;
-            if (cible_formulaire_partage.nom_fichier) corps_requete.fileName = cible_formulaire_partage.nom_fichier;
-            if (donnees_formulaire_partage.motDePasse) corps_requete.motDePasse = donnees_formulaire_partage.motDePasse;
-            if (donnees_formulaire_partage.dateExpiration) corps_requete.dateExpiration = donnees_formulaire_partage.dateExpiration;
 
-            const reponse = await axios.post(`${API}/api/dossiers/${cible_formulaire_partage.id_dossier}/partager`, corps_requete, { headers: authHeader() });
-            const lien = reponse.data?.lien?.url;
-            const message = lien ? `Lien créé : ${window.location.origin}${lien}` : 'Partage effectué avec succès.';
-            setMessagePartage(message); setFormulairePartageOuvert(false);
+        try {
+            const token = localStorage.getItem('token');
+            const body = {};
+
+            if (mode_formulaire_partage === 'utilisateur') {
+                body.email = donnees_formulaire_partage.email;
+            }
+
+            if (cible_formulaire_partage.fileName) {
+                body.fileName = cible_formulaire_partage.fileName;
+            }
+
+            if (donnees_formulaire_partage.motDePasse) {
+                body.motDePasse = donnees_formulaire_partage.motDePasse;
+            }
+
+            if (donnees_formulaire_partage.dateExpiration) {
+                body.dateExpiration = donnees_formulaire_partage.dateExpiration;
+            }
+
+            const response = await axios.post(
+                `http://localhost:3000/api/dossiers/${cible_formulaire_partage.dossierId}/partager`,
+                body,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            let message = response.data?.message || 'Partage effectué avec succès.';
+            const lien = response.data?.lien?.url;
+            
+            if (mode_formulaire_partage === 'lien' && lien && !response.data?.sharedWithAccount) {
+                const urlComplete = `${window.location.origin}${lien}`;
+                message = `Lien copié dans le presse-papiers : ${urlComplete}`;
+                try {
+                    await navigator.clipboard.writeText(urlComplete);
+                } catch (erreur) {
+                    console.error('Erreur de copie :', erreur);
+                    setError('Erreur lors de la copie du lien : ' + (erreur.response?.data?.error || erreur.message));
+                    message = `Lien de partage généré : ${urlComplete}`;
+                }
+            }
+
+            setMessagePartage(message);
+            setFormulairePartageOuvert(false);
+            setModeFormulairePartage('utilisateur');
+            setCibleFormulairePartage(null);
             window.alert(message);
-        } catch (err) {
-            setError(err.response?.data?.error || 'Erreur lors du partage.');
+        } catch (erreur) {
+            console.error('Erreur lors du partage :', erreur);
+            setError('Erreur lors du partage : ' + (erreur.response?.data?.error || erreur.message));
         } finally {
             setChargementPartage(false);
         }
     };
 
-    const fermerMenuPartage = () => setCibleMenuPartage(null);
+
     const fermerFormulairePartage = () => {
-        setFormulairePartageOuvert(false); setCibleFormulairePartage(null);
-        setDonneesFormulairePartage({ email: '', motDePasse: '', dateExpiration: '' });
+        setFormulairePartageOuvert(false);
+        setModeFormulairePartage('utilisateur');
+        setCibleFormulairePartage(null);
+        setDonneesFormulairePartage({
+            email: '',
+            motDePasse: '',
+            dateExpiration: ''
+        });
+        setEmailExistantPartage(null);
     };
 
     return {
         message_partage, cible_menu_partage, formulaire_partage_ouvert,
-        mode_formulaire_partage, donnees_formulaire_partage, setDonneesFormulairePartage, email_existant_partage, chargement_partage,
+        mode_formulaire_partage, setModeFormulairePartage, donnees_formulaire_partage, setDonneesFormulairePartage, chargement_partage,
         gestionChangementEmailPartage, gestionBlurEmailPartage, partagerRessource,
-        ouvrirFormulairePartageUtilisateur, ouvrirFormulaireGenerationLien,
-        fermerMenuPartage, soumettreFormulairePartage, fermerFormulairePartage
+        soumettreFormulairePartage, fermerFormulairePartage
     };
 }

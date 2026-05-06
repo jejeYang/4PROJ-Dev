@@ -60,6 +60,7 @@ export function useRechercheTri({ authHeader, dossier_actuel, dossier_racine, ta
             setRechercheActive(true);
             setIdDossierOrigineRecherche(id_dossier_recherche);
         } catch (erreur) {
+            console.error('Erreur lors de la recherche :', erreur);
             setError(erreur.response?.data?.error || 'Erreur lors de la recherche');
         } finally {
             setChargementRecherche(false);

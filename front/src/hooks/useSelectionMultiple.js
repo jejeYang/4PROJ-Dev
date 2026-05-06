@@ -57,7 +57,8 @@ export function useSelectionMultiple({ authHeader, dossier_actuel, dossier_racin
             await rafraichirVueActuelle();
             setSelection([]);
         } catch (erreur) {
-            setError('Une erreur est survenue lors de la suppression de certains éléments.', erreur);
+            console.error('Une erreur est survenue lors de la suppression de certains éléments :', erreur);
+            setError('Erreur lors de la suppression : ' + (erreur.response?.data?.error || erreur.message));
         } finally {
             setTimeout(() => setActionEnCours({ active: false, type: '', progression: 0 }), 500);
         }
@@ -107,11 +108,14 @@ export function useSelectionMultiple({ authHeader, dossier_actuel, dossier_racin
                 try {
                     const text = await erreur.response.data.text();
                     const jsonErreur = JSON.parse(text);
+                    console.error('Erreur lors de la création de l\'archive :', jsonErreur);
                     setError(jsonErreur.error || "Erreur lors de la création de l'archive par le serveur.");
                 } catch (e) {
+                    console.error('Erreur lors de la lecture du message d\'erreur :', e);
                     setError("Erreur lors de la création de l'archive par le serveur.", e);
                 }
             } else {
+                console.error('Erreur lors de la création de l\'archive :', erreur);
                 setError("Erreur lors de la création de l'archive par le serveur.");
             }
         } finally {
@@ -145,6 +149,7 @@ export function useSelectionMultiple({ authHeader, dossier_actuel, dossier_racin
             await rafraichirVueActuelle();
             setSelection([]);
         } catch (erreur) {
+            console.error('Une erreur est survenue lors de la restauration de certains éléments :', erreur);
             setError('Une erreur est survenue lors de la restauration de certains éléments.', erreur);
         } finally {
             setTimeout(() => setActionEnCours({ active: false, type: '', progression: 0 }), 500);
@@ -178,6 +183,7 @@ export function useSelectionMultiple({ authHeader, dossier_actuel, dossier_racin
             await rafraichirVueActuelle();
             setSelection([]);
         } catch (erreur) {
+            console.error('Une erreur est survenue lors de la suppression définitive de certains éléments :', erreur);
             setError('Une erreur est survenue lors de la suppression définitive de certains éléments.', erreur);
         } finally {
             setTimeout(() => setActionEnCours({ active: false, type: '', progression: 0 }), 500);

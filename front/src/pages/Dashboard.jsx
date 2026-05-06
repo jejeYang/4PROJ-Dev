@@ -14,11 +14,10 @@ function Dashboard() {
         menu_options_fichier, setMenuOptionsFichier,
         fichier_preview, chargement_preview, corbeille_info,
         dossier_cible_deplacement, chemin_deplacement, sous_dossiers_deplacement,
-        message_partage, cible_menu_partage, formulaire_partage_ouvert,
-        mode_formulaire_partage, donnees_formulaire_partage, setDonneesFormulairePartage, email_existant_partage, chargement_partage,
+        message_partage, formulaire_partage_ouvert,
+        mode_formulaire_partage, setModeFormulairePartage, donnees_formulaire_partage, setDonneesFormulairePartage, chargement_partage,
         gestionChangementEmailPartage, gestionBlurEmailPartage, partagerRessource,
-        ouvrirFormulairePartageUtilisateur, ouvrirFormulaireGenerationLien,
-        fermerMenuPartage, soumettreFormulairePartage, fermerFormulairePartage,
+        soumettreFormulairePartage, fermerFormulairePartage,
         naviguerVersUpload, handleDragEnterGlobal, handleDragLeaveGlobal, handleDragOverGlobal, handleDropGlobal,
         gestionClicDossier, gestionClicBreadcrumb,
         selection, estSelectionne, toggleSelection, toggleSelectionTout,
@@ -298,7 +297,7 @@ function Dashboard() {
                                 {error && <p className="erreur-modale suppression">{error}</p>}
                                 <div className="modal-bouttons">
                                     <button className="btn-annuler" onClick={() => setOuvreModal({ type: null, data: null })}>Annuler</button>
-                                    <button className="btn-confirmer" style={{backgroundColor: 'var(--error-color)'}} onClick={supprimerDefinitivementSelection}>Supprimer</button>
+                                    <button className="btn-confirmer" onClick={supprimerDefinitivementSelection}>Supprimer</button>
                                 </div>
                             </div>
                         )}
@@ -331,37 +330,47 @@ function Dashboard() {
                 </div>
             )}
 
-            {cible_menu_partage && (
-                <div className="modal-overlay" onMouseDown={(e) => { 
-                    if (e.target === e.currentTarget) fermerMenuPartage(); 
-                }}>
-                    <div className="modal-contenu" style={{ maxWidth: '380px' }} onClick={e => e.stopPropagation()}>
-                        <h3>Partager</h3>
-                        <div className="modal-bouttons" style={{ flexDirection: 'column', gap: '10px' }}>
-                            <button type="button" className="btn-confirmer" onClick={ouvrirFormulaireGenerationLien}>
-                                Générer un lien
-                            </button>
-                            <button type="button" className="btn-annuler" onClick={ouvrirFormulairePartageUtilisateur}>
-                                Partager à un utilisateur
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {formulaire_partage_ouvert && (
                 <div className="modal-overlay" onMouseDown={(e) => { 
                     if (e.target === e.currentTarget) fermerFormulairePartage(); 
                 }}>
                     <div className="modal-contenu" onClick={e => e.stopPropagation()}>
-                        <h3>{mode_formulaire_partage === 'lien' ? 'Générer un lien' : 'Partager à un utilisateur'}</h3>
+                        
+                        <div className='partage-header'>
+                            <button 
+                                type="button"
+                                className={mode_formulaire_partage === 'utilisateur' ? 'btn-confirmer' : 'btn-annuler'} 
+                                onClick={() => {
+                                    setModeFormulairePartage('utilisateur');
+                                    setError('');
+                                }}
+                            >
+                                Utilisateur
+                            </button>
+                            <button 
+                                type="button"
+                                className={mode_formulaire_partage === 'lien' ? 'btn-confirmer' : 'btn-annuler'} 
+                                onClick={() => {
+                                    setModeFormulairePartage('lien');
+                                    setError('');
+                                }}
+                            >
+                                Invité
+                            </button>
+                        </div>
+
+                        <h3>
+                            {mode_formulaire_partage === 'utilisateur' 
+                                ? 'Collaborer avec un utilisateur' 
+                                : 'Partager à un invité'}
+                        </h3>
+
                         <form onSubmit={soumettreFormulairePartage}>
-                            {mode_formulaire_partage === 'utilisateur' && (
+                            {mode_formulaire_partage === 'utilisateur' ? (
                                 <>
-                                    <div className="form-group" style={{ marginBottom: '1rem' }}>
-                                        <label htmlFor="share-email" style={{ display: 'block', marginBottom: '0.5rem' }}>
-                                            Email
-                                        </label>
+                                    <div className="partage-form">
+                                        <label htmlFor="share-email" className='partage-label'>Email</label>
                                         <input
                                             id="share-email"
                                             type="email"
@@ -372,53 +381,54 @@ function Dashboard() {
                                             required
                                         />
                                     </div>
-                                    {email_existant_partage === true && (
-                                        <p className="info-modale" style={{ fontSize: '0.9rem', color: 'var(--btn-primary-color)' }}>
-                                            Cet email correspond à un utilisateur existant. Le partage sera effectué directement dans sa racine.
-                                        </p>
-                                    )}
-                                    {email_existant_partage === false && (
-                                        <p className="info-modale" style={{ fontSize: '0.9rem', color: 'var(--text-secondary-color)' }}>
-                                            Aucun compte trouvé. Un lien de partage sera créé et vous pouvez définir un mot de passe.
-                                        </p>
-                                    )}
+                                    <div className="partage-form">
+                                        <label htmlFor="share-expiry" className='partage-label'>Date d'expiration (facultatif)</label>
+                                        <input
+                                            id="share-expiry"
+                                            type="datetime-local"
+                                            value={donnees_formulaire_partage.dateExpiration}
+                                            onChange={(e) => setDonneesFormulairePartage({ ...donnees_formulaire_partage, dateExpiration: e.target.value })}
+                                        />
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="partage-form">
+                                        <label htmlFor="share-password" className='partage-label'>Mot de passe</label>
+                                        <input
+                                            id="share-password"
+                                            type="password"
+                                            placeholder="Définir un mot de passe"
+                                            value={donnees_formulaire_partage.motDePasse}
+                                            onChange={(e) => setDonneesFormulairePartage({ ...donnees_formulaire_partage, motDePasse: e.target.value })}
+                                            required
+                                            autoFocus
+                                        />
+                                    </div>
+                                    <div className="partage-form">
+                                        <label htmlFor="share-expiry" className='partage-label'>Date d'expiration</label>
+                                        <input
+                                            id="share-expiry"
+                                            type="datetime-local"
+                                            value={donnees_formulaire_partage.dateExpiration}
+                                            onChange={(e) => setDonneesFormulairePartage({ ...donnees_formulaire_partage, dateExpiration: e.target.value })}
+                                            required
+                                        />
+                                    </div>
                                 </>
                             )}
-                            <div className="form-group" style={{ marginBottom: '1rem' }}>
-                                <label htmlFor="share-password" style={{ display: 'block', marginBottom: '0.5rem' }}>
-                                    {mode_formulaire_partage === 'lien' ? 'Mot de passe obligatoire' : 'Mot de passe facultatif'}
-                                </label>
-                                <input
-                                    id="share-password"
-                                    type="password"
-                                    placeholder={mode_formulaire_partage === 'lien' ? 'Mot de passe du lien' : 'Laisser vide si aucun'}
-                                    value={donnees_formulaire_partage.motDePasse}
-                                    onChange={(e) => setDonneesFormulairePartage({ ...donnees_formulaire_partage, motDePasse: e.target.value })}
-                                    disabled={mode_formulaire_partage === 'utilisateur' && email_existant_partage === true}
-                                    required={mode_formulaire_partage === 'lien'}
-                                    autoFocus={mode_formulaire_partage === 'lien'}
-                                />
-                            </div>
-                            {mode_formulaire_partage === 'utilisateur' && (
-                                <div className="form-group" style={{ marginBottom: '1rem' }}>
-                                    <label htmlFor="share-expiry" style={{ display: 'block', marginBottom: '0.5rem' }}>
-                                        Date d'expiration optionnelle
-                                    </label>
-                                    <input
-                                        id="share-expiry"
-                                        type="datetime-local"
-                                        value={donnees_formulaire_partage.dateExpiration}
-                                        onChange={(e) => setDonneesFormulairePartage({ ...donnees_formulaire_partage, dateExpiration: e.target.value })}
-                                    />
-                                </div>
-                            )}
+
                             {error && <p className="erreur-modale">{error}</p>}
+
                             <div className="modal-bouttons">
                                 <button type="button" className="btn-annuler" onClick={fermerFormulairePartage} disabled={chargement_partage}>
                                     Annuler
                                 </button>
                                 <button type="submit" className="btn-confirmer" disabled={chargement_partage}>
-                                    {chargement_partage ? (mode_formulaire_partage === 'lien' ? 'Génération...' : 'Partage en cours...') : (mode_formulaire_partage === 'lien' ? 'Générer' : 'Partager')}
+                                    {chargement_partage 
+                                        ? 'En cours...' 
+                                        : (mode_formulaire_partage === 'lien' ? 'Générer' : 'Confirmer')
+                                    }
                                 </button>
                             </div>
                         </form>
@@ -428,16 +438,31 @@ function Dashboard() {
 
             <div className="dossiers-section">
                 <div className="dossiers-section-header">
-                    <h2>{recherche_active ? 'Résultats de la recherche' : dossier_actuel ? `Contenu de ${dossier_actuel.cheminDaccesDossier}` : 'Mes dossiers'}</h2>
-                    <button
-                        className="btn-recherche"
-                        style={recherche_active ? { backgroundColor: 'var(--select-primary-color)', borderColor: 'var(--btn-primary-color)' } : {}}
-                        onClick={() => setModalRechercheOuverte(true)}
-                    >Rechercher</button>
+                    <h2>
+                        {recherche_active
+                            ? 'Résultats de la recherche'
+                            : dossier_actuel
+                                ? `Contenu de ${dossier_actuel.cheminDaccesDossier}`
+                                : 'Mes dossiers'}
+                    </h2>
+
+                    {!(allItems.length === 0 && !recherche_active) && (
+                        <button
+                            className="btn-recherche"
+                            style={
+                                recherche_active
+                                    ? { backgroundColor: 'var(--select-primary-color)', borderColor: 'var(--btn-primary-color)' }
+                                    : {}
+                            }
+                            onClick={() => setModalRechercheOuverte(true)}
+                        >
+                            Rechercher
+                        </button>
+                    )}
                 </div>
 
                 {message_partage && (
-                    <p className="share-message" style={{ color: 'var(--btn-primary-color)', fontWeight: 'bold', marginBottom: '1rem' }}>
+                    <p className="partage-message" >
                         {message_partage}
                     </p>
                 )}

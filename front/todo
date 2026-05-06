@@ -2,6 +2,7 @@ General :
 - Ajouter des commentaires propres
 - Conteneuriser le front
 - Remplacer les emoji par une bibliothèque (ex : Flaticon)
+- Responsive
 
 Page d'accueil :
 - Refaire design avec :
@@ -15,14 +16,18 @@ Dashboard :
 - Fonctionnalités :
     - Créer un lien de partage (Dossier, Fichier)
 
-Liens :
+Partage :
 - Voir liens actifs fichier / dossier
 - Supprimer lien
 - Clean le css
 
+Lien :
+- Afficher l'élement partagé
+- Clean le css
+
 Paramètres :
 - Modifier la popup de confirmation
-- Donner une image par défaut aux nouveaux utilisateurs (1ere lettre du nom)
+- Demander le mot de passe pour supprimer son compte
 
 Back :
 - Restaurer un élement doit le remettre dans le dossier dans lequel il était plutôt qu'à la racine

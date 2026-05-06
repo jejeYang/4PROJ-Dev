@@ -52,11 +52,13 @@ export function useDragDrop({ authHeader, dossier_actuel, dossier_racine, setErr
             try {
                 const resTaille = await axios.get(`${API}/api/dossiers/${cible_id}/taille`, { headers: authHeader() });
                 setTailleDossiers(prev => ({ ...prev, [cible_id]: resTaille.data.taille || 0 }));
-            } catch (erreur) {
+            } catch (erreur) {                
                 console.error("Erreur lors de la récupération de la nouvelle taille :", erreur);
+                setError('Erreur lors de la récupération de la nouvelle taille.' + (erreur.response?.data?.error || erreur.message));
             }
 
         } catch (erreur) {
+            console.error('Erreur lors de l\'upload :', erreur);
             setError('Erreur lors de l\'upload : ' + (erreur.response?.data?.error || erreur.message));
         }
     };

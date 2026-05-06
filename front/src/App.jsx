@@ -55,9 +55,9 @@ function AppContent() {
     const location = useLocation();
 
 
-  const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
-  const isHome = location.pathname === '/';
-  const isLienPartage = location.pathname.startsWith('/lien/');
+    const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
+    const isHome = location.pathname === '/';
+    const isLienPartage = location.pathname.startsWith('/lien/');
 
     useEffect(() => {
         const handleStorageChange = () => {
@@ -87,12 +87,9 @@ function AppContent() {
         window.location.href = '/';
     };
 
-    const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
-    const isHome = location.pathname === '/';
-
     return (
         <div className="app-container">
-            {isHome && (<FallingIcons />)}
+            {(isHome || isAuthPage) && (<FallingIcons />)}
             
             <nav className="navbar">
                 <Link to="/" className="nav-brand">
