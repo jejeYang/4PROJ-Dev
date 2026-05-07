@@ -29,7 +29,7 @@ export function useDragDrop({ authHeader, dossier_actuel, dossier_racine, setErr
         const files = Array.from(e.dataTransfer.files);
         if (files.length === 0) return;
         if (files.length > 10) return setError('Trop de fichiers (max 10).');
-        if (files.find(f => f.size > 50 * 1024 * 1024)) return setError('Un fichier dépasse 50 Mo.');
+        if (files.find(f => f.size > 50 * 1024 * 1024)) return setError('Un fichier est trop gros (max de 50 Mo pour le glisser-déposer).');
 
         const cible_id = id_dossier_specifique || (dossier_actuel ? dossier_actuel.idDossier : dossier_racine?.idDossier);
         if (!cible_id) return setError("Dossier de destination introuvable.");
