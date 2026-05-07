@@ -5,15 +5,11 @@ General :
 - Responsive
 
 Page d'accueil :
-- Refaire design avec :
-    - Header utilisateur (nom, avatar)
-    - Taille utilisée sur taille restante
-    - Dernier fichiers publiés
-    - Derniers fichiers visionnés
-    - Diagrammes / Stats (Diagramme circulaire du type de fichier)
+- Clean le css
 
 Dashboard :
 - Fonctionnalités :
+    - Renommer un fichier
     - Créer un lien de partage (Dossier, Fichier) [EN ATTENTE DU BACK]
 
 Partage :

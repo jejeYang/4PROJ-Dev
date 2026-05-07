@@ -276,6 +276,77 @@ class DossierService {
         return 0;
     }
 
+    async recupererHomeStats(idCompte) {
+        const compte = await this.compteRepository.findById(idCompte);
+        if (!compte) throw new Error("Compte non trouvé");
+
+        const quotaTotal = 32212254720n; // 30 Go
+        const stockageUtilise = quotaTotal - BigInt(compte.stockageCompte);
+
+        // Récupérer tous les dossiers pour le mapping
+        const tousLesDossiersDB = await this.dossierRepository.findByCompte(idCompte);
+        // Trouver le dossier racine "user_x"
+        const dossierRacine = tousLesDossiersDB.find(d => d.idDossierParent === null && d.cheminDaccesDossier !== '.corbeille');
+        
+        const allFiles = [];
+        const allFolders = [];
+
+        const scanDir = async (dirPath, currentParentId) => {
+            if (!fs.existsSync(dirPath)) return;
+            const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
+
+            for (const entry of entries) {
+                // Ignore les fichiers systèmes et la corbeille
+                if (entry.name === '.trash-meta.json' || entry.name === '.corbeille') continue;
+
+                const fullPath = path.join(dirPath, entry.name);
+                const stats = await fs.promises.stat(fullPath);
+
+                if (entry.isDirectory()) {
+                    // ID de ce sous-dossier en DB
+                    const dossierDB = tousLesDossiersDB.find(d => 
+                        d.cheminDaccesDossier === entry.name && Number(d.idDossierParent) === Number(currentParentId)
+                    );
+                    
+                    if (dossierDB) {
+                        allFolders.push({ 
+                            idDossier: dossierDB.idDossier, 
+                            nom: entry.name, 
+                            mtime: stats.mtime.getTime()
+                        });
+                        // Récursion dans le sous-dossier
+                        await scanDir(fullPath, dossierDB.idDossier);
+                    }
+                } else {
+                    // Ajoute le fichier trouvé à la liste
+                    allFiles.push({
+                        nom: entry.name,
+                        taille: stats.size,
+                        atime: stats.atime.getTime(),
+                        idDossierParent: currentParentId
+                    });
+                }
+            }
+        };
+
+        if (dossierRacine) {
+            // Commence le scan dans le dossier racine physique
+            const cheminPhysiqueRacine = path.join(SERVER_FILES_PATH, `user_${idCompte}`, dossierRacine.cheminDaccesDossier);
+            await scanDir(cheminPhysiqueRacine, dossierRacine.idDossier);
+        }
+
+        return {
+            stockage: {
+                total: Number(quotaTotal),
+                utilise: Number(stockageUtilise)
+            },
+            derniersDossiers: allFolders.sort((a, b) => b.mtime - a.mtime).slice(0, 5),
+            derniersFichiers: allFiles.sort((a, b) => b.atime - a.atime).slice(0, 5),
+            plusGrosFichiers: allFiles.sort((a, b) => b.taille - a.taille).slice(0, 5),
+            tousLesFichiers: allFiles.map(f => f.nom)
+        };
+    }
+
     async _genererNomUniqueFichier(dossierPhysique, nomSouhaite) {
         const extension = path.extname(nomSouhaite);
         const base = path.basename(nomSouhaite, extension);

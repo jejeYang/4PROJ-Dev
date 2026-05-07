@@ -239,7 +239,6 @@
 }
 
 .btn-annuler {
-    flex: 1;
     padding: 0.8rem;
     background: transparent;
     border: 1px solid var(--border-color);

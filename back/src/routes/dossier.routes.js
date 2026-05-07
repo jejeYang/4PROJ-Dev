@@ -8,6 +8,7 @@ const router = express.Router();
 // ===== CRUD DOSSIERS =====
 router.post('/dossiers', authentifierToken, DossierController.createDossier);
 router.get('/dossiers', authentifierToken, DossierController.getDossiers);
+router.get('/dossiers/stats/home', authentifierToken, DossierController.getHomeStats);
 router.get('/dossiers/:dossierId', authentifierToken, DossierController.getDossierById);
 router.get('/comptes/:idCompteCreateurDossier/dossiers', authentifierToken, DossierController.getDossiersByCompte);
 router.get('/dossiers/:dossierId/sous-dossiers', authentifierToken, DossierController.getSousDossiers);

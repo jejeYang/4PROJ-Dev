@@ -278,6 +278,16 @@ class DossierController {
         }
     };
 
+    getHomeStats = async (req, res, next) => {
+        try {
+            const idUtilisateurAuthentifie = +req.utilisateur.id;
+            const stats = await this.dossierService.recupererHomeStats(idUtilisateurAuthentifie);
+            res.json(stats);
+        } catch (error) {
+            next(error);
+        }
+    };
+
     // ===== GESTION DES FICHIERS =====
 
     getFichier = async (req, res, next) => {
@@ -294,6 +304,14 @@ class DossierController {
 
             if (!fs.existsSync(cheminFichierPhysique)) {
                 return res.status(404).json({ error: 'Fichier introuvable sur le serveur' });
+            }
+
+            // Mets à jour la date d'accès (atime) pour tracker les derniers fichiers visionnés ---
+            try {
+                const now = new Date();
+                await fsPromises.utimes(cheminFichierPhysique, now, fs.statSync(cheminFichierPhysique).mtime);
+            } catch (err) {
+                console.error("Erreur lors de la mise à jour de la date d'accès :", err);
             }
 
             res.sendFile(cheminFichierPhysique);

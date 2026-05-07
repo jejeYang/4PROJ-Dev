@@ -63,12 +63,52 @@ export function useDashboard() {
 
             if (racine) {
                 setDossierRacine(racine);
-                const [resDossiers, resFichiers] = await Promise.all([
+
+                const [resDossiersRacine, resFichiersRacine] = await Promise.all([
                     axios.get(`${API}/api/dossiers/${racine.idDossier}/sous-dossiers`, { headers: authHeader() }),
                     axios.get(`${API}/api/dossiers/${racine.idDossier}/fichiers`, { headers: authHeader() })
                 ]);
-                setDossiers(resDossiers.data || []);
-                setFichiersBase(resFichiers.data || []);
+                setDossiers(resDossiersRacine.data || []);
+                setFichiersBase(resFichiersRacine.data || []);
+
+                // Redirection
+                const searchParams = new URLSearchParams(window.location.search);
+                const dossierIdCible = searchParams.get('folder');
+
+                if (dossierIdCible && String(dossierIdCible) !== String(racine.idDossier)) {
+                    try {
+                        // Récupère les infos du dossier ciblé pour vérifier son existence et obtenir son parent
+                        const resDossier = await axios.get(`${API}/api/dossiers/${dossierIdCible}`, { headers: authHeader() });
+                        const dossierCible = resDossier.data;
+
+                        // Récupère les sous-dossiers et fichiers du dossier ciblé
+                        const [resSousDossiersCible, resFichiersCible] = await Promise.all([
+                            axios.get(`${API}/api/dossiers/${dossierIdCible}/sous-dossiers`, { headers: authHeader() }),
+                            axios.get(`${API}/api/dossiers/${dossierIdCible}/fichiers`, { headers: authHeader() })
+                        ]);
+
+                        // Reconstruit le fil d'Ariane jusqu'à la racine
+                        let breadcrumb = [dossierCible];
+                        let currentParentId = dossierCible.idDossierParent;
+
+                        while (currentParentId && String(currentParentId) !== String(racine.idDossier)) {
+                            const parentRes = await axios.get(`${API}/api/dossiers/${currentParentId}`, { headers: authHeader() });
+                            breadcrumb.unshift(parentRes.data);
+                            currentParentId = parentRes.data.idDossierParent;
+                        }
+
+                        setDossierActuel(dossierCible);
+                        setContenuDossier({ dossiers: resSousDossiersCible.data || [], fichiers: resFichiersCible.data || [] });
+                        setFilAriane(breadcrumb);
+
+                        // Nettoie l'URL pour éviter les problèmes de rafraîchissement ou de partage du lien
+                        window.history.replaceState(null, '', window.location.pathname);
+                        
+                    } catch (erreur) {
+                        console.error("Impossible de charger le dossier demandé, on affiche la racine.", erreur);
+                        window.history.replaceState(null, '', window.location.pathname);
+                    }
+                }
             } else {
                 setDossiers([]);
                 setFichiersBase([]);
