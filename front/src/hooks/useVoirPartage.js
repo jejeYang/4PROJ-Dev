@@ -1,66 +1,62 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const API = 'http://localhost:3000';
 
 export function useVoirPartage() {
-    const navigate = useNavigate();
-    const [liensPartage, setLiensPartage] = useState([]);
-    const [chargementEnCours, setChargementEnCours] = useState(true);
+    const [liensPublics, setLiensPublics] = useState([]);
+    const [partagesEnvoyes, setPartagesEnvoyes] = useState([]);
+    const [partagesRecus, setPartagesRecus] = useState([]);
+    const [chargement, setChargement] = useState(true);
     const [erreur, setErreur] = useState('');
 
-    const authHeader = useCallback(() => {
-        const token = localStorage.getItem('token');
-        return { Authorization: `Bearer ${token}` };
+    const fetchAllPartages = useCallback(async () => {
+        setChargement(true);
+        const config = { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } };
+        try {
+            const [resLiens, resEnvoyes, resRecus] = await Promise.all([
+                axios.get(`${API}/api/partage/mes-liens`, config),
+                axios.get(`${API}/api/partage/envoyes`, config),
+                axios.get(`${API}/api/partage/recus`, config)
+            ]);
+            setLiensPublics(resLiens.data);
+            setPartagesEnvoyes(resEnvoyes.data);
+            setPartagesRecus(resRecus.data);
+        } catch (erreur) {
+            setErreur("Erreur lors de la récupération des partages." + (erreur.response?.data?.error || erreur.message));
+        } finally {
+            setChargement(false);
+        }
     }, []);
 
-    const chargerPartages = useCallback(async () => {
-        setChargementEnCours(true);
-        setErreur('');
-        try {
-            // Liste les liens de partage pour l'utilisateur connecté
-            const response = await axios.get(`${API}/api/liens`, { headers: authHeader() });
-            setLiensPartage(response.data || []);
-        } catch (err) {
-            console.error("Erreur lors du chargement des partages :", err);
-            setErreur(err.response?.data?.error || "Impossible de charger vos partages.");
-        } finally {
-            setChargementEnCours(false);
-        }
-    }, [authHeader]);
+    useEffect(() => { fetchAllPartages(); }, [fetchAllPartages]);
 
-    useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            navigate('/login');
-            return;
-        }
-        chargerPartages();
-    }, [chargerPartages, navigate]);
-
-    const supprimerLien = async (idLien) => {
-        if (!window.confirm("Voulez-vous vraiment supprimer ce lien de partage ? Il ne sera plus accessible.")) {
-            return;
-        }
-        
+    const supprimerLienPublic = async (idLien) => {
         try {
-            // TODO: créer une route API pour supprimer un lien de partage
-            await axios.delete(`${API}/api/liens/${idLien}`, { headers: authHeader() });
-            
-            // Mise à jour de l'affichage
-            setLiensPartage(prevLiens => prevLiens.filter(lien => lien.idLien !== idLien));
-        } catch (err) {
-            console.error("Erreur lors de la suppression :", err);
-            setErreur(err.response?.data?.error || "Erreur lors de la suppression du lien.");
+            await axios.delete(`${API}/api/partage/lien/${idLien}`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
+            setLiensPublics(prev => prev.filter(l => l.idLien !== idLien));
+        } catch (erreur) {
+            setErreur("Impossible de supprimer le lien." + (erreur.response?.data?.error || erreur.message));
         }
     };
 
-    return {
-        liensPartage,
-        chargementEnCours,
-        erreur,
-        setErreur,
-        supprimerLien
+    const resilierPartageInterne = async (idDossier) => {
+        if (!window.confirm("Cela supprimera l'accès pour tous les participants. Confirmer ?")) return;
+        try {
+            await axios.delete(`${API}/api/partage/interne/${idDossier}`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
+            fetchAllPartages();
+        } catch (erreur) {
+            setErreur("Erreur lors de la révocation du partage." + (erreur.response?.data?.error || erreur.message));
+        }
+    };
+
+    return { 
+        liensPublics, partagesEnvoyes, partagesRecus, 
+        chargement, erreur, setErreur, 
+        supprimerLienPublic, resilierPartageInterne 
     };
 }

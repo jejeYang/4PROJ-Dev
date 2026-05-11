@@ -610,6 +610,7 @@ function Dashboard() {
                                     <span>📁</span>
                                     <span className="dossier-nom" title={dossier.cheminDaccesDossier}>
                                         {tronquerNom(dossier.cheminDaccesDossier)}
+                                        {dossier.idDossierSource && <span className="badge-partage" title="Dossier partagé">👥</span>}
                                     </span>
                                 </div>
                                 <div className="col-extension">dossier</div>
@@ -676,7 +677,6 @@ function Dashboard() {
                                             <div className="actions-rapides" onClick={(e) => e.stopPropagation()}>
                                                 {!estDansCorbeille ? (
                                                     <>
-                                                        <button className="action-icon-btn" onClick={() => partagerRessource({ id_dossier: id_dossier_courant, nom_fichier: fichier.nom })} title="Partager">🔗</button>
                                                         <button className="action-icon-btn" onClick={() => telechargerFichier(fichier)} title="Télécharger">⬇️</button>
                                                         <button className="action-icon-btn" onClick={() => ouvrirModalRenommerFichier(fichier)} title="Renommer">✏️</button>
                                                         <button className="action-icon-btn" onClick={() => ouvrirModalDeplacement(fichier)} title="Déplacer">↪️</button>
