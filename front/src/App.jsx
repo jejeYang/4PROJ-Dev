@@ -38,6 +38,14 @@ axios.interceptors.response.use(
     }
 );
 
+const formatOctets = (bytes) => {
+    if (!bytes || bytes === 0) return '0 o';
+    const k = 1024;
+    const sizes = ['o', 'Ko', 'Mo', 'Go', 'To'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
 function AppContent() {
     const token = localStorage.getItem('token');
     const userString = localStorage.getItem('user');
@@ -52,7 +60,10 @@ function AppContent() {
     const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [erreurImage, setErreurImage] = useState(false);
+    const [stockageUtilise, setStockageUtilise] = useState(0);
     const location = useLocation();
+
+    const MAX_STORAGE = 30 * 1024 * 1024 * 1024;
 
 
     const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
@@ -77,6 +88,18 @@ function AppContent() {
             window.removeEventListener('profilMisAJour', handleStorageChange);
         };
     }, [location.pathname]);
+
+    useEffect(() => {
+    if (isAuthenticated) {
+        axios.get('http://localhost:3000/api/dossiers/stats/home', {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        })
+        .then(response => {
+            setStockageUtilise(response.data.stockage.utilise || 0);
+        })
+        .catch(error => console.error("Erreur de récupération du stockage:", error));
+    }
+}, [isAuthenticated, location.pathname]);
 
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -141,6 +164,17 @@ function AppContent() {
                             <Link to="/settings" className={`sidebar-link ${location.pathname === '/settings' ? 'active' : ''}`}>
                                 Paramètres
                             </Link>
+                        </div>
+                        <div className="sidebar-storage">
+                            <div className="storage-bar">
+                                <div 
+                                    className="storage-fill" 
+                                    style={{ width: `${Math.min((stockageUtilise / MAX_STORAGE) * 100, 100)}%` }}
+                                ></div>
+                            </div>
+                            <p className="storage-text">
+                                {formatOctets(stockageUtilise)} utilisé
+                            </p>
                         </div>
                         <button className="sidebar-close" onClick={() => setSidebarOpen(false)}>✕</button>
                     </aside>

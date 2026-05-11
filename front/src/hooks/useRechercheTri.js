@@ -26,17 +26,47 @@ export function useRechercheTri({ authHeader, dossier_actuel, dossier_racine, ta
             let valA, valB;
 
             if (type === 'dossier') {
-                if (tri_config.cle === 'nom') { valA = a.cheminDaccesDossier.toLowerCase(); valB = b.cheminDaccesDossier.toLowerCase(); }
-                else if (tri_config.cle === 'extension') { valA = ''; valB = ''; }
-                else if (tri_config.cle === 'dateCreation') { valA = new Date(a.dateCreation).getTime(); valB = new Date(b.dateCreation).getTime(); }
-                else if (tri_config.cle === 'modifieLe') { valA = new Date(a.modifieLe).getTime(); valB = new Date(b.modifieLe).getTime(); }
-                else if (tri_config.cle === 'taille') { valA = taille_dossiers[a.idDossier] || 0; valB = taille_dossiers[b.idDossier] || 0; }
+                if (tri_config.cle === 'nom') { 
+                    valA = (a.cheminDaccesDossier || '').toLowerCase(); 
+                    valB = (b.cheminDaccesDossier || '').toLowerCase(); 
+                }
+                else if (tri_config.cle === 'extension') { 
+                    valA = ''; 
+                    valB = ''; 
+                }
+                else if (tri_config.cle === 'dateCreation') { 
+                    valA = new Date(a.dateCreation || 0).getTime(); 
+                    valB = new Date(b.dateCreation || 0).getTime(); 
+                }
+                else if (tri_config.cle === 'modifieLe') { 
+                    valA = new Date(a.modifieLe || 0).getTime(); 
+                    valB = new Date(b.modifieLe || 0).getTime(); 
+                }
+                else if (tri_config.cle === 'taille') { 
+                    valA = taille_dossiers[a.idDossier] || 0; 
+                    valB = taille_dossiers[b.idDossier] || 0; 
+                }
             } else {
-                if (tri_config.cle === 'nom') { valA = a.nom.toLowerCase(); valB = b.nom.toLowerCase(); }
-                else if (tri_config.cle === 'extension') { valA = separerNomExtension(a.nom).extension; valB = separerNomExtension(b.nom).extension; }
-                else if (tri_config.cle === 'dateCreation') { valA = new Date(a.dateCreation).getTime(); valB = new Date(b.dateCreation).getTime(); }
-                else if (tri_config.cle === 'modifieLe') { valA = new Date(a.modifieLe).getTime(); valB = new Date(b.modifieLe).getTime(); }
-                else if (tri_config.cle === 'taille') { valA = a.taille || 0; valB = b.taille || 0; }
+                if (tri_config.cle === 'nom') { 
+                    valA = (a.nom || '').toLowerCase(); 
+                    valB = (b.nom || '').toLowerCase(); 
+                }
+                else if (tri_config.cle === 'extension') { 
+                    valA = (separerNomExtension(a.nom).extension || '').toLowerCase(); 
+                    valB = (separerNomExtension(b.nom).extension || '').toLowerCase(); 
+                }
+                else if (tri_config.cle === 'dateCreation') { 
+                    valA = new Date(a.dateCreation || a.dateModification || 0).getTime(); 
+                    valB = new Date(b.dateCreation || b.dateModification || 0).getTime(); 
+                }
+                else if (tri_config.cle === 'modifieLe') { 
+                    valA = new Date(a.modifieLe || a.dateModification || 0).getTime(); 
+                    valB = new Date(b.modifieLe || b.dateModification || 0).getTime(); 
+                }
+                else if (tri_config.cle === 'taille') { 
+                    valA = a.taille || 0; 
+                    valB = b.taille || 0; 
+                }
             }
 
             if (valA < valB) return tri_config.direction === 'asc' ? -1 : 1;

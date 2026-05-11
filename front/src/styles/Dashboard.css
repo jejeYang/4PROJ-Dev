@@ -77,7 +77,7 @@
 
 .dossier-header-tableau {
     display: grid;
-    grid-template-columns: 40px 0.9fr 150px 150px 200px 0.5fr 120px;
+    grid-template-columns: 40px 0.7fr 150px 150px 150px 0.5fr 120px;
     padding: 0.7rem 1rem;
     align-items: center;
     border: 1px solid var(--border-color);
@@ -253,7 +253,7 @@
 
 .dossier-ligne {
     display: grid;
-    grid-template-columns: 40px 0.9fr 150px 150px 200px 0.5fr 120px;
+    grid-template-columns: 40px 0.7fr 150px 150px 150px 0.5fr 120px;
     background-color: var(--bg-tertiary-color);
     padding: 0.1rem 1rem;
     align-items: center;
@@ -556,14 +556,14 @@
     max-width: 100%;
 }
 
-.partage-header {
+.partage-modal-header {
     display: flex;
     gap: 10px;
     margin-bottom: 1.5rem;
     flex:1;
 }
 
-.partage-header button {
+.partage-modal-header button {
     flex: 1;
     text-align: center;
 }

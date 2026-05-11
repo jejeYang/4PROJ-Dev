@@ -356,7 +356,7 @@ function Dashboard() {
                 }}>
                     <div className="modal-contenu" onClick={e => e.stopPropagation()}>
                         
-                        <div className='partage-header'>
+                        <div className='partage-modal-header'>
                             <button 
                                 type="button"
                                 className={mode_formulaire_partage === 'utilisateur' ? 'btn-confirmer' : 'btn-annuler'} 

@@ -40,11 +40,12 @@ class LienController {
             // Génération d'un lien public (si pas d'email ou si compte n'existe pas)
             const token = crypto.randomBytes(16).toString('hex');
             const cheminDaccesLien = fileName ? `fichier:${dossierId}:${fileName}` : `dossier:${dossierId}`;
+            const dateExpirationFormatee = dateExpiration ? new Date(dateExpiration) : null;
 
             const lien = await this.lienService.creerLien({
                 idCompte: idUtilisateur,
                 cheminDaccesLien: cheminDaccesLien,
-                dateExpiration,
+                dateExpiration: dateExpirationFormatee,
                 mdpLienGenere: motDePasse,
                 urlLienGenere: token
             });
