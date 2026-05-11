@@ -23,6 +23,7 @@ router.delete('/dossiers/:dossierId', authentifierToken, DossierController.delet
 
 // ===== GESTION DES FICHIERS =====
 router.get('/dossiers/:dossierId/fichiers/:nomFichier', authentifierToken, verifierDossierExiste, DossierController.getFichier);
+router.put('/dossiers/:dossierId/fichiers/:nomFichier/renommer', authentifierToken, DossierController.renommerFichier);
 router.post('/dossiers/:dossierId/televerser', authentifierToken, verifierDossierExiste, upload.single('fichier'), DossierController.televerserFichier);
 router.post('/dossiers/:dossierId/televerser-multiple', authentifierToken, verifierDossierExiste, upload.array('fichiers', 10), DossierController.televerserMultipleFichiers);
 router.get('/telechargerZip', authentifierToken, DossierController.telechargerZip);

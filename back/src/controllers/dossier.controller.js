@@ -320,6 +320,33 @@ class DossierController {
         }
     };
 
+    renommerFichier = async (req, res, next) => {
+    try {
+        const { dossierId, nomFichier } = req.params;
+        const { nouveauNom } = req.body;
+        const idUtilisateurAuthentifie = +req.utilisateur.id;
+
+        if (!nouveauNom || nouveauNom.trim() === "") {
+            return res.status(400).json({ error: 'Le nouveau nom est requis' });
+        }
+
+        const dossier = await this.dossierService.recupererDossierParId(dossierId);
+        if (dossier.idCompteCreateur !== idUtilisateurAuthentifie) {
+            return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
+        }
+
+        const resultat = await this.dossierService.renommerFichier(
+            dossierId, 
+            decodeURIComponent(nomFichier), 
+            nouveauNom.trim()
+        );
+        
+        res.json(resultat);
+    } catch (error) {
+        next(error);
+    }
+};
+
     televerserFichier = async (req, res, next) => {
         try {
             const { dossierId } = req.params;

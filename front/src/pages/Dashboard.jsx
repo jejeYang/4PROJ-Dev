@@ -31,6 +31,7 @@ function Dashboard() {
         ouvrirModalViderCorbeille, confirmerViderCorbeille,
         telechargerFichier, restaurerFichier, 
         ouvrirModalSuppressionFichier, ouvrirModalSuppressionDefinitiveFichier, confirmerSuppressionDefinitiveFichier,
+        ouvrirModalRenommerFichier, confirmerRenommageFichier,
         tri_config, demanderTri, trierElements,
         ouvrirApercu, fermerApercu,
         ouvrirModalDeplacement, naviguerDeplacement, confirmerDeplacement,
@@ -192,6 +193,24 @@ function Dashboard() {
                                 <div className="modal-bouttons">
                                     <button className="btn-annuler" onClick={() => setOuvreModal({ type: null, data: null })}>Annuler</button>
                                     <button className="btn-confirmer" onClick={confirmerRenommageDossier}>Sauvegarder</button>
+                                </div>
+                            </div>
+                        )}
+
+                        {ouvre_modal.type === 'renommage-fichier' && (
+                            <div>
+                                <h3>Renommer le fichier</h3>
+                                <input 
+                                    type="text" 
+                                    value={nouveau_nom} 
+                                    onChange={(e) => setRenommeDossier(e.target.value)} 
+                                    autoFocus
+                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); confirmerRenommageFichier(); } }} 
+                                />
+                                {error && <p className="erreur-modale">{error}</p>}
+                                <div className="modal-bouttons">
+                                    <button className="btn-annuler" onClick={() => setOuvreModal({ type: null, data: null })}>Annuler</button>
+                                    <button className="btn-confirmer" onClick={confirmerRenommageFichier}>Sauvegarder</button>
                                 </div>
                             </div>
                         )}
@@ -659,6 +678,7 @@ function Dashboard() {
                                                     <>
                                                         <button className="action-icon-btn" onClick={() => partagerRessource({ id_dossier: id_dossier_courant, nom_fichier: fichier.nom })} title="Partager">🔗</button>
                                                         <button className="action-icon-btn" onClick={() => telechargerFichier(fichier)} title="Télécharger">⬇️</button>
+                                                        <button className="action-icon-btn" onClick={() => ouvrirModalRenommerFichier(fichier)} title="Renommer">✏️</button>
                                                         <button className="action-icon-btn" onClick={() => ouvrirModalDeplacement(fichier)} title="Déplacer">↪️</button>
                                                         <button className="action-icon-btn" onClick={() => ouvrirModalSuppressionFichier(fichier)} title="Déplacer vers la corbeille">🗑️</button>
                                                     </>

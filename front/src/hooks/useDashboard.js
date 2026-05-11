@@ -342,6 +342,48 @@ export function useDashboard() {
     };
 
     // ===== FICHIERS =====
+
+    const ouvrirModalRenommerFichier = (fichier) => {
+        setRenommeDossier(fichier.nom);
+        setError('');
+        setOuvreModal({ type: 'renommage-fichier', data: fichier });
+        setMenuOptionsFichier(null);
+    };
+
+    const confirmerRenommageFichier = async () => {
+        const nom = nouveau_nom.trim();
+        if (!nom) return setError('Nom vide invalide');
+        
+        const fichier = ouvre_modal.data;
+        const id_actuel = dossier_actuel ? dossier_actuel.idDossier : dossier_racine?.idDossier;
+
+        try {
+            await axios.put(`${API}/api/dossiers/${id_actuel}/fichiers/${encodeURIComponent(fichier.nom)}/renommer`, 
+                { nouveauNom: nom }, 
+                { headers: authHeader() }
+            );
+
+            if (dossier_actuel) {
+                setContenuDossier(prev => ({ 
+                    ...prev, 
+                    fichiers: prev.fichiers.map(f => f.nom === fichier.nom ? { ...f, nom: nom } : f) 
+                }));
+            } else {
+                setFichiersBase(prev => prev.map(f => f.nom === fichier.nom ? { ...f, nom: nom } : f));
+            }
+
+            // Met à jour le nom si le fichier est déjà sélectionné
+            setSelection(prev => prev.map(s => 
+                (s.type === 'fichier' && s.item.nom === fichier.nom) ? { ...s, item: { ...s.item, nom: nom } } : s
+            ));
+
+            setOuvreModal({ type: null, data: null });
+        } catch (erreur) {
+            console.error('Erreur lors du renommage du fichier :', erreur);
+            setError(erreur.response?.data?.error || 'Erreur lors du renommage');
+        }
+    };
+
     const telechargerFichier = async (fichier) => {
         const id_actuel = dossier_actuel ? dossier_actuel.idDossier : dossier_racine?.idDossier;
         try {
@@ -503,6 +545,7 @@ export function useDashboard() {
         ouvrirModalSuppressionDossier, ouvrirModalSuppressionDefinitiveDossier, confirmerSuppressionDefinitiveDossier,
         restaurerDossier, ouvrirModalViderCorbeille, confirmerViderCorbeille,
         telechargerFichier, restaurerFichier, ouvrirModalSuppressionFichier, ouvrirModalSuppressionDefinitiveFichier, confirmerSuppressionDefinitiveFichier,
+        ouvrirModalRenommerFichier, confirmerRenommageFichier,
         menu_options_dossier, setMenuOptionsDossier, menu_options_fichier, setMenuOptionsFichier,
         
         // Aperçu

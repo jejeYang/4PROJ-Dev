@@ -170,7 +170,32 @@ class DossierService {
         return { message: `Fichier '${fileName}' supprimé`, dossierId, fileName };
     }
 
-    async recupererEndpoints(dossierId) {
+    async renommerFichier(dossierId, ancienNom, nouveauNom) {
+    const dossier = await this.recupererDossierParId(dossierId);
+    const cheminRelatif = await this.construireCheminComplet(dossierId);
+    const dossierPhysique = path.join(SERVER_FILES_PATH, `user_${dossier.idCompteCreateur}`, cheminRelatif);
+
+    const ancienChemin = path.join(dossierPhysique, ancienNom);
+    const nouveauChemin = path.join(dossierPhysique, nouveauNom);
+
+    if (!fs.existsSync(ancienChemin)) {
+        throw new Error(`Le fichier "${ancienNom}" n'existe pas.`);
+    }
+
+    if (fs.existsSync(nouveauChemin)) {
+        throw new Error(`Un fichier nommé "${nouveauNom}" existe déjà.`);
+    }
+
+    // Renommage physique
+    fs.renameSync(ancienChemin, nouveauChemin);
+
+    // Mise à jour de la date de modification du dossier parent en DB
+    await this.dossierRepository.update(dossierId, { modifieLe: new Date() });
+
+    return { message: "Fichier renommé avec succès", ancienNom, nouveauNom };
+}
+
+    async recuperedpoints(dossierId) {
         return null;
     }
 
