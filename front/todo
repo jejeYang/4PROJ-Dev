@@ -23,8 +23,3 @@ Lien :
 Back :
 - Restaurer un élement doit le remettre dans le dossier dans lequel il était plutôt qu'à la racine
 - Récupérer la date de création d'un fichier
-
-Partage :
-    - Séparer le partage à un utilisateur et à un invité
-    - Créer la gestion de date d'expiration (pas le droit de mettre du date antérieure à maintenant, supprimer automatiquement quand la date est passée)
-    - Bug de déplacement
