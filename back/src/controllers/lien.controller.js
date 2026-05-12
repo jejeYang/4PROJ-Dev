@@ -43,8 +43,8 @@ class LienController {
             const cible = await this.compteService.trouverParEmail(email);
             
             if (!cible) {
-                return res.status(200).json({ 
-                    message: "Si un compte est associé à cet email, la ressource a été partagée." 
+                return res.status(404).json({ 
+                    error: "Aucun compte n'est associé à cette adresse email." 
                 });
             }
 
@@ -87,6 +87,7 @@ class LienController {
     supprimerPartageInterne = async (req, res, next) => {
         try {
             const { dossierIdPartage } = req.params;
+            const idDemandeur = +req.utilisateur.id;
             const dossier = await this.dossierService.recupererDossierParId(dossierIdPartage);
             if (dossier.idCompteCreateur !== idDemandeur && dossier.idCompteAcces !== idDemandeur) {
                 return res.status(403).json({ error: "Vous n'avez pas l'autorisation d'annuler ce partage." });

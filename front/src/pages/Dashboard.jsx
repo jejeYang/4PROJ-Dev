@@ -16,7 +16,7 @@ function Dashboard() {
         dossier_cible_deplacement, chemin_deplacement, sous_dossiers_deplacement,
         formulaire_partage_ouvert,
         mode_formulaire_partage, setModeFormulairePartage, donnees_formulaire_partage, setDonneesFormulairePartage,
-        gestionChangementEmailPartage, gestionBlurEmailPartage, partagerRessource,
+        gestionBlurEmailPartage, partagerRessource,
         soumettreFormulairePartage, fermerFormulairePartage,
         naviguerVersUpload, handleDragEnterGlobal, handleDragLeaveGlobal, handleDragOverGlobal, handleDropGlobal,
         gestionClicDossier, gestionClicBreadcrumb,
@@ -395,18 +395,9 @@ function Dashboard() {
                                             type="email"
                                             placeholder="adresse@email.com"
                                             value={donnees_formulaire_partage.email}
-                                            onChange={(e) => gestionChangementEmailPartage(e.target.value)}
+                                            onChange={(e) => setDonneesFormulairePartage({ ...donnees_formulaire_partage, email: e.target.value })}
                                             onBlur={gestionBlurEmailPartage}
                                             required
-                                        />
-                                    </div>
-                                    <div className="partage-form">
-                                        <label htmlFor="share-expiry" className='partage-label'>Date d'expiration (facultatif)</label>
-                                        <input
-                                            id="share-expiry"
-                                            type="datetime-local"
-                                            value={donnees_formulaire_partage.dateExpiration}
-                                            onChange={(e) => setDonneesFormulairePartage({ ...donnees_formulaire_partage, dateExpiration: e.target.value })}
                                         />
                                     </div>
                                 </>
@@ -610,7 +601,6 @@ function Dashboard() {
                                     <span>📁</span>
                                     <span className="dossier-nom" title={dossier.cheminDaccesDossier}>
                                         {tronquerNom(dossier.cheminDaccesDossier)}
-                                        {dossier.idDossierSource && <span className="badge-partage" title="Dossier partagé">👥</span>}
                                     </span>
                                 </div>
                                 <div className="col-extension">dossier</div>
