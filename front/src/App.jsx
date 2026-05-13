@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
@@ -15,24 +15,17 @@ import { ThemeProvider } from './context/theme_context';
 import FallingIcons from './components/FallingIcons';
 
 axios.interceptors.response.use(
-    (response) => {
-        return response;
-    },
+    (response) => response,
     (error) => {
         if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-            // Ne pas rediriger si on est sur la page de lien de partage (car l'erreur 401 est normale pour demander le mot de passe)
             if (window.location.pathname.startsWith('/lien/')) {
                 return Promise.reject(error);
             }
-
-            console.warn("Token expiré ou invalide. Déconnexion automatique.");
             
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             
-            if (window.location.pathname !== '/login') {
-                window.location.href = '/login';
-            }
+            window.dispatchEvent(new Event('forceLogout'));
         }
         return Promise.reject(error);
     }
@@ -47,68 +40,75 @@ const formatOctets = (bytes) => {
 };
 
 function AppContent() {
-    const token = localStorage.getItem('token');
-    const userString = localStorage.getItem('user');
-    const user = userString ? JSON.parse(userString) : null;
-    
-    const initialAuth = !!(token && user);
-    const initialUsername = user ? (user.nom || user.email || 'User') : '';
-    const initialAvatarUrl = user ? user.avatarUrl : null; 
+    const navigate = useNavigate();
+    const location = useLocation();
 
-    const [isAuthenticated, setIsAuthenticated] = useState(initialAuth);
-    const [username, setUsername] = useState(initialUsername);
-    const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl);
+    const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
+    const [username, setUsername] = useState('');
+    const [avatarUrl, setAvatarUrl] = useState(null);
+    
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [erreurImage, setErreurImage] = useState(false);
     const [stockageUtilise, setStockageUtilise] = useState(0);
-    const location = useLocation();
 
     const MAX_STORAGE = 30 * 1024 * 1024 * 1024;
-
 
     const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
     const isHome = location.pathname === '/';
     const isLienPartage = location.pathname.startsWith('/lien/');
 
-    useEffect(() => {
-        const handleStorageChange = () => {
-            const updatedUserString = localStorage.getItem('user');
-            if (updatedUserString) {
-                const updatedUser = JSON.parse(updatedUserString);
-                setUsername(updatedUser.nom || updatedUser.email || 'User');
-                setAvatarUrl(updatedUser.avatarUrl || null);
-                setErreurImage(false);
-            }
-        };
-
-        handleStorageChange();
-        window.addEventListener('profilMisAJour', handleStorageChange);
-
-        return () => {
-            window.removeEventListener('profilMisAJour', handleStorageChange);
-        };
-    }, [location.pathname]);
-
-    useEffect(() => {
-    if (isAuthenticated) {
-        axios.get('http://localhost:3000/api/dossiers/stats/home', {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-        })
-        .then(response => {
-            setStockageUtilise(response.data.stockage.utilise || 0);
-        })
-        .catch(error => console.error("Erreur de récupération du stockage:", error));
-    }
-}, [isAuthenticated, location.pathname]);
-
-    const handleLogout = () => {
+    const performLogout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         setIsAuthenticated(false);
         setUsername('');
         setAvatarUrl(null);
-        window.location.href = '/';
+        if (location.pathname !== '/login' && location.pathname !== '/') {
+            navigate('/login');
+        }
     };
+
+    useEffect(() => {
+        const handleStorageChange = () => {
+            const token = localStorage.getItem('token');
+            const userString = localStorage.getItem('user');
+            
+            setIsAuthenticated(!!token);
+
+            if (userString) {
+                const user = JSON.parse(userString);
+                setUsername(user.nom || user.email || 'User');
+                setAvatarUrl(user.avatarUrl || null);
+                setErreurImage(false);
+            }
+        };
+
+        handleStorageChange();
+        
+        window.addEventListener('profilMisAJour', handleStorageChange);
+        return () => window.removeEventListener('profilMisAJour', handleStorageChange);
+    }, [location.pathname]);
+
+    useEffect(() => {
+        const handleForceLogout = () => {
+            performLogout();
+        };
+
+        window.addEventListener('forceLogout', handleForceLogout);
+        return () => window.removeEventListener('forceLogout', handleForceLogout);
+    }, [location.pathname]);
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            axios.get('http://localhost:3000/api/dossiers/stats/home', {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            })
+            .then(response => {
+                setStockageUtilise(response.data.stockage.utilise || 0);
+            })
+            .catch(error => console.error(error));
+        }
+    }, [isAuthenticated, location.pathname]);
 
     return (
         <div className="app-container">
@@ -136,7 +136,7 @@ function AppContent() {
                                 )}
                                 <span className="nav-username">{username}</span>
                             </div>
-                            <button onClick={handleLogout} className="nav-link logout-btn">Logout</button>
+                            <button onClick={performLogout} className="nav-link logout-btn">Déconnexion</button>
                         </>
                     ) : (
                         <>
@@ -152,29 +152,16 @@ function AppContent() {
                     <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
                         <div className="sidebar-content">
                             <h3>Menu</h3>
-                            <Link to="/dashboard" className={`sidebar-link ${location.pathname === '/dashboard' ? 'active' : ''}`}>
-                                Tableau de bord
-                            </Link>
-                            <Link to="/upload" className={`sidebar-link ${location.pathname === '/upload' ? 'active' : ''}`}>
-                                Uploader
-                            </Link>
-                            <Link to="/partages" className={`sidebar-link ${location.pathname === '/partages' ? 'active' : ''}`}>
-                                Partages
-                            </Link>
-                            <Link to="/settings" className={`sidebar-link ${location.pathname === '/settings' ? 'active' : ''}`}>
-                                Paramètres
-                            </Link>
+                            <Link to="/dashboard" className={`sidebar-link ${location.pathname === '/dashboard' ? 'active' : ''}`}>Tableau de bord</Link>
+                            <Link to="/upload" className={`sidebar-link ${location.pathname === '/upload' ? 'active' : ''}`}>Uploader</Link>
+                            <Link to="/partages" className={`sidebar-link ${location.pathname === '/partages' ? 'active' : ''}`}>Partages</Link>
+                            <Link to="/settings" className={`sidebar-link ${location.pathname === '/settings' ? 'active' : ''}`}>Paramètres</Link>
                         </div>
                         <div className="sidebar-storage">
                             <div className="storage-bar">
-                                <div 
-                                    className="storage-fill" 
-                                    style={{ width: `${Math.min((stockageUtilise / MAX_STORAGE) * 100, 100)}%` }}
-                                ></div>
+                                <div className="storage-fill" style={{ width: `${Math.min((stockageUtilise / MAX_STORAGE) * 100, 100)}%` }}></div>
                             </div>
-                            <p className="storage-text">
-                                {formatOctets(stockageUtilise)} utilisé
-                            </p>
+                            <p className="storage-text">{formatOctets(stockageUtilise)} utilisé</p>
                         </div>
                         <button className="sidebar-close" onClick={() => setSidebarOpen(false)}>✕</button>
                     </aside>
@@ -182,9 +169,7 @@ function AppContent() {
                 
                 <div className={`main-content ${isAuthenticated && !isAuthPage && !isHome && !isLienPartage ? 'with-sidebar' : ''} ${isAuthPage ? 'auth-page' : ''}`}>
                     {isAuthenticated && !isAuthPage && !isHome && !isLienPartage && (
-                        <button className="sidebar-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
-                            ☰
-                        </button>
+                        <button className="sidebar-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>☰</button>
                     )}
                     
                     <Routes>
