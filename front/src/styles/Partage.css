@@ -1,4 +1,4 @@
-.partage-page-container {
+.partage-conteneur-page {
     width: 100%;
     min-height: calc(100vh - 100px);
     padding: 3rem 2rem;
@@ -7,31 +7,31 @@
     justify-content: center;
 }
 
-.dashboard-wrapper {
+.partage-enveloppe-tableau {
     max-width: 1400px;
     width: 100%;
 }
 
-.dashboard-welcome h1 {
+.partage-entete-bienvenue h1 {
     font-size: 2.8rem;
     font-weight: 800;
     margin-bottom: 0.8rem;
     color: var(--text-primary-color);
 }
 
-.dashboard-welcome p {
+.partage-entete-bienvenue p {
     font-size: 1.2rem;
     color: var(--text-secondary-color);
     margin-bottom: 3rem;
 }
 
-.partages-grid {
+.partage-grille-principale {
     display: grid;
     grid-template-columns: 1fr;
     gap: 2.5rem;
 }
 
-.data-panel {
+.partage-panneau-donnees {
     background: var(--bg-tertiary-color);
     border-radius: 25px;
     padding: 2rem 2.5rem;
@@ -39,36 +39,36 @@
     box-shadow: 0 10px 25px var(--shadow-color);
 }
 
-.full-width {
+.partage-pleine-largeur {
     grid-column: 1 / -1;
 }
 
-.panel-header-desc {
+.partage-en-tete-description {
     margin-bottom: 2rem;
     border-bottom: 1px solid var(--bg-secondary-color);
     padding-bottom: 1.2rem;
 }
 
-.panel-header-desc h3 {
+.partage-en-tete-description h3 {
     font-size: 1.5rem;
     margin: 0 0 0.5rem 0;
     color: var(--text-primary-color);
     font-weight: 700;
 }
 
-.panel-header-desc p {
+.partage-en-tete-description p {
     margin: 0;
     font-size: 1rem;
     color: var(--text-secondary-color);
 }
 
-.wide-list {
+.partage-liste-large {
     display: flex;
     flex-direction: column;
     gap: 1rem;
 }
 
-.wide-list-item {
+.partage-element-liste {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -79,14 +79,14 @@
     transition: all 0.2s ease;
 }
 
-.wide-list-item:hover {
+.partage-element-liste:hover {
     background: var(--select-primary-color);
     transform: translateY(-3px);
     border-color: var(--border-color);
     box-shadow: 0 8px 15px var(--shadow-color);
 }
 
-.item-main {
+.partage-element-principal {
     display: flex;
     align-items: center;
     gap: 1.2rem;
@@ -94,11 +94,11 @@
     overflow: hidden;
 }
 
-.file-icon {
+.partage-icone-fichier {
     font-size: 1.8rem;
 }
 
-.file-name {
+.partage-nom-fichier {
     font-weight: 600;
     font-size: 1.1rem;
     color: var(--text-primary-color);
@@ -107,19 +107,19 @@
     text-overflow: ellipsis;
 }
 
-.item-side {
+.partage-element-lateral {
     display: flex;
     align-items: center;
     gap: 2rem;
 }
 
-.file-date {
+.partage-date-fichier {
     font-size: 0.95rem;
     color: var(--text-secondary-color);
     font-weight: 600;
 }
 
-.tag-status {
+.partage-etiquette-statut {
     padding: 0.3rem 0.8rem;
     border-radius: 10px;
     font-size: 0.85rem;
@@ -128,19 +128,19 @@
     white-space: nowrap;
 }
 
-.tag-protege {
+.partage-etiquette-protege {
     background: rgba(6, 188, 193, 0.15);
     color: var(--btn-primary-color);
     border: 1px solid rgba(6, 188, 193, 0.3);
 }
 
-.tag-public {
+.partage-etiquette-public {
     background: var(--bg-secondary-color);
     color: var(--text-secondary-color);
     border: 1px solid var(--border-color);
 }
 
-.btn-danger-outline {
+.partage-bouton-danger-contour {
     background: transparent;
     color: #ff4d4d;
     border: 2px solid rgba(255, 77, 77, 0.3);
@@ -152,14 +152,14 @@
     font-size: 0.95rem;
 }
 
-.btn-danger-outline:hover {
+.partage-bouton-danger-contour:hover {
     background: #ff4d4d;
     color: white;
     border-color: #ff4d4d;
     box-shadow: 0 5px 15px rgba(255, 77, 77, 0.3);
 }
 
-.empty-state {
+.partage-etat-vide {
     text-align: center;
     padding: 3rem;
     background: var(--bg-primary-color);
@@ -170,7 +170,7 @@
     font-weight: 600;
 }
 
-.alert-danger {
+.partage-alerte-erreur {
     background: rgba(255, 77, 77, 0.1);
     border: 1px solid rgba(255, 77, 77, 0.3);
     color: #ff4d4d;
@@ -184,7 +184,7 @@
     font-size: 1.1rem;
 }
 
-.alert-close {
+.partage-fermer-alerte {
     background: none;
     border: none;
     color: #ff4d4d;
@@ -193,11 +193,11 @@
     transition: transform 0.2s;
 }
 
-.alert-close:hover {
+.partage-fermer-alerte:hover {
     transform: scale(1.2);
 }
 
-.loader {
+.partage-chargement {
     font-size: 1.5rem;
     font-weight: bold;
     color: var(--btn-primary-color);
@@ -205,18 +205,18 @@
 }
 
 @media (max-width: 900px) {
-    .wide-list-item {
+    .partage-element-liste {
         flex-direction: column;
         align-items: flex-start;
         gap: 1.5rem;
     }
     
-    .item-side {
+    .partage-element-lateral {
         width: 100%;
         justify-content: space-between;
     }
 
-    .data-panel {
+    .partage-panneau-donnees {
         padding: 1.5rem;
     }
 }

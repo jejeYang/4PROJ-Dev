@@ -9,41 +9,41 @@ function Partage() {
         supprimerLienPublic, resilierPartageInterne 
     } = useVoirPartage();
 
-    if (chargement) return <div className="partage-page-container"><div className="loader">Chargement...</div></div>;
+    if (chargement) return <div className="partage-conteneur-page"><div className="partage-chargement">Chargement...</div></div>;
 
     return (
-        <div className="partage-page-container">
-            <div className="dashboard-wrapper">
-                <header className="dashboard-welcome">
+        <div className="partage-conteneur-page">
+            <div className="partage-enveloppe-tableau">
+                <header className="partage-entete-bienvenue">
                     <h1>Gestion des partages 🤝</h1>
                     <p>Gérez vos accès, vos envois et vos liens publics en un clin d'œil.</p>
                 </header>
 
                 {erreur && (
-                    <div className="alert-danger">
+                    <div className="partage-alerte-erreur">
                         <span>{erreur}</span>
-                        <button className="alert-close" onClick={() => setErreur('')}>✕</button>
+                        <button className="partage-fermer-alerte" onClick={() => setErreur('')}>✕</button>
                     </div>
                 )}
 
-                <div className="partages-grid">
+                <div className="partage-grille-principale">
                     
-                    <div className="data-panel full-width">
-                        <div className="panel-header-desc">
+                    <div className="partage-panneau-donnees partage-pleine-largeur">
+                        <div className="partage-en-tete-description">
                             <h3>Partages reçus</h3>
                             <p>Dossiers partagés par d'autres utilisateurs avec vous.</p>
                         </div>
-                        <div className="wide-list">
-                            {partagesRecus.length === 0 ? <div className="empty-state">Aucun dossier reçu.</div> : 
+                        <div className="partage-liste-large">
+                            {partagesRecus.length === 0 ? <div className="partage-etat-vide">Aucun dossier reçu.</div> : 
                                 partagesRecus.map(p => (
-                                    <div key={p.idDossier} className="wide-list-item">
-                                        <div className="item-main">
-                                            <span className="file-icon">📥</span>
-                                            <span className="file-name">{p.cheminDaccesDossier}</span>
+                                    <div key={p.idDossier} className="partage-element-liste">
+                                        <div className="partage-element-principal">
+                                            <span className="partage-icone-fichier">📥</span>
+                                            <span className="partage-nom-fichier">{p.cheminDaccesDossier}</span>
                                         </div>
-                                        <div className="item-side">
-                                            <span className="file-date">Reçu le {new Date(p.dateCreation).toLocaleDateString()}</span>
-                                            <button className="btn-danger-outline" onClick={() => resilierPartageInterne(p.idDossier)}>Quitter</button>
+                                        <div className="partage-element-lateral">
+                                            <span className="partage-date-fichier">Reçu le {new Date(p.dateCreation).toLocaleDateString()}</span>
+                                            <button className="partage-bouton-danger-contour" onClick={() => resilierPartageInterne(p.idDossier)}>Quitter</button>
                                         </div>
                                     </div>
                                 ))
@@ -51,22 +51,22 @@ function Partage() {
                         </div>
                     </div>
 
-                    <div className="data-panel full-width">
-                        <div className="panel-header-desc">
+                    <div className="partage-panneau-donnees partage-pleine-largeur">
+                        <div className="partage-en-tete-description">
                             <h3>Partages envoyés</h3>
                             <p>Dossiers que vous avez partagés avec d'autres comptes.</p>
                         </div>
-                        <div className="wide-list">
-                            {partagesEnvoyes.length === 0 ? <div className="empty-state">Aucun partage envoyé.</div> : 
+                        <div className="partage-liste-large">
+                            {partagesEnvoyes.length === 0 ? <div className="partage-etat-vide">Aucun partage envoyé.</div> : 
                                 partagesEnvoyes.map(p => (
-                                    <div key={p.idDossier} className="wide-list-item">
-                                        <div className="item-main">
-                                            <span className="file-icon">📤</span>
-                                            <span className="file-name">{p.cheminDaccesDossier}</span>
+                                    <div key={p.idDossier} className="partage-element-liste">
+                                        <div className="partage-element-principal">
+                                            <span className="partage-icone-fichier">📤</span>
+                                            <span className="partage-nom-fichier">{p.cheminDaccesDossier}</span>
                                         </div>
-                                        <div className="item-side">
-                                            <span className="file-date">Envoyé le {new Date(p.dateCreation).toLocaleDateString()}</span>
-                                            <button className="btn-danger-outline" onClick={() => resilierPartageInterne(p.idDossier)}>Révoquer</button>
+                                        <div className="partage-element-lateral">
+                                            <span className="partage-date-fichier">Envoyé le {new Date(p.dateCreation).toLocaleDateString()}</span>
+                                            <button className="partage-bouton-danger-contour" onClick={() => resilierPartageInterne(p.idDossier)}>Révoquer</button>
                                         </div>
                                     </div>
                                 ))
@@ -74,24 +74,24 @@ function Partage() {
                         </div>
                     </div>
 
-                    <div className="data-panel full-width">
-                        <div className="panel-header-desc">
+                    <div className="partage-panneau-donnees partage-pleine-largeur">
+                        <div className="partage-en-tete-description">
                             <h3>Liens publics (Invités)</h3>
                             <p>Liens actifs accessibles via URL.</p>
                         </div>
-                        <div className="wide-list">
-                            {liensPublics.length === 0 ? <div className="empty-state">Aucun lien généré.</div> : 
+                        <div className="partage-liste-large">
+                            {liensPublics.length === 0 ? <div className="partage-etat-vide">Aucun lien généré.</div> : 
                                 liensPublics.map(l => (
-                                    <div key={l.idLien} className="wide-list-item">
-                                        <div className="item-main">
-                                            <span className="file-icon">{l.type === 'dossier' ? '📁' : '📄'}</span>
-                                            <span className="file-name">{l.nom}</span>
-                                            <span className={`tag-status ${l.protege ? 'tag-protege' : 'tag-public'}`}>
+                                    <div key={l.idLien} className="partage-element-liste">
+                                        <div className="partage-element-principal">
+                                            <span className="partage-icone-fichier">{l.type === 'dossier' ? '📁' : '📄'}</span>
+                                            <span className="partage-nom-fichier">{l.nom}</span>
+                                            <span className={`partage-etiquette-statut ${l.protege ? 'partage-etiquette-protege' : 'partage-etiquette-public'}`}>
                                                 {l.protege ? '🔒 Protégé' : '🔓 Public'}
                                             </span>
                                         </div>
-                                        <div className="item-side">
-                                            <button className="btn-danger-outline" onClick={() => supprimerLienPublic(l.idLien)}>Supprimer</button>
+                                        <div className="partage-element-lateral">
+                                            <button className="partage-bouton-danger-contour" onClick={() => supprimerLienPublic(l.idLien)}>Supprimer</button>
                                         </div>
                                     </div>
                                 ))
