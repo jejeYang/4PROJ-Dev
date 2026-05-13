@@ -16,8 +16,7 @@ function Home() {
             {estAuthentifie && stats ? (
                 <div className="accueil-enveloppe-tableau">
                     <header className="accueil-entete-bienvenue">
-                        <h1>Bienvenue, {nomUtilisateur} 👋</h1>
-                        <p>Voici l'aperçu complet de votre activité.</p>
+                        <h1>Bienvenue, {nomUtilisateur}</h1>
                     </header>
 
                     <div className="accueil-grille-actions">

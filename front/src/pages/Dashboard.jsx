@@ -63,7 +63,7 @@ function Dashboard() {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [ouvre_modal.type, creating, modal_recherche_ouverte, fichier_preview, setOuvreModal, fermerApercu]);
 
-    if (loading) return <div className="dashboard-container">Chargement...</div>;
+    if (loading) return <div className="dashboard-container"><div className="div-chargement">Chargement...</div></div>;
 
     const id_dossier_courant = dossier_actuel ? dossier_actuel.idDossier : dossier_racine?.idDossier;
 
@@ -108,7 +108,7 @@ function Dashboard() {
                 <div className="dashboard-drag-overlay" />
             )}
 
-            <div className="dashboard-header">
+            <div className="page-liste-header">
                 <div>
                     <h1>Mon Espace</h1>
                     {fil_ariane.length > 0 && (
@@ -125,22 +125,22 @@ function Dashboard() {
                         </nav>
                     )}
                 </div>
-                <div className={`dashboard-header-actions ${dossier_actuel ? 'in-folder' : ''}`}>
+                <div className={`page-liste-header-actions ${dossier_actuel ? 'in-folder' : ''}`}>
                     {!estDansCorbeille ? (
                         <>
-                            <button className="btn-publie-dashboard-header" onClick={naviguerVersUpload}>Publier un fichier</button>
-                            <button className="btn-cree-dossier-dashboard-header" onClick={() => { setChangeNomDossier(''); setError(''); setOuvreModal({ type: 'creation-dossier', data: null }); }}>
+                            <button className="btn-publie-page-liste-header" onClick={naviguerVersUpload}>Publier un fichier</button>
+                            <button className="btn-cree-dossier-page-liste-header" onClick={() => { setChangeNomDossier(''); setError(''); setOuvreModal({ type: 'creation-dossier', data: null }); }}>
                                 Créer un dossier
                             </button>
                         </>
                     ) : (
-                        <button className="btn-cree-dossier-dashboard-header" onClick={ouvrirModalViderCorbeille}>Vider la corbeille</button>
+                        <button className="btn-cree-dossier-page-liste-header" onClick={ouvrirModalViderCorbeille}>Vider la corbeille</button>
                     )}
                 </div>
             </div>
 
             {error && !ouvre_modal.type && !formulaire_partage_ouvert && (
-                <div className="dashboard-erreur-globale">
+                <div className="page-listee-erreur-globale">
                     <span>{error}</span>
                     <button className="btn-fermer-erreur" onClick={() => setError('')} title="Fermer">✕</button>
                 </div>

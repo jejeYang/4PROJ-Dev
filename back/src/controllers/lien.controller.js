@@ -68,7 +68,14 @@ class LienController {
         try {
             const idUtilisateur = +req.utilisateur.id;
             const partages = await this.lienService.recupererPartagesEnvoyes(idUtilisateur);
-            res.json(partages);
+            
+            // Récupère l'email du compte qui a reçu l'accès
+            const partagesAvecEmail = await Promise.all(partages.map(async (p) => {
+                const compteCible = await this.compteService.compteRepository.findById(p.idCompteCreateur); // Celui qui détient la copie
+                return { ...p, emailContact: compteCible?.adresseMailCompte };
+            }));
+
+            res.json(partagesAvecEmail);
         } catch (error) {
             next(error);
         }
@@ -78,7 +85,14 @@ class LienController {
         try {
             const idUtilisateur = +req.utilisateur.id;
             const partages = await this.lienService.recupererPartagesRecus(idUtilisateur);
-            res.json(partages);
+            
+            // Récupère l'email du compte qui a initié le partage (idCompteAcces)
+            const partagesAvecEmail = await Promise.all(partages.map(async (p) => {
+                const compteSource = await this.compteService.compteRepository.findById(p.idCompteAcces);
+                return { ...p, emailContact: compteSource?.adresseMailCompte };
+            }));
+
+            res.json(partagesAvecEmail);
         } catch (error) {
             next(error);
         }
@@ -141,19 +155,31 @@ class LienController {
             const idUtilisateur = +req.utilisateur.id;
             const liens = await this.lienService.recupererLiensParCompte(idUtilisateur);
             
-            const ressources = liens.map(lien => {
+            // Récupère le nom du dossier à partir du chemin d'accès du lien
+            const ressources = await Promise.all(liens.map(async (lien) => {
                 const info = this._parserCheminDaccesLien(lien.cheminDaccesLien);
+                
+                let vraiNom = info?.fileName || 'Ressource inconnue';
+                if (info?.type === 'dossier') {
+                    try {
+                        const dossierSource = await this.dossierService.recupererDossierParId(info.dossierId);
+                        vraiNom = dossierSource.cheminDaccesDossier;
+                    } catch (e) {
+                        vraiNom = 'Dossier introuvable';
+                    }
+                }
+
                 return {
                     idLien: lien.idLienGenere,
                     token: lien.urlLienGenere,
                     url: `/liens/${lien.urlLienGenere}`,
                     type: info?.type,
-                    nom: info?.fileName || 'Dossier',
+                    nom: vraiNom,
                     dateExpiration: lien.dateExpiration,
                     protege: !!lien.mdpLienGenere,
                     createdAt: lien.dateCreation
                 };
-            });
+            }));
             res.json(ressources);
         } catch (error) {
             next(error);
