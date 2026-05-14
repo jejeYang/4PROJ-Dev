@@ -106,7 +106,6 @@ class DossierService {
 
     async supprimerDossier(dossierId) {
         const dossierASupprimer = await this.recupererDossierParId(dossierId);
-        const idProprietaire = dossierASupprimer.idCompteCreateur;
 
         // Récupérer tous les dossiers liés à ce partage (la source + les copies)
         const idOriginal = dossierASupprimer.idDossierSource || dossierASupprimer.idDossier;
@@ -134,10 +133,12 @@ class DossierService {
             const cheminPhysique = path.join(SERVER_FILES_PATH, `user_${dossier.idCompteCreateur}`, cheminRelatif);
 
             try {
-                if (fs.existsSync(cheminPhysique)) {
-                    // Si c'est un lien (partage), on ne supprime que le lien, pas la source
-                    const stats = fs.lstatSync(cheminPhysique);
-                    if (stats.isSymbolicLink()) {
+                let statsCible = null;
+                // lstatSync pour détecter les liens morts
+                try { statsCible = fs.lstatSync(cheminPhysique); } catch (err) {}
+
+                if (statsCible) {
+                    if (statsCible.isSymbolicLink()) {
                         fs.unlinkSync(cheminPhysique);
                     } else {
                         fs.rmSync(cheminPhysique, { recursive: true, force: true });
@@ -287,16 +288,19 @@ class DossierService {
                 }
 
                 const cheminFichier = path.join(cheminPhysique, nom);
-                const stat = fs.statSync(cheminFichier);
-
-                if (!stat.isDirectory()) {
-                    return {
-                        nom: nom,
-                        taille: stat.size,
-                        dateCreation: stat.birthtime || stat.ctime,
-                        dateModification: stat.mtime,
-                        type: 'fichier'
-                    };
+                try {
+                    const stat = fs.statSync(cheminFichier);
+                    if (!stat.isDirectory()) {
+                        return {
+                            nom: nom,
+                            taille: stat.size,
+                            dateCreation: stat.birthtime || stat.ctime,
+                            dateModification: stat.mtime,
+                            type: 'fichier'
+                        };
+                    }
+                } catch (e) {
+                    return null;
                 }
                 return null;
             }).filter(f => f !== null);
@@ -711,6 +715,7 @@ class DossierService {
             await this.lienService.supprimerLiensDossier(descId);
         }
 
+        // Supprime les copies chez les destinataires
         if (!dossier.idDossierSource) {
             const copies = await this.dossierRepository.findMany({
                 idDossierSource: Number(dossierId)
@@ -727,9 +732,11 @@ class DossierService {
                 const cheminRelatifCopie = await this.construireCheminComplet(copie.idDossier);
                 const cheminPhysiqueCopie = path.join(SERVER_FILES_PATH, `user_${copie.idCompteCreateur}`, cheminRelatifCopie);
                 try {
-                    if (fs.existsSync(cheminPhysiqueCopie)) {
-                        const stats = fs.lstatSync(cheminPhysiqueCopie);
-                        if (stats.isSymbolicLink()) {
+                    let statsCopie = null;
+                    try { statsCopie = fs.lstatSync(cheminPhysiqueCopie); } catch(e){}
+                    
+                    if (statsCopie) {
+                        if (statsCopie.isSymbolicLink()) {
                             fs.unlinkSync(cheminPhysiqueCopie);
                         } else {
                             fs.rmSync(cheminPhysiqueCopie, { recursive: true, force: true });
@@ -745,31 +752,29 @@ class DossierService {
         }
 
         const cheminSourceRelatif = await this.construireCheminComplet(dossierId);
-        const cheminSourcePhysique = path.join(
-            SERVER_FILES_PATH,
-            `user_${idCompteCreateur}`,
-            cheminSourceRelatif
-        );
+        const cheminSourcePhysique = path.join(SERVER_FILES_PATH, `user_${idCompteCreateur}`, cheminSourceRelatif);
 
         const cheminCorbeilleRelatif = await this.construireCheminComplet(corbeille.idDossier);
-        const cheminCorbeillePhysique = path.join(
-            SERVER_FILES_PATH,
-            `user_${idCompteCreateur}`,
-            cheminCorbeilleRelatif
-        );
+        const cheminCorbeillePhysique = path.join(SERVER_FILES_PATH, `user_${idCompteCreateur}`, cheminCorbeilleRelatif);
 
         if (!fs.existsSync(cheminCorbeillePhysique)) {
             await mkdir(cheminCorbeillePhysique, { recursive: true });
         }
 
-        let cheminDestinationPhysique = path.join(cheminCorbeillePhysique, dossier.cheminDaccesDossier);
+        let nomFinalDossier = dossier.cheminDaccesDossier;
+        let cheminDestinationPhysique = path.join(cheminCorbeillePhysique, nomFinalDossier);
+        
+        // Si un dossier avec ce nom existe déjà dans la corbeille, on modifie le nom
         if (fs.existsSync(cheminDestinationPhysique)) {
             const suff = `-${Date.now()}`;
-            cheminDestinationPhysique = path.join(cheminCorbeillePhysique, `${dossier.cheminDaccesDossier}${suff}`);
+            nomFinalDossier = `${dossier.cheminDaccesDossier}${suff}`;
+            cheminDestinationPhysique = path.join(cheminCorbeillePhysique, nomFinalDossier);
         }
 
         try {
-            if (fs.existsSync(cheminSourcePhysique)) {
+            let sourceExists = false;
+            try { fs.lstatSync(cheminSourcePhysique); sourceExists = true; } catch(e){}
+            if (sourceExists) {
                 fs.renameSync(cheminSourcePhysique, cheminDestinationPhysique);
             }
         } catch (error) {
@@ -780,6 +785,7 @@ class DossierService {
         return await this.dossierRepository.update(dossierId, {
             idDossierParent: corbeille.idDossier,
             status: cheminSourceRelatif,
+            cheminDaccesDossier: nomFinalDossier 
         });
     }
 
@@ -1200,12 +1206,14 @@ class DossierService {
                     }
 
                     const cheminFichier = path.join(cheminDir, fichier);
-                    const stat = fs.statSync(cheminFichier);
-
-                    if (stat.isDirectory()) {
-                        tailleTotale += calculerTaille(cheminFichier);
-                    } else {
-                        tailleTotale += stat.size;
+                    try {
+                        const stat = fs.statSync(cheminFichier);
+                        if (stat.isDirectory()) {
+                            tailleTotale += calculerTaille(cheminFichier);
+                        } else {
+                            tailleTotale += stat.size;
+                        }
+                    } catch (e) {
                     }
                 });
 
