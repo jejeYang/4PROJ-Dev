@@ -140,7 +140,7 @@ function Dashboard() {
             </div>
 
             {error && !ouvre_modal.type && !formulaire_partage_ouvert && (
-                <div className="page-listee-erreur-globale">
+                <div className="page-liste-erreur-globale">
                     <span>{error}</span>
                     <button className="btn-fermer-erreur" onClick={() => setError('')} title="Fermer">✕</button>
                 </div>

@@ -205,7 +205,7 @@ class LienController {
     accederLienPartage = async (req, res, next) => {
         try {
             const { token } = req.params;
-            const { download } = req.query; 
+            const { download, idDossier, fileName } = req.query; 
             const lien = await this.lienService.recupererParToken(token);
 
             if (!lien) return res.status(404).json({ error: 'Lien introuvable.' });
@@ -222,25 +222,46 @@ class LienController {
             const resource = this._parserCheminDaccesLien(lien.cheminDaccesLien);
             if (!resource) return res.status(400).json({ error: 'Lien corrompu.' });
 
-            const dossier = await this.dossierService.recupererDossierParId(resource.dossierId);
-            const sourcePath = await this.dossierService.construireCheminComplet(resource.dossierId);
-
             if (resource.type === 'fichier') {
+                const dossier = await this.dossierService.recupererDossierParId(resource.dossierId);
+                const sourcePath = await this.dossierService.construireCheminComplet(resource.dossierId);
                 const cheminFichier = path.join(SERVER_FILES_PATH, `user_${dossier.idCompteCreateur}`, sourcePath, resource.fileName);
+                
                 if (!fs.existsSync(cheminFichier)) return res.status(404).json({ error: 'Fichier introuvable.' });
-
                 if (download === 'true') res.download(cheminFichier, resource.fileName);
                 else res.sendFile(cheminFichier);
             } else {
-                const dossierPhysique = path.join(SERVER_FILES_PATH, `user_${dossier.idCompteCreateur}`, sourcePath);
-                const nomArchive = `${path.basename(sourcePath)}.zip`;
-                res.setHeader('Content-Type', 'application/zip');
-                res.setHeader('Content-Disposition', `attachment; filename="${nomArchive}"`);
+                let cibleId = resource.dossierId;
                 
-                const archive = archiver('zip', { zlib: { level: 9 } });
-                archive.pipe(res);
-                archive.directory(dossierPhysique, path.basename(sourcePath));
-                await archive.finalize();
+                // Vérifie si l'utilisateur veut accéder à un sous-dossier et s'assure que c'est un descendant du dossier partagé
+                if (idDossier && idDossier !== String(resource.dossierId)) {
+                    const estDescendant = await this.dossierService.estDescendant(idDossier, resource.dossierId);
+                    if (!estDescendant) return res.status(403).json({ error: 'Accès non autorisé.' });
+                    cibleId = parseInt(idDossier, 10);
+                }
+
+                const dossier = await this.dossierService.recupererDossierParId(cibleId);
+                const sourcePath = await this.dossierService.construireCheminComplet(cibleId);
+
+                if (fileName) {
+                    // Téléchargement d'un fichier spécifique dans le dossier
+                    const cheminFichier = path.join(SERVER_FILES_PATH, `user_${dossier.idCompteCreateur}`, sourcePath, fileName);
+                    if (!fs.existsSync(cheminFichier)) return res.status(404).json({ error: 'Fichier introuvable.' });
+
+                    if (download === 'true') res.download(cheminFichier, fileName);
+                    else res.sendFile(cheminFichier);
+                } else {
+                    // Téléchargement du dossier entier en ZIP
+                    const dossierPhysique = path.join(SERVER_FILES_PATH, `user_${dossier.idCompteCreateur}`, sourcePath);
+                    const nomArchive = `${path.basename(sourcePath)}.zip`;
+                    res.setHeader('Content-Type', 'application/zip');
+                    res.setHeader('Content-Disposition', `attachment; filename="${nomArchive}"`);
+                    
+                    const archive = archiver('zip', { zlib: { level: 9 } });
+                    archive.pipe(res);
+                    archive.directory(dossierPhysique, path.basename(sourcePath));
+                    await archive.finalize();
+                }
             }
         } catch (error) {
             next(error);
@@ -250,6 +271,7 @@ class LienController {
     obtenirDetailsLien = async (req, res, next) => {
         try {
             const { token } = req.params;
+            const { idSousDossier } = req.query;
             const lien = await this.lienService.recupererParToken(token);
 
             if (!lien) return res.status(404).json({ error: 'Lien introuvable.' });
@@ -257,17 +279,46 @@ class LienController {
                 return res.status(410).json({ error: 'Ce lien a expiré.' });
             }
 
+            const password = req.query.password || req.headers['x-lien-password'];
+            const isPasswordValid = await this.lienService.verifierMdpLien(password, lien.mdpLienGenere);
+            if (!isPasswordValid) {
+                return res.status(401).json({ error: 'Mot de passe requis.', protege: true });
+            }
+
             const resource = this._parserCheminDaccesLien(lien.cheminDaccesLien);
-            const dossier = await this.dossierService.recupererDossierParId(resource.dossierId);
-            const sourcePath = await this.dossierService.construireCheminComplet(resource.dossierId);
+            if (!resource) return res.status(400).json({ error: 'Lien corrompu.' });
 
             if (resource.type === 'fichier') {
+                const dossier = await this.dossierService.recupererDossierParId(resource.dossierId);
+                const sourcePath = await this.dossierService.construireCheminComplet(resource.dossierId);
                 const chemin = path.join(SERVER_FILES_PATH, `user_${dossier.idCompteCreateur}`, sourcePath, resource.fileName);
                 const stats = fs.statSync(chemin);
-                res.json({ type: 'fichier', nom: resource.fileName, taille: stats.size, mtime: stats.mtime });
+                
+                res.json({ type: 'fichier', nom: resource.fileName, taille: stats.size, dateModification: stats.mtime });
             } else {
-                const fichiers = await this.dossierService.recupererFichiersDossier(resource.dossierId);
-                res.json({ type: 'dossier', nom: dossier.cheminDaccesDossier, fichiers });
+                let cibleId = resource.dossierId;
+                let isRacinePartage = true;
+
+                // Navigation dans un sous-dossier
+                if (idSousDossier && idSousDossier !== String(resource.dossierId)) {
+                    const estDescendant = await this.dossierService.estDescendant(idSousDossier, resource.dossierId);
+                    if (!estDescendant) return res.status(403).json({ error: "Accès non autorisé à ce sous-dossier." });
+                    cibleId = parseInt(idSousDossier, 10);
+                    isRacinePartage = false;
+                }
+
+                const dossier = await this.dossierService.recupererDossierParId(cibleId);
+                const fichiers = await this.dossierService.recupererFichiersDossier(cibleId);
+                const sousDossiers = await this.dossierService.recupererSousDossiers(cibleId);
+
+                res.json({ 
+                    type: 'dossier', 
+                    nom: dossier.cheminDaccesDossier, 
+                    idDossier: cibleId,
+                    isRacinePartage,
+                    fichiers,
+                    sousDossiers 
+                });
             }
         } catch (error) {
             next(error);

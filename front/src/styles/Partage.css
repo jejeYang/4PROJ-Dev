@@ -131,7 +131,7 @@
 
 .partage-bouton-danger-contour:hover {
     background: var(--error-color);
-    color: var-(--bg-primary-color);
+    color: var(--bg-primary-col);
     border-color: var(--error-color);
     box-shadow: 0 5px 15px var(--shadow-color)
 }

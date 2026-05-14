@@ -3,18 +3,7 @@ General :
 - Conteneuriser le front
 - Remplacer les emoji par une bibliothèque (ex : Flaticon)
 - Responsive
-
-Page d'accueil :
-- Clean le css
-
-Dashboard :
-- Fonctionnalités :
-    - Créer un lien de partage (Dossier, Fichier) [EN ATTENTE DU BACK]
-
-Partage :
-- Voir liens actifs fichier / dossier
-- Supprimer lien
-- Clean le css
+- Conditions d'utilisation
 
 Lien :
 - Afficher l'élement partagé
@@ -23,3 +12,6 @@ Lien :
 Back :
 - Restaurer un élement doit le remettre dans le dossier dans lequel il était plutôt qu'à la racine
 - Récupérer la date de création d'un fichier
+- Supprimer un partage quand on supprime le dossier qu'on a partagé
+- Mot de passe doit être demandé pour accéder au contenu du dossier partagé (lien)
+- Gestion date d'expiration des liens

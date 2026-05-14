@@ -705,6 +705,45 @@ class DossierService {
             throw new Error('Corbeille non trouvée pour cet utilisateur');
         }
 
+        // Supprime les liens publics associés à ce dossier et à tous ses sous-dossiers
+        const idsDescendants = [Number(dossierId), ...(await this.recupererIdsDescendants(dossierId))];
+        for (const descId of idsDescendants) {
+            await this.lienService.supprimerLiensDossier(descId);
+        }
+
+        if (!dossier.idDossierSource) {
+            const copies = await this.dossierRepository.findMany({
+                idDossierSource: Number(dossierId)
+            });
+            
+            for (const copie of copies) {
+                // Enlève les liens publics que le destinataire aurait pu générer sur sa copie
+                const copyDescendants = [Number(copie.idDossier), ...(await this.recupererIdsDescendants(copie.idDossier))];
+                for (const descId of copyDescendants) {
+                    await this.lienService.supprimerLiensDossier(descId);
+                }
+
+                // Supprime les lien de partage chez le destinataire
+                const cheminRelatifCopie = await this.construireCheminComplet(copie.idDossier);
+                const cheminPhysiqueCopie = path.join(SERVER_FILES_PATH, `user_${copie.idCompteCreateur}`, cheminRelatifCopie);
+                try {
+                    if (fs.existsSync(cheminPhysiqueCopie)) {
+                        const stats = fs.lstatSync(cheminPhysiqueCopie);
+                        if (stats.isSymbolicLink()) {
+                            fs.unlinkSync(cheminPhysiqueCopie);
+                        } else {
+                            fs.rmSync(cheminPhysiqueCopie, { recursive: true, force: true });
+                        }
+                    }
+                } catch (e) {
+                    console.error(`Erreur suppression physique pour copie partagée ${copie.idDossier}:`, e);
+                }
+
+                // Supprime le dossier de la base de données du destinataire
+                await this.dossierRepository.delete(copie.idDossier);
+            }
+        }
+
         const cheminSourceRelatif = await this.construireCheminComplet(dossierId);
         const cheminSourcePhysique = path.join(
             SERVER_FILES_PATH,
@@ -812,6 +851,8 @@ class DossierService {
         if (!corbeille) {
             throw new Error('Corbeille non trouvée pour cet utilisateur');
         }
+
+        await this.lienService.supprimerLienFichier(dossierId, nomFichier);
 
         const cheminSourceRelatif = await this.construireCheminComplet(dossierId);
         const cheminSourcePhysique = path.join(

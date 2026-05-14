@@ -412,7 +412,7 @@
     font-weight: 600;
 }
 
-.page-listee-erreur-globale {
+.page-liste-erreur-globale {
     background: var(--bg-secondary-color);
     color: var(--error-color);
     padding: 1rem;

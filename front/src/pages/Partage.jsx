@@ -31,7 +31,7 @@ function Partage() {
                 </header>
 
                 {erreur && (
-                    <div className="page-listee-erreur-globale">
+                    <div className="page-liste-erreur-globale">
                         <span>{erreur}</span>
                         <button className="btn-fermer-erreur" onClick={() => setErreur('')}>✕</button>
                     </div>

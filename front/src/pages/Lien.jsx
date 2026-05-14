@@ -1,18 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
-import '../styles/Lien.css';
+import { formatFileSize, obtenirTypeFichier, tronquerNom, separerNomExtension, obtenirEmojiFichier } from '../utils/fichierUtils';
+import '../styles/Dashboard.css';
 
 const Lien = () => {
     const { token } = useParams();
     const [details, setDetails] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    
+    // Auth & Navigation
     const [password, setPassword] = useState('');
     const [passwordRequired, setPasswordRequired] = useState(false);
-    const [currentFolderId, setCurrentFolderId] = useState(null);
+    const [nomRacine, setNomRacine] = useState('');
+    const [fil_ariane, setFilAriane] = useState([]); // [{id, nom}]
+    
+    // Aperçu
+    const [fichier_preview, setFichierPreview] = useState(null);
 
-    const fetchDetails = async (pass = '', folderId = null) => {
+    const fetchDetails = async (pass = password, folderId = null) => {
         setLoading(true);
         setError('');
         try {
@@ -21,17 +28,19 @@ const Lien = () => {
                 headers: pass ? { 'x-lien-password': pass } : {}
             };
             const response = await axios.get(`http://localhost:3000/api/liens/${token}/details`, config);
+            
             setDetails(response.data);
             setPasswordRequired(false);
-            if (response.data.type === 'dossier') {
-                setCurrentFolderId(response.data.idDossier);
+            
+            if (response.data.isRacinePartage) {
+                setNomRacine(response.data.nom);
             }
         } catch (err) {
             if (err.response && err.response.status === 401) {
                 setPasswordRequired(true);
                 if (pass) setError('Mot de passe incorrect.');
             } else {
-                setError(err.response?.data?.error || 'Erreur lors de la récupération des détails.');
+                setError(err.response?.data?.error || 'Erreur lors de la récupération du lien.');
             }
         } finally {
             setLoading(false);
@@ -40,6 +49,7 @@ const Lien = () => {
 
     useEffect(() => {
         fetchDetails();
+        // eslint-disable-next-line
     }, [token]);
 
     const handlePasswordSubmit = (e) => {
@@ -47,72 +57,76 @@ const Lien = () => {
         fetchDetails(password);
     };
 
-    const handleAction = (fileName = null, folderId = null, download = false) => {
-        const idToUse = folderId || (details.type === 'dossier' ? details.idDossier : null);
-        const nameToUse = fileName || (details.type === 'fichier' ? details.nom : null);
+    const naviguerVersDossier = (dossierId, nomDossier) => {
+        setFilAriane([...fil_ariane, { id: dossierId, nom: nomDossier }]);
+        fetchDetails(password, dossierId);
+    };
+
+    const gestionClicBreadcrumb = (index) => {
+        if (index === -1) {
+            setFilAriane([]);
+            fetchDetails(password, null);
+        } else {
+            const nouveauFil = fil_ariane.slice(0, index + 1);
+            setFilAriane(nouveauFil);
+            fetchDetails(password, nouveauFil[index].id);
+        }
+    };
+
+    const ouvrirApercu = (fichier) => {
+        const type = obtenirTypeFichier(fichier.nom);
+        if (type === 'inconnu') return;
         
-        let url = `http://localhost:3000/api/liens/${token}?password=${encodeURIComponent(password)}`;
-        if (idToUse) url += `&idDossier=${idToUse}`;
-        if (nameToUse) url += `&fileName=${encodeURIComponent(nameToUse)}`;
-        if (download) url += `&download=true`;
-        
+        const url = `http://localhost:3000/api/liens/${token}?password=${encodeURIComponent(password)}&idDossier=${details.idDossier}&fileName=${encodeURIComponent(fichier.nom)}`;
+        setFichierPreview({ nom: fichier.nom, url, type });
+    };
+
+    const telechargerFichier = (fichier) => {
+        const url = `http://localhost:3000/api/liens/${token}?password=${encodeURIComponent(password)}&idDossier=${details.idDossier}&fileName=${encodeURIComponent(fichier.nom)}&download=true`;
         window.open(url, '_blank');
     };
 
-    const navigateToFolder = (folderId) => {
-        fetchDetails(password, folderId);
+    const telechargerDossier = (dossierId = details.idDossier) => {
+        const url = `http://localhost:3000/api/liens/${token}?password=${encodeURIComponent(password)}&idDossier=${dossierId}&download=true`;
+        window.open(url, '_blank');
     };
 
-    const getFileIcon = (fileName) => {
-        const ext = fileName.split('.').pop().toLowerCase();
-        const types = {
-            images: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'],
-            videos: ['mp4', 'webm'],
-            audio: ['mp3', 'wav', 'm4a', 'ogg'],
-            pdf: ['pdf'],
-            zip: ['zip', 'rar', '7z', 'tar', 'gz'],
-        };
-        if (types.images.includes(ext)) return '🖼️';
-        if (types.videos.includes(ext)) return '🎥';
-        if (types.audio.includes(ext)) return '🎵';
-        if (types.pdf.includes(ext)) return '📄';
-        if (types.zip.includes(ext)) return '📦';
-        return '📄';
-    };
-
+    // Vues conditionnelles
     if (loading && !details) {
-        return <div className="partage-container"><div className="spinner-recherche-grand"></div></div>;
+        return <div className="dashboard-container"><div className="div-chargement">Chargement du partage...</div></div>;
     }
 
     if (passwordRequired) {
         return (
-            <div className="partage-container">
-                <div className="partage-card auth-card">
-                    <h2>Lien protégé</h2>
-                    <p>Ce lien est protégé par un mot de passe.</p>
+            <div className="dashboard-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+                <div className="modal-contenu" style={{ maxWidth: '400px', width: '100%' }}>
+                    <h3>🔒 Lien protégé</h3>
+                    <p style={{ marginBottom: '1.5rem', color: 'var(--text-secondary-color)' }}>Ce partage est protégé par un mot de passe.</p>
                     <form onSubmit={handlePasswordSubmit}>
                         <input
                             type="password"
-                            placeholder="Mot de passe"
+                            placeholder="Entrez le mot de passe"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
+                            autoFocus
+                            style={{ width: '100%', padding: '1rem', borderRadius: '15px', border: '1px solid var(--border-color)', marginBottom: '1rem', background: 'var(--bg-primary-color)', color: 'var(--text-primary-color)', fontSize: '1rem' }}
                         />
-                        <button type="submit" className="btn-primary">Accéder</button>
+                        {error && <p className="erreur-modale">{error}</p>}
+                        <div className="modal-bouttons" style={{ marginTop: '1rem' }}>
+                            <button type="submit" className="btn-confirmer" style={{ width: '100%', padding: '0.8rem' }}>Accéder au contenu</button>
+                        </div>
                     </form>
-                    {error && <p className="error-message">{error}</p>}
                 </div>
             </div>
         );
     }
 
-    if (error) {
+    if (error && !details) {
         return (
-            <div className="partage-container">
-                <div className="partage-card error-card">
-                    <h2>Erreur</h2>
-                    <p>{error}</p>
-                    <button onClick={() => window.location.reload()} className="btn-secondary">Réessayer</button>
+            <div className="dashboard-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+                <div className="page-liste-erreur-globale">
+                    <span>{error}</span>
                 </div>
             </div>
         );
@@ -121,83 +135,145 @@ const Lien = () => {
     if (!details) return null;
 
     return (
-        <div className="partage-guest-dashboard">
-            <header className="guest-header">
-                <div className="header-info">
-                    <h1>{details.nom}</h1>
-                    <span className="badge-guest">Mode Invité</span>
-                </div>
-                <div className="header-actions">
-                    <button onClick={() => handleAction(null, null, true)} className="btn-download-main">
-                        {details.type === 'dossier' ? 'Télécharger tout (ZIP)' : 'Télécharger'}
-                    </button>
-                </div>
-            </header>
-
-            <main className="guest-main">
-                <div className="guest-content-card">
+        <div className="dashboard-container" style={{ padding: '2rem' }}>
+            
+            <div className="page-liste-header">
+                <div>
+                    <h1>{fil_ariane.length > 0 ? fil_ariane[fil_ariane.length - 1].nom : (details.nom || "Fichier partagé")}</h1>
                     {details.type === 'dossier' && (
-                        <div className="guest-navigation">
-                            {!details.isRacinePartage && (
-                                <button className="btn-back" onClick={() => navigateToFolder(details.idDossierParent)}>
-                                    ⬅ Dossier parent
-                                </button>
-                            )}
-                            <div className="current-path">
-                                Contenu de : <strong>{details.nom}</strong>
-                            </div>
-                        </div>
+                        <nav className="breadcrumb" aria-label="Fil d'arianne">
+                            <button className="breadcrumb-objet" onClick={() => gestionClicBreadcrumb(-1)}>{nomRacine}</button>
+                            {fil_ariane.map((dossier, index) => (
+                                <React.Fragment key={dossier.id}>
+                                    <span className="breadcrumb-separateur">›</span>
+                                    <button className="breadcrumb-objet" onClick={() => gestionClicBreadcrumb(index)}>
+                                        {dossier.nom}
+                                    </button>
+                                </React.Fragment>
+                            ))}
+                        </nav>
                     )}
+                </div>
+                <div className="page-liste-header-actions">
+                    {details.type === 'dossier' ? (
+                        <button className="btn-publie-page-liste-header" onClick={() => telechargerDossier()}>
+                            Télécharger le dossier en ZIP
+                        </button>
+                    ) : (
+                         <button className="btn-publie-page-liste-header" onClick={() => telechargerFichier(details)}>
+                            Télécharger
+                        </button>
+                    )}
+                </div>
+            </div>
 
-                    <div className="guest-items-table">
-                        <div className="table-header">
-                            <div className="col-icon"></div>
-                            <div className="col-name">Nom</div>
-                            <div className="col-size">Taille</div>
+            <div className="dossiers-section">
+                <div className="dossiers-section-header">
+                    <h2>Contenu partagé (Lecture seule)</h2>
+                </div>
+
+                {(!details.sousDossiers?.length && !details.fichiers?.length && details.type !== 'fichier') ? (
+                    <div className="dossier-vide">
+                        <p>Ce dossier est vide.</p>
+                    </div>
+                ) : (
+                    <div className="dossiers-liste">
+                        <div className="dossier-header-tableau">
+                            <div className="col-checkbox" style={{ width: '20px' }}></div>
+                            <div className="col-nom">Nom</div>
+                            <div className="col-extension">Extension</div>
+                            <div className="col-date">Créé le</div>
+                            <div className="col-date">Modifié le</div>
+                            <div className="col-taille">Taille</div>
                             <div className="col-actions">Actions</div>
                         </div>
 
-                        {details.type === 'fichier' && !currentFolderId ? (
-                            <div className="table-row">
-                                <div className="col-icon">{getFileIcon(details.nom)}</div>
-                                <div className="col-name">{details.nom}</div>
-                                <div className="col-size">{(details.taille / 1024 / 1024).toFixed(2)} Mo</div>
+                        {/* PARTIE : SOUS-DOSSIERS */}
+                        {details.sousDossiers?.map((dossier) => (
+                            <div key={dossier.idDossier} className="dossier-ligne" onClick={() => naviguerVersDossier(dossier.idDossier, dossier.cheminDaccesDossier)}>
+                                <div className="col-checkbox" style={{ width: '20px' }}></div>
+                                <div className="col-nom">
+                                    <span>📁</span>
+                                    <span className="dossier-nom" title={dossier.cheminDaccesDossier}>
+                                        {tronquerNom(dossier.cheminDaccesDossier)}
+                                    </span>
+                                </div>
+                                <div className="col-extension">dossier</div>
+                                <div className="col-date">-</div>
+                                <div className="col-date">-</div>
+                                <div className="col-taille">...</div>
                                 <div className="col-actions">
-                                    <button onClick={() => handleAction()} title="Consulter">👁️</button>
-                                    <button onClick={() => handleAction(null, null, true)} title="Télécharger">⬇️</button>
+                                    <button className="action-icon-btn action-primary" onClick={(e) => { e.stopPropagation(); telechargerDossier(dossier.idDossier); }} title="Télécharger ZIP">⬇️</button>
                                 </div>
                             </div>
-                        ) : (
-                            <>
-                                {details.sousDossiers?.map(folder => (
-                                    <div key={folder.idDossier} className="table-row folder-row" onClick={() => navigateToFolder(folder.idDossier)}>
-                                        <div className="col-icon">📁</div>
-                                        <div className="col-name">{folder.cheminDaccesDossier}</div>
-                                        <div className="col-size">--</div>
-                                        <div className="col-actions">
-                                            <button onClick={(e) => { e.stopPropagation(); handleAction(null, folder.idDossier, true); }} title="Télécharger ZIP">⬇️</button>
-                                        </div>
+                        ))}
+
+                        {/* PARTIE : FICHIERS */}
+                        {details.fichiers?.map((fichier) => {
+                            const { nomBase, extension } = separerNomExtension(fichier.nom);
+                            return (
+                                <div key={fichier.nom} className="dossier-ligne fichier-ligne" onClick={() => ouvrirApercu(fichier)}>
+                                    <div className="col-checkbox" style={{ width: '20px' }}></div>
+                                    <div className="col-nom">
+                                        <span>{obtenirEmojiFichier(fichier.nom)}</span>
+                                        <span className="dossier-nom" title={fichier.nom}>
+                                            {tronquerNom(nomBase)}
+                                        </span>
                                     </div>
-                                ))}
-                                {details.fichiers?.map(file => (
-                                    <div key={file.nom} className="table-row">
-                                        <div className="col-icon">{getFileIcon(file.nom)}</div>
-                                        <div className="col-name">{file.nom}</div>
-                                        <div className="col-size">{(file.taille / 1024 / 1024).toFixed(2)} Mo</div>
-                                        <div className="col-actions">
-                                            <button onClick={() => handleAction(file.nom)} title="Consulter">👁️</button>
-                                            <button onClick={() => handleAction(file.nom, null, true)} title="Télécharger">⬇️</button>
-                                        </div>
+                                    <div className="col-extension">{extension || 'fichier'}</div>
+                                    <div className="col-date">{fichier.dateCreation ? new Date(fichier.dateCreation).toLocaleDateString('fr-FR') : '-'}</div>
+                                    <div className="col-date">{fichier.dateModification ? new Date(fichier.dateModification).toLocaleDateString('fr-FR') : '-'}</div>
+                                    <div className="col-taille">{formatFileSize(fichier.taille)}</div>
+                                    <div className="col-actions">
+                                        <button className="action-icon-btn action-primary" onClick={(e) => { e.stopPropagation(); telechargerFichier(fichier); }} title="Télécharger">⬇️</button>
                                     </div>
-                                ))}
-                                {(!details.sousDossiers?.length && !details.fichiers?.length) && (
-                                    <div className="empty-message">Ce dossier est vide.</div>
-                                )}
-                            </>
+                                </div>
+                            );
+                        })}
+
+                        {/* PARTIE : FICHIER UNIQUE (Partage direct de fichier) */}
+                        {details.type === 'fichier' && (
+                             <div className="dossier-ligne fichier-ligne" onClick={() => ouvrirApercu(details)}>
+                                <div className="col-checkbox" style={{ width: '20px' }}></div>
+                                <div className="col-nom">
+                                    <span>{obtenirEmojiFichier(details.nom)}</span>
+                                    <span className="dossier-nom" title={details.nom}>
+                                        {tronquerNom(separerNomExtension(details.nom).nomBase)}
+                                    </span>
+                                </div>
+                                <div className="col-extension">{separerNomExtension(details.nom).extension || 'fichier'}</div>
+                                <div className="col-date">-</div>
+                                <div className="col-date">{details.dateModification ? new Date(details.dateModification).toLocaleDateString('fr-FR') : '-'}</div>
+                                <div className="col-taille">{formatFileSize(details.taille)}</div>
+                                <div className="col-actions">
+                                    <button className="action-icon-btn action-primary" onClick={(e) => { e.stopPropagation(); telechargerFichier(details); }} title="Télécharger">⬇️</button>
+                                </div>
+                            </div>
                         )}
                     </div>
+                )}
+            </div>
+
+            {/* MODALE D'APERÇU */}
+            {fichier_preview && (
+                <div className="modal-overlay" onMouseDown={(e) => {
+                    if (e.target === e.currentTarget) setFichierPreview(null);
+                }}>
+                    <div className="modal-preview-contenu" onClick={e => e.stopPropagation()}>
+                        <div className="preview-header">
+                            <h3>{fichier_preview.nom}</h3>
+                            <button className="btn-fermer-preview" onClick={() => setFichierPreview(null)}>✕</button>
+                        </div>
+                        <div className="preview-body">
+                            {fichier_preview.type === 'image' && <img src={fichier_preview.url} alt={fichier_preview.nom} />}
+                            {fichier_preview.type === 'video' && <video controls autoPlay src={fichier_preview.url} />}
+                            {fichier_preview.type === 'audio' && <audio controls autoPlay src={fichier_preview.url} />}
+                            {fichier_preview.type === 'document' && <iframe src={fichier_preview.url} title={fichier_preview.nom} />}
+                            {fichier_preview.type === 'non_supporte' && <div>L'affichage de ce type de fichier n'est pas supporté. Veuillez le télécharger.</div>}
+                        </div>
+                    </div>
                 </div>
-            </main>
+            )}
         </div>
     );
 };
