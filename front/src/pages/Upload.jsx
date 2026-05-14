@@ -89,7 +89,7 @@ function Upload() {
         }
     };
 
-    const TAILLE_MAX_FICHIER = 50 * 1024 * 1024;
+    const TAILLE_MAX_FICHIER = 10 * 1024 * 1024 * 1024;
     const MAX_FICHIERS = 10;
 
     const gestionTeleversement = async (event) => {
@@ -108,7 +108,7 @@ function Upload() {
 
         const fichierTropGros = fichiers.find(f => f.size > TAILLE_MAX_FICHIER);
         if (fichierTropGros) {
-            setErreurUpload(`Le fichier "${fichierTropGros.name}" dépasse la taille maximale autorisée de 50 Mo.`);
+            setErreurUpload(`Le fichier "${fichierTropGros.name}" dépasse la taille maximale autorisée de "${TAILLE_MAX_FICHIER/1024/1024/1024}" Go.`);
             return;
         }
         

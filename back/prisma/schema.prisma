@@ -41,6 +41,7 @@ model Dossier {
   idDossier            Int       @id @default(autoincrement())
   idCompteCreateur     Int
   idCompteAcces        Int?
+  idDossierSource      Int?
   idDossierParent      Int?
   cheminDaccesDossier  String
   status               String?   @db.VarChar(50)

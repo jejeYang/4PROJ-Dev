@@ -1,38 +1,17 @@
 General :
 - Ajouter des commentaires propres
 - Conteneuriser le front
+- Remplacer les emoji par une bibliothèque (ex : Flaticon)
+- Responsive
+- Conditions d'utilisation
 
-Page d'accueil :
-- Refaire design avec :
-    - Header utilisateur (nom, avatar)
-    - Taille utilisée sur taille restante
-    - Dernier fichiers publiés
-    - Derniers fichiers visionnées / téléchargés
-    - Diagrammes / Stats (Diagramme circulaire du type de fichier)
-
-Dashboard :
-- Affichage logo type de fichier
-- Affichage fichier :
-    - Nom
-    - Type de fichier
-    - Taille
-    - Date de création
-    - Modifié le
-- Filtres (croissant / décroissant):
-    - Nom
-    - Type de fichier
-    - Taille
-    - Date de création
-    - Modifié le
-- Fonctionnalités fichiers :
-    - Créer un lien de partage (y compris de dossier)
-
-Liens :
-- Voir liens actifs fichier / dossier
-- Modifier lien (date d'expiration, mot de passe)
-- Supprimer lien (impossible de supprimer une collaboration)
-
+Lien :
+- Afficher l'élement partagé
+- Clean le css
 
 Back :
-- Modifier table dossier pour contenir "Date de création" & "Modifié le"
 - Restaurer un élement doit le remettre dans le dossier dans lequel il était plutôt qu'à la racine
+- Récupérer la date de création d'un fichier
+- Supprimer un partage quand on supprime le dossier qu'on a partagé
+- Mot de passe doit être demandé pour accéder au contenu du dossier partagé (lien)
+- Gestion date d'expiration des liens

@@ -10,15 +10,25 @@ class CompteController {
             const { email, mdp } = req.body;
             const resultat = await this.compteService.authentifierUtilisateur(email, mdp);
             
-            if (resultat) {
-                res.status(200).json({
-                    message: 'Connexion réussie',
-                    utilisateur: resultat.utilisateur,
-                    token: resultat.token
-                });
-            } else {
-                res.status(401).json({ message: 'Email ou mot de passe incorrect' });
+            // Sécurité : On vérifie si les identifiants sont bons
+            if (!resultat) {
+                return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
             }
+
+            const utilisateur = resultat.utilisateur;
+            const idUtilisateur = utilisateur.id || utilisateur.idCompte || utilisateur.idUtilisateur;
+
+            // Si l'utilisateur n'a pas déjà une URL d'avatar valide (ex: un lien Google), on lui assigne la route locale
+            if (!utilisateur.avatarUrl || !utilisateur.avatarUrl.startsWith('http')) {
+                utilisateur.avatarUrl = `http://localhost:3000/api/users/avatar/${idUtilisateur}?t=${Date.now()}`;
+            }
+            delete utilisateur.avatarBlobCompte; // Nettoyage du blob pour alléger la réponse
+
+            res.status(200).json({
+                message: 'Connexion réussie',
+                utilisateur: utilisateur,
+                token: resultat.token
+            });
         } catch (error) {
             next(error);
         }
@@ -32,10 +42,24 @@ class CompteController {
             }
 
             const resultat = await this.compteService.authentifierGoogle(idToken);
+            
+            // On vérifie si le token Google a bien été validé
+            if (!resultat) {
+                return res.status(401).json({ message: 'Échec de l\'authentification Google' });
+            }
+
+            const utilisateur = resultat.utilisateur;
+            const idUtilisateur = utilisateur.id || utilisateur.idCompte || utilisateur.idUtilisateur;
+
+            // Même logique que le login classique : on préserve l'image Google si elle existe
+            if (!utilisateur.avatarUrl || !utilisateur.avatarUrl.startsWith('http')) {
+                utilisateur.avatarUrl = `http://localhost:3000/api/users/avatar/${idUtilisateur}?t=${Date.now()}`;
+            }
+            delete utilisateur.avatarBlobCompte;
 
             res.status(200).json({
                 message: 'Connexion Google réussie',
-                utilisateur: resultat.utilisateur,
+                utilisateur: utilisateur,
                 token: resultat.token,
             });
         } catch (error) {
@@ -86,8 +110,9 @@ class CompteController {
             }
 
             const { nom, email } = req.body;
+            
             if (!nom && !email) {
-                return res.status(400).json({ message: 'Au moins un champ doit être fourni' });
+                return res.status(400).json({ message: 'Au moins un champ (nom ou email) doit être fourni' });
             }
 
             const donnees = {};
@@ -155,14 +180,16 @@ class CompteController {
     deleteUser = async (req, res, next) => {
         try {
             const idUtilisateurAuthentifie = +req.utilisateur.id;
-            const { mdp } = req.body;
+            const emailUtilisateur = req.utilisateur.email;
+            const { mot_de_passe } = req.body;
 
-            if (!mdp) {
+            if (!mot_de_passe) {
                 return res.status(400).json({ message: 'Le mot de passe est requis pour confirmer la suppression' });
             }
 
-            const utilisateur = await this.compteService.authentifierUtilisateur(req.utilisateur.email, mdp);
-            if (!utilisateur) {
+            const estValide = await this.compteService.authentifierUtilisateur(emailUtilisateur, mot_de_passe);
+            
+            if (!estValide) {
                 return res.status(401).json({ message: 'Le mot de passe est incorrect' });
             }
 
