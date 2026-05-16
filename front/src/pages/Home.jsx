@@ -4,7 +4,7 @@ import { useHome } from '../hooks/useHome';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import '../styles/Home.css';
 
-const COULEURS = ['#06BCC1', '#474973', '#161B33', '#bcb6b6', '#e6f2ff'];
+const COULEURS = ['#06BCC1', '#474973', '#4ae61f', '#6a166f', '#f48d25'];
 
 function Home() {
     const { estAuthentifie, nomUtilisateur, stats, chargement, formatOctets } = useHome();

@@ -310,9 +310,23 @@
 .dossier-nom {
     font-weight: 600;
     color: var(--text-primary-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
 }
 
-.col-nom, .col-date, .col-taille, .col-extension {
+.col-date, .col-taille, .col-extension {
+    color: var(--text-primary-color);
+    padding: 0.45rem 0;
+    font-size: 0.95rem;
+}
+
+.col-nom {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
     color: var(--text-primary-color);
     padding: 0.45rem 0;
     font-size: 0.95rem;
@@ -592,22 +606,6 @@
     margin-bottom: 1rem;
 }
 
-
-@media (max-width: 768px) {
-    .dossier-ligne {
-        grid-template-columns: 40px 1fr;
-        gap: 0.5rem;
-    }
-    .col-date, .col-taille, .col-actions {
-        text-align: left;
-        justify-content: flex-start;
-        grid-column: 2;
-    }
-    .actions-multiples {
-        justify-content: flex-start;
-    }
-}
-
 .dossiers-section-header {
     display: flex;
     align-items: center;
@@ -710,3 +708,80 @@
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+@media (max-width: 1024px) {
+    .dossier-header-tableau,
+    .dossier-ligne {
+        grid-template-columns: 40px 1fr 100px 90px 80px; 
+    }
+    
+    .col-extension, 
+    .dossier-header-tableau .col-date:nth-child(4),
+    .dossier-ligne .col-date:nth-child(4) {
+        display: none;
+    }
+
+    .btn-recherche {
+        width: 25%;
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-container {
+        padding: 4%;
+    }
+
+    .page-liste-header {
+        align-items: stretch;
+        gap: 1rem;
+    }
+
+    .breadcrumb {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 8px;
+        white-space: nowrap;
+        scrollbar-width: none;
+    }
+    .breadcrumb::-webkit-scrollbar {
+        display: none;
+    }
+
+    .btn-publie-page-liste-header, 
+    .btn-cree-dossier-page-liste-header {
+        width: 100%;
+        height: auto;
+        padding: 1rem;
+    }
+
+    .btn-recherche {
+        width: 35%;
+    }
+
+    .modal-contenu {
+        padding: 1.5rem;
+        width: 90%;
+        max-width: none;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .partage-modal-header {
+        flex-direction: column;
+    }
+
+    .modal-navigateur-deplacement {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .modal-preview-contenu {
+        width: 100%;
+        height: 100vh;
+        border-radius: 0;
+    }
+
+    .preview-body iframe {
+        height: 70vh;
+    }
+} 

@@ -65,9 +65,7 @@ function AppContent() {
         setIsAuthenticated(false);
         setUsername('');
         setAvatarUrl(null);
-        if (location.pathname !== '/login' && location.pathname !== '/') {
-            navigate('/login');
-        }
+        navigate('/', { replace: true });
     };
 
     useEffect(() => {

@@ -2,19 +2,20 @@ import { useState, useEffect } from 'react';
 import { obtenirTypeFichier } from '../utils/fichierUtils';
 
 export const useHome = () => {
-    const [estAuthentifie] = useState(() => !!localStorage.getItem('token'));
-    const [nomUtilisateur] = useState(() => {
+    const estAuthentifie = !!localStorage.getItem('token');
+    
+    let nomUtilisateur = 'Utilisateur';
+    if (estAuthentifie) {
         const utilisateur = localStorage.getItem('user');
         if (utilisateur) {
             try {
                 const donnees_utilisateur = JSON.parse(utilisateur);
-                return donnees_utilisateur.nom || donnees_utilisateur.email || 'Utilisateur';
+                nomUtilisateur = donnees_utilisateur.nom || donnees_utilisateur.email || 'Utilisateur';
             } catch {
-                return 'Utilisateur';
+                nomUtilisateur = 'Utilisateur';
             }
         }
-        return '';
-    });
+    }
 
     const [stats, setStats] = useState(null);
     const [chargement, setChargement] = useState(true);
@@ -23,9 +24,11 @@ export const useHome = () => {
         const fetchStats = async () => {
             if (!estAuthentifie) {
                 setChargement(false);
+                setStats(null); 
                 return;
             }
 
+            setChargement(true);
             try {
                 const response = await fetch('http://localhost:3000/api/dossiers/stats/home', {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
