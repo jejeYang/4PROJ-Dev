@@ -651,7 +651,7 @@ function Dashboard() {
                                             onChange={() => toggleSelection(fichier, 'fichier')}
                                         />
                                     </div>
-
+                                    
                                     <div className="col-nom">
                                         <span>{emojiFichier}</span>
                                         <span className="dossier-nom" title={fichier.nom}>
