@@ -10,6 +10,7 @@ import Upload from './pages/Upload';
 import Settings from './pages/Settings';
 import Partage from './pages/Partage';
 import Lien from './pages/Lien';
+import Conditions from './pages/Conditions';
 import logo from './assets/logo.png';
 import { ThemeProvider } from './context/theme_context';
 import FallingIcons from './components/FallingIcons';
@@ -56,6 +57,7 @@ function AppContent() {
     const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
     const isHome = location.pathname === '/';
     const isLienPartage = location.pathname.startsWith('/liens/');
+    const isConditions = location.pathname === '/conditions';
 
     const performLogout = () => {
         localStorage.removeItem('token');
@@ -63,9 +65,7 @@ function AppContent() {
         setIsAuthenticated(false);
         setUsername('');
         setAvatarUrl(null);
-        if (location.pathname !== '/login' && location.pathname !== '/') {
-            navigate('/login');
-        }
+        navigate('/', { replace: true });
     };
 
     useEffect(() => {
@@ -148,7 +148,7 @@ function AppContent() {
             </nav>
 
             <div className="app-wrapper">
-                {isAuthenticated && !isAuthPage && !isHome && !isLienPartage && (
+                {isAuthenticated && !isAuthPage && !isHome && !isLienPartage && !isConditions && (
                     <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
                         <div className="sidebar-content">
                             <h3>Menu</h3>
@@ -167,8 +167,8 @@ function AppContent() {
                     </aside>
                 )}
                 
-                <div className={`main-content ${isAuthenticated && !isAuthPage && !isHome && !isLienPartage ? 'with-sidebar' : ''} ${isAuthPage ? 'auth-page' : ''}`}>
-                    {isAuthenticated && !isAuthPage && !isHome && !isLienPartage && (
+                <div className={`main-content ${isAuthenticated && !isAuthPage && !isHome && !isLienPartage && !isConditions ? 'with-sidebar' : ''} ${isAuthPage ? 'auth-page' : ''}`}>
+                    {isAuthenticated && !isAuthPage && !isHome && !isLienPartage && !isConditions && (
                         <button className="sidebar-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>☰</button>
                     )}
                     
@@ -181,12 +181,13 @@ function AppContent() {
                         <Route path="/settings" element={isAuthenticated ? <Settings /> : <Home />} />
                         <Route path="/partages" element={<Partage />} />
                         <Route path="/liens/:token" element={<Lien />} />
+                        <Route path="/conditions" element={<Conditions />} />
                     </Routes>
                 </div>
             </div>
 
             <footer className="footer">
-                Conditions d'utilisation | © 2026 SUPFile
+                <Link to="/conditions" className="footer-link">Conditions d'utilisation</Link> | © 2026 SUPFile
             </footer>
         </div>
     );
