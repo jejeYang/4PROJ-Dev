@@ -19,7 +19,7 @@ axios.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-            if (window.location.pathname.startsWith('/lien/')) {
+            if (window.location.pathname.startsWith('/liens/')) {
                 return Promise.reject(error);
             }
             
@@ -56,7 +56,7 @@ function AppContent() {
 
     const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
     const isHome = location.pathname === '/';
-    const isLienPartage = location.pathname.startsWith('/lien/');
+    const isLienPartage = location.pathname.startsWith('/liens/');
     const isConditions = location.pathname === '/conditions';
 
     const performLogout = () => {
@@ -180,7 +180,7 @@ function AppContent() {
                         <Route path="/upload" element={isAuthenticated ? <Upload /> : <Home />} />
                         <Route path="/settings" element={isAuthenticated ? <Settings /> : <Home />} />
                         <Route path="/partages" element={<Partage />} />
-                        <Route path="/lien/:token" element={<Lien />} />
+                        <Route path="/liens/:token" element={<Lien />} />
                         <Route path="/conditions" element={<Conditions />} />
                     </Routes>
                 </div>

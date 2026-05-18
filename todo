@@ -1,11 +1,9 @@
 General :
 - Ajouter des commentaires propres
-- Conteneuriser le front
 - Remplacer les emoji par une bibliothèque (ex : Flaticon)
 
 Back :
 - Restaurer un élement doit le remettre dans le dossier dans lequel il était plutôt qu'à la racine
 - Récupérer la date de création d'un fichier
-- Supprimer un partage quand on supprime le dossier qu'on a partagé
-- Mot de passe doit être demandé pour accéder au contenu du dossier partagé (lien)
 - Gestion date d'expiration des liens
+- Vérification de la compléxité du mot de passe lors de sa création
