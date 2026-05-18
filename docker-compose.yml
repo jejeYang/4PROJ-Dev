@@ -18,7 +18,7 @@ services:
       retries: 10
 
   api:
-    build: .
+    build: ./back
     container_name: supfile_api
     restart: unless-stopped
     environment:
@@ -28,12 +28,26 @@ services:
       JWT_SECRET: change-me-in-production
       GOOGLE_CLIENT_ID: 60122681226-56ehoh7uj46u1ot03dlct24srh1j83p0.apps.googleusercontent.com
     volumes:
-      - ./storage/files:/app/files
+      - ./back/storage/files:/app/files
     ports:
       - "3000:3000"
     depends_on:
       postgres:
         condition: service_healthy
+
+  front:
+    build: ./front
+    container_name: supfile_front
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
+    volumes:
+      - ./front:/app
+      - /app/node_modules
+    depends_on:
+      - api
 
 volumes:
   postgres_data:
