@@ -316,11 +316,12 @@ class DossierController {
             }
 
             const fichiersExistants = await this.dossierService.recupererFichiersDossier(dossierId);
-            const nomExiste = fichiersExistants.some(f => f.nom.toLowerCase() === req.file.originalname.toLowerCase());
+            const nomFichierDecode = decodeURIComponent(req.file.originalname);
+            const nomExiste = fichiersExistants.some(f => f.nom.toLowerCase() === nomFichierDecode.toLowerCase());
 
             if (nomExiste) {
                 await fsPromises.unlink(req.file.path).catch(() => {});
-                return res.status(409).json({ error: `Le fichier "${req.file.originalname}" existe déjà dans ce dossier.` });
+                return res.status(409).json({ error: `Le fichier "${nomFichierDecode}" existe déjà dans ce dossier.` });
             }
 
             const cheminDossierPhysique = path.join(SERVER_FILES_PATH, `user_${req.idCompteCreateur}`, req.cheminDossier);

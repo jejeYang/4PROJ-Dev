@@ -10,10 +10,12 @@ import {
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMobileTheme } from '../context/MobileThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../api/client';
 import { dossierApi, Dossier } from '../api/api';
+import { API_BASE_URL } from '../config';
 
 interface BreadcrumbItem {
   id: number | null;
@@ -244,17 +246,24 @@ export default function UploadScreen({ navigation }: any) {
     setUploadProgress(0);
 
     try {
+      const token = await AsyncStorage.getItem('@supfile_token');
+      if (!token) {
+        Alert.alert('Erreur', 'Non authentifié');
+        setUploading(false);
+        return;
+      }
+
       // Uploader chaque fichier individuellement
       for (let i = 0; i < selectedFiles.length; i++) {
         const file = selectedFiles[i];
         const formData = new FormData();
 
-        const fileUri = file.uri;
         const fileName = generateFileName(file, i);
         const fileType = file.mimeType || file.type || 'application/octet-stream';
 
+        // Construire l'objet fichier pour React Native
         formData.append('fichier', {
-          uri: fileUri,
+          uri: file.uri,
           name: fileName,
           type: fileType,
         } as any);
@@ -262,11 +271,20 @@ export default function UploadScreen({ navigation }: any) {
         // Mise à jour de la progression
         setUploadProgress(Math.round(((i + 1) / selectedFiles.length) * 100));
 
-        await apiClient.post(`/api/dossiers/${selectedDossier.idDossier}/televerser`, formData, {
+        // Utiliser fetch directement au lieu d'axios pour FormData
+        const response = await fetch(`${API_BASE_URL}/api/dossiers/${selectedDossier.idDossier}/televerser`, {
+          method: 'POST',
           headers: {
-            'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${token}`,
+            // NE PAS définir Content-Type - fetch le fait automatiquement avec FormData
           },
+          body: formData,
         });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || `Erreur HTTP: ${response.status}`);
+        }
       }
 
       Alert.alert(
@@ -285,7 +303,7 @@ export default function UploadScreen({ navigation }: any) {
       );
     } catch (error: any) {
       console.error('Erreur lors de l\'upload:', error);
-      Alert.alert('Erreur', error.response?.data?.message || 'Échec de l\'upload');
+      Alert.alert('Erreur', error.message || 'Échec de l\'upload');
     } finally {
       setUploading(false);
     }

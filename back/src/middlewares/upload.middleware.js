@@ -9,7 +9,9 @@ const storage = multer.diskStorage({
         cb(null, SERVER_FILES_PATH);
     },
     filename: (req, file, cb) => {
-        cb(null, file.originalname);
+        // Décoder le nom du fichier pour éviter les %20 et autres caractères encodés
+        const decodedName = decodeURIComponent(file.originalname);
+        cb(null, decodedName);
     }
 });
 

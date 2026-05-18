@@ -1,6 +1,19 @@
 import { apiClient } from './client';
 import { API_ENDPOINTS, API_BASE_URL } from '../config';
 
+// Fonction helper pour encoder les noms de fichiers
+// Le backend fait un decodeURIComponent après qu'Express ait déjà décodé l'URL
+// Donc si le nom contient déjà des % (fichiers encodés), on doit encoder deux fois
+const encodeFileName = (fileName: string): string => {
+  // Si le nom contient déjà des %, c'est un nom encodé (ex: "test%20file.txt")
+  // On doit l'encoder deux fois pour compenser le double décodage
+  if (fileName.includes('%')) {
+    return encodeURIComponent(encodeURIComponent(fileName));
+  }
+  // Sinon, encodage normal
+  return encodeURIComponent(fileName);
+};
+
 export interface LoginCredentials {
   email: string;
   mdp: string;
@@ -82,8 +95,10 @@ export const dossierApi = {
     apiClient.delete(`${API_ENDPOINTS.DOSSIERS}/${id}`),
   
   deleteFichier: (idDossier: number, nomFichier: string) =>
-    apiClient.delete(`/api/dossiers/${idDossier}/fichiers/${encodeURIComponent(nomFichier)}`),
+    apiClient.delete(`/api/dossiers/${idDossier}/fichiers/${encodeFileName(nomFichier)}`),
 
+  // Pour la visualisation, on utilise un encodage simple car le backend utilise res.sendFile()
+  // qui décode automatiquement l'URL une fois
   getFileUrl: (idDossier: number, nomFichier: string) => {
     return `${API_BASE_URL}/api/dossiers/${idDossier}/fichiers/${encodeURIComponent(nomFichier)}`;
   },
@@ -96,7 +111,7 @@ export const dossierApi = {
     }),
 
   downloadFile: (dossierId: number, fileName: string) =>
-    apiClient.get(`${API_ENDPOINTS.DOWNLOAD}/${dossierId}/${fileName}`, {
+    apiClient.get(`${API_ENDPOINTS.DOWNLOAD}/${dossierId}/${encodeFileName(fileName)}`, {
       responseType: 'blob',
     }),
 
@@ -106,7 +121,7 @@ export const dossierApi = {
 
   // Déplacer un fichier vers la corbeille
   moveFileToTrash: (idDossier: number, nomFichier: string) =>
-    apiClient.delete(`/api/dossiers/${idDossier}/fichiers/${encodeURIComponent(nomFichier)}/vers-corbeille`),
+    apiClient.delete(`/api/dossiers/${idDossier}/fichiers/${encodeFileName(nomFichier)}/vers-corbeille`),
 
   // Restaurer un dossier depuis la corbeille
   restoreDossier: (idDossier: number) =>
@@ -114,7 +129,7 @@ export const dossierApi = {
 
   // Restaurer un fichier depuis la corbeille
   restoreFichier: (nomFichier: string) =>
-    apiClient.post(`/api/corbeille/fichiers/${encodeURIComponent(nomFichier)}/restaurer`),
+    apiClient.post(`/api/corbeille/fichiers/${encodeFileName(nomFichier)}/restaurer`),
 
   // Déplacer un dossier vers un autre dossier
   moveDossier: (idDossier: number, idNouveauDossierParent: number) =>
@@ -122,7 +137,7 @@ export const dossierApi = {
 
   // Déplacer un fichier vers un autre dossier
   moveFichier: (idDossierActuel: number, nomFichier: string, idNouveauDossierParent: number) =>
-    apiClient.put(`/api/dossiers/${idDossierActuel}/fichiers/${encodeURIComponent(nomFichier)}/deplacer`, { idNouveauDossierParent }),
+    apiClient.put(`/api/dossiers/${idDossierActuel}/fichiers/${encodeFileName(nomFichier)}/deplacer`, { idNouveauDossierParent }),
 
   // Télécharger un dossier en ZIP
   downloadZip: (idDossier: number) =>

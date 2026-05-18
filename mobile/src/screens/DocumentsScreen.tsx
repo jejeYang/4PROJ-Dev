@@ -21,6 +21,7 @@ import { API_BASE_URL } from '../config';
 import { useMobileTheme } from '../context/MobileThemeContext';
 import { useAuth } from '../context/AuthContext';
 import * as Clipboard from 'expo-clipboard';
+import FileViewer from '../components/FileViewer';
 
 interface BreadcrumbItem {
   id: number | null;
@@ -64,6 +65,10 @@ export default function DocumentsScreen({ navigation }: any) {
   // État pour le menu d'options
   const [showOptionsModal, setShowOptionsModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<DisplayItem | null>(null);
+  
+  // États pour le visualiseur de fichiers
+  const [showFileViewer, setShowFileViewer] = useState(false);
+  const [fileToView, setFileToView] = useState<{ url: string; name: string } | null>(null);
   
   const { theme } = useMobileTheme();
   const { user } = useAuth();
@@ -172,7 +177,7 @@ export default function DocumentsScreen({ navigation }: any) {
           }),
         ...fichiers.map(f => ({
           id: `file-${f.nom}`,
-          name: f.nom,
+          name: decodeURIComponent(f.nom),
           type: 'file' as const,
           size: f.taille,
           fichier: f,
@@ -264,24 +269,35 @@ export default function DocumentsScreen({ navigation }: any) {
       return;
     }
 
+    // Ouvrir le visualiseur de fichiers
+    const fileUrl = dossierApi.getFileUrl(dossierId, item.fichier.nom);
+    setFileToView({ url: fileUrl, name: item.name });
+    setShowFileViewer(true);
+  };
+
+  const handleDownloadFile = async (item: DisplayItem) => {
+    if (!item.fichier) return;
+
+    const dossierId = currentDossierId || userRootFolderId;
+    
+    if (!dossierId) {
+      Alert.alert('Erreur', 'Impossible de déterminer le dossier');
+      return;
+    }
+
     try {
-      // Récupérer le token d'authentification
       const token = await AsyncStorage.getItem('@supfile_token');
       if (!token) {
         Alert.alert('Erreur', 'Non authentifié');
         return;
       }
 
-      // Construire l'URL du fichier
-      const fileUrl = dossierApi.getFileUrl(dossierId, item.name);
-      
-      // Définir le chemin local pour télécharger le fichier
+      const fileUrl = dossierApi.getFileUrl(dossierId, item.fichier.nom);
       const docDir = (FileSystem as any).documentDirectory || (FileSystem as any).cacheDirectory || '';
       const fileUri = docDir + item.name;
 
       Alert.alert('Téléchargement', 'Téléchargement du fichier...');
 
-      // Télécharger le fichier avec authentification
       const downloadResult = await FileSystem.downloadAsync(
         fileUrl,
         fileUri,
@@ -293,7 +309,6 @@ export default function DocumentsScreen({ navigation }: any) {
       );
 
       if (downloadResult.status === 200) {
-        // Vérifier si le partage est disponible
         const isAvailable = await Sharing.isAvailableAsync();
         if (isAvailable) {
           await Sharing.shareAsync(downloadResult.uri);
@@ -305,7 +320,7 @@ export default function DocumentsScreen({ navigation }: any) {
       }
     } catch (error: any) {
       console.error('Erreur téléchargement fichier:', error);
-      Alert.alert('Erreur', error.message || 'Impossible d\'ouvrir le fichier');
+      Alert.alert('Erreur', error.message || 'Impossible de télécharger le fichier');
     }
   };
 
@@ -322,10 +337,10 @@ export default function DocumentsScreen({ navigation }: any) {
             try {
               if (item.type === 'folder' && item.dossier) {
                 await dossierApi.moveToTrash(item.dossier.idDossier);
-              } else if (item.type === 'file') {
+              } else if (item.type === 'file' && item.fichier) {
                 const dossierId = currentDossierId || userRootFolderId;
                 if (dossierId) {
-                  await dossierApi.moveFileToTrash(dossierId, item.name);
+                  await dossierApi.moveFileToTrash(dossierId, item.fichier.nom);
                 } else {
                   throw new Error('Impossible de déterminer le dossier');
                 }
@@ -353,8 +368,8 @@ export default function DocumentsScreen({ navigation }: any) {
             try {
               if (item.type === 'folder' && item.dossier) {
                 await dossierApi.restoreDossier(item.dossier.idDossier);
-              } else if (item.type === 'file') {
-                await dossierApi.restoreFichier(item.name);
+              } else if (item.type === 'file' && item.fichier) {
+                await dossierApi.restoreFichier(item.fichier.nom);
               }
               Alert.alert('Succès', 'Élément restauré');
               loadContent();
@@ -380,10 +395,10 @@ export default function DocumentsScreen({ navigation }: any) {
             try {
               if (item.type === 'folder' && item.dossier) {
                 await dossierApi.deleteDossier(item.dossier.idDossier);
-              } else if (item.type === 'file') {
+              } else if (item.type === 'file' && item.fichier) {
                 const dossierId = currentDossierId || userRootFolderId;
                 if (dossierId) {
-                  await dossierApi.deleteFichier(dossierId, item.name);
+                  await dossierApi.deleteFichier(dossierId, item.fichier.nom);
                 } else {
                   throw new Error('Impossible de déterminer le dossier');
                 }
@@ -509,10 +524,10 @@ export default function DocumentsScreen({ navigation }: any) {
       if (itemToMove.type === 'folder' && itemToMove.dossier) {
         await dossierApi.moveDossier(itemToMove.dossier.idDossier, moveDestination);
         Alert.alert('Succès', 'Dossier déplacé avec succès');
-      } else if (itemToMove.type === 'file') {
+      } else if (itemToMove.type === 'file' && itemToMove.fichier) {
         const sourceFolder = currentDossierId || userRootFolderId;
         if (sourceFolder) {
-          await dossierApi.moveFichier(sourceFolder, itemToMove.name, moveDestination);
+          await dossierApi.moveFichier(sourceFolder, itemToMove.fichier.nom, moveDestination);
           Alert.alert('Succès', 'Fichier déplacé avec succès');
         }
       }
@@ -553,14 +568,14 @@ export default function DocumentsScreen({ navigation }: any) {
       };
 
       // Si c'est un fichier, ajouter le nom du fichier
-      if (itemToShare.type === 'file') {
-        data.fileName = itemToShare.name;
+      if (itemToShare.type === 'file' && itemToShare.fichier) {
+        data.fileName = itemToShare.fichier.nom;
       }
 
       const response = await lienApi.createShareLink(dossierId, data);
       
-      if (response.data?.lien?.url) {
-        const fullLink = `${API_BASE_URL}${response.data.lien.url}`;
+      if ((response as any).data?.lien?.url) {
+        const fullLink = `${API_BASE_URL}${(response as any).data.lien.url}`;
         setShareLink(fullLink);
         
         // Copier automatiquement dans le presse-papier
@@ -601,7 +616,7 @@ export default function DocumentsScreen({ navigation }: any) {
         }
         break;
       case 'download':
-        handleFilePress(selectedItem);
+        handleDownloadFile(selectedItem);
         break;
       case 'zip':
         handleDownloadZip(selectedItem);
@@ -707,6 +722,8 @@ export default function DocumentsScreen({ navigation }: any) {
     const docExtensions = ['pdf', 'doc', 'docx', 'txt', 'rtf', 'odt', 'xls', 'xlsx', 'ppt', 'pptx', 'csv'];
     // Extensions de vidéos
     const videoExtensions = ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm', 'm4v'];
+    // Extensions audio
+    const audioExtensions = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a', 'wma', 'opus', 'aiff', 'alac'];
     
     if (extension && imageExtensions.includes(extension)) {
       return require('../assets/image.png');
@@ -714,6 +731,8 @@ export default function DocumentsScreen({ navigation }: any) {
       return require('../assets/docs.png');
     } else if (extension && videoExtensions.includes(extension)) {
       return require('../assets/referencement-video.png');
+    } else if (extension && audioExtensions.includes(extension)) {
+      return require('../assets/fichier-audio.png');
     } else {
       return require('../assets/lien.png');
     }
@@ -1151,6 +1170,18 @@ export default function DocumentsScreen({ navigation }: any) {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {fileToView && (
+        <FileViewer
+          visible={showFileViewer}
+          fileUrl={fileToView.url}
+          fileName={fileToView.name}
+          onClose={() => {
+            setShowFileViewer(false);
+            setFileToView(null);
+          }}
+        />
+      )}
     </View>
   );
 }
