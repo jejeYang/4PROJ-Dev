@@ -13,6 +13,12 @@ class LienRepository {
         });
     }
 
+    async findById(id) {
+        return prisma.lienGenere.findUnique({
+            where: { idLienGenere: Number.parseInt(id) },
+        });
+    }
+
     async findByCompte(idCompte) {
         return prisma.lienGenere.findMany({
             where: { idCompte: parseInt(idCompte) },
@@ -34,6 +40,29 @@ class LienRepository {
 
     async findAll() {
         return prisma.lienGenere.findMany();
+    }
+
+    async delete(id) {
+        return prisma.lienGenere.delete({
+            where: { idLienGenere: Number.parseInt(id) },
+        });
+    }
+
+    async deleteByChemin(chemin) {
+        return prisma.lienGenere.deleteMany({
+            where: { cheminDaccesLien: chemin },
+        });
+    }
+
+    async deleteByDossierId(dossierId) {
+        return prisma.lienGenere.deleteMany({
+            where: {
+                OR: [
+                    { cheminDaccesLien: `dossier:${dossierId}` },
+                    { cheminDaccesLien: { startsWith: `fichier:${dossierId}:` } },
+                ],
+            },
+        });
     }
 }
 

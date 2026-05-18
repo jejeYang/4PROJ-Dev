@@ -278,6 +278,16 @@ class DossierController {
         }
     };
 
+    getHomeStats = async (req, res, next) => {
+        try {
+            const idUtilisateurAuthentifie = +req.utilisateur.id;
+            const stats = await this.dossierService.recupererHomeStats(idUtilisateurAuthentifie);
+            res.json(stats);
+        } catch (error) {
+            next(error);
+        }
+    };
+
     // ===== GESTION DES FICHIERS =====
 
     getFichier = async (req, res, next) => {
@@ -296,11 +306,46 @@ class DossierController {
                 return res.status(404).json({ error: 'Fichier introuvable sur le serveur' });
             }
 
+            // Mets à jour la date d'accès (atime) pour tracker les derniers fichiers visionnés ---
+            try {
+                const now = new Date();
+                await fsPromises.utimes(cheminFichierPhysique, now, fs.statSync(cheminFichierPhysique).mtime);
+            } catch (err) {
+                console.error("Erreur lors de la mise à jour de la date d'accès :", err);
+            }
+
             res.sendFile(cheminFichierPhysique);
         } catch (error) {
             next(error);
         }
     };
+
+    renommerFichier = async (req, res, next) => {
+    try {
+        const { dossierId, nomFichier } = req.params;
+        const { nouveauNom } = req.body;
+        const idUtilisateurAuthentifie = +req.utilisateur.id;
+
+        if (!nouveauNom || nouveauNom.trim() === "") {
+            return res.status(400).json({ error: 'Le nouveau nom est requis' });
+        }
+
+        const dossier = await this.dossierService.recupererDossierParId(dossierId);
+        if (dossier.idCompteCreateur !== idUtilisateurAuthentifie) {
+            return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
+        }
+
+        const resultat = await this.dossierService.renommerFichier(
+            dossierId, 
+            decodeURIComponent(nomFichier), 
+            nouveauNom.trim()
+        );
+        
+        res.json(resultat);
+    } catch (error) {
+        next(error);
+    }
+};
 
     televerserFichier = async (req, res, next) => {
         try {

@@ -1,5 +1,6 @@
 import DossierRepository from "../repositories/dossier.repository.js";
 import CompteRepository from "../repositories/compte.repository.js";
+import LienService from "./lien.service.js";
 import fs from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
@@ -9,6 +10,7 @@ class DossierService {
     constructor() {
         this.dossierRepository = new DossierRepository();
         this.compteRepository = new CompteRepository();
+        this.lienService = new LienService();
     }
 
     async creerDossier(dossier) {
@@ -66,41 +68,98 @@ class DossierService {
         return await this.dossierRepository.findRootByCompte(idCompteCreateur);
     }
 
-    async mettreAJourDossier(dossierId, cheminDaccesDossier) {
-        const nomSafe = path.basename(cheminDaccesDossier);
-        return await this.dossierRepository.update(dossierId, { cheminDaccesDossier: nomSafe });
+    async mettreAJourDossier(dossierId, nouveauNom) {
+        const dossier = await this.recupererDossierParId(dossierId);
+        const idCompte = dossier.idCompteCreateur;
+        
+        // Sécurisation du nom pour éviter les problèmes de chemin et de sécurité
+        const nomSafe = path.basename(nouveauNom).trim();
+        if (nomSafe === dossier.cheminDaccesDossier) return dossier;
+
+        // Construit les chemins physiques (Ancien vs Nouveau)
+        const cheminRelatifAncien = await this.construireCheminComplet(dossierId);
+        const cheminPhysiqueAncien = path.join(SERVER_FILES_PATH, `user_${idCompte}`, cheminRelatifAncien);
+        
+        // Le dossier parent reste le même, on change juste le dernier segment
+        const cheminParentRelatif = path.dirname(cheminRelatifAncien);
+        const cheminPhysiqueNouveau = path.join(SERVER_FILES_PATH, `user_${idCompte}`, cheminParentRelatif, nomSafe);
+
+        if (fs.existsSync(cheminPhysiqueNouveau)) {
+            throw new Error(`Un élément nommé "${nomSafe}" existe déjà à cet emplacement.`);
+        }
+
+        // Renommage physique
+        if (fs.existsSync(cheminPhysiqueAncien)) {
+            try {
+                fs.renameSync(cheminPhysiqueAncien, cheminPhysiqueNouveau);
+            } catch (err) {
+                throw new Error(`Erreur lors du renommage physique : ${err.message}`);
+            }
+        }
+
+        // Mise à jour en Base de données
+        return await this.dossierRepository.update(dossierId, { 
+            cheminDaccesDossier: nomSafe,
+            modifieLe: new Date() 
+        });
     }
 
     async supprimerDossier(dossierId) {
-        const dossier = await this.recupererDossierParId(dossierId);
-        const tailleDossier = await this.recupererTailleDossier(dossierId);
+        const dossierASupprimer = await this.recupererDossierParId(dossierId);
 
-        const cheminRelatif = await this.construireCheminComplet(dossierId);
-        const chemin = path.join(
-            SERVER_FILES_PATH,
-            `user_${dossier.idCompteCreateur}`,
-            cheminRelatif
-        );
+        // Récupérer tous les dossiers liés à ce partage (la source + les copies)
+        const idOriginal = dossierASupprimer.idDossierSource || dossierASupprimer.idDossier;
+        const instancesADelete = [Number(idOriginal)];
+        const copies = await this.dossierRepository.findMany({
+            idDossierSource: Number(idOriginal)
+        });
+        instancesADelete.push(...copies.map(c => Number(c.idDossier)));
 
-        try {
-            if (fs.existsSync(chemin)) {
-                fs.rmSync(chemin, { recursive: true, force: true });
+        const idsUniques = [...new Set(instancesADelete)];
+
+        // Procéder à la suppression pour chaque instance trouvée
+        for (const id of idsUniques) {
+            const dossier = await this.recupererDossierParId(id);
+            const tailleDossier = await this.recupererTailleDossier(id);
+
+            // Suppression des liens de partage publics associés
+            const idsDescendants = [id, ...(await this.recupererIdsDescendants(id))];
+            for (const descId of idsDescendants) {
+                await this.lienService.supprimerLiensDossier(descId);
             }
-        } catch (e) {
-            console.error("Erreur suppression dossier physique", e);
+
+            // Suppression physique
+            const cheminRelatif = await this.construireCheminComplet(id);
+            const cheminPhysique = path.join(SERVER_FILES_PATH, `user_${dossier.idCompteCreateur}`, cheminRelatif);
+
+            try {
+                let statsCible = null;
+                // lstatSync pour détecter les liens morts
+                try { statsCible = fs.lstatSync(cheminPhysique); } catch (err) {}
+
+                if (statsCible) {
+                    if (statsCible.isSymbolicLink()) {
+                        fs.unlinkSync(cheminPhysique);
+                    } else {
+                        fs.rmSync(cheminPhysique, { recursive: true, force: true });
+                    }
+                }
+            } catch (e) {
+                console.error(`Erreur suppression physique pour dossier ${id}:`, e);
+            }
+
+            await this.dossierRepository.delete(id);
+
+            // Mise à jour du quota pour le propriétaire
+            const compte = await this.compteRepository.findById(dossier.idCompteCreateur);
+            if (compte) {
+                await this.compteRepository.update(dossier.idCompteCreateur, {
+                    stockageCompte: BigInt(compte.stockageCompte) + BigInt(tailleDossier)
+                });
+            }
         }
 
-        const resultat = await this.dossierRepository.delete(dossierId);
-
-        // Restaurer le quota (ajouter car stockageCompte est le quota restant)
-        const compte = await this.compteRepository.findById(dossier.idCompteCreateur);
-        if (compte) {
-            await this.compteRepository.update(dossier.idCompteCreateur, {
-                stockageCompte: BigInt(compte.stockageCompte) + BigInt(tailleDossier)
-            });
-        }
-
-        return resultat;
+        return { message: "Ressource supprimée globalement pour tous les participants.", instancesSupprimees: idsUniques.length };
     }
 
     async televerserFichier(dossierId, file, idUtilisateur) {
@@ -133,6 +192,9 @@ class DossierService {
     async supprimerFichier(dossierId, fileName) {
         const dossier = await this.recupererDossierParId(dossierId);
 
+        // Suppression des liens de partage associés à ce fichier
+        await this.lienService.supprimerLienFichier(dossierId, fileName);
+
         const cheminComplet = await this.construireCheminComplet(dossierId);
         const cheminPhysique = path.join(SERVER_FILES_PATH, `user_${dossier.idCompteCreateur}`, cheminComplet, fileName);
 
@@ -159,7 +221,32 @@ class DossierService {
         return { message: `Fichier '${fileName}' supprimé`, dossierId, fileName };
     }
 
-    async recupererEndpoints(dossierId) {
+    async renommerFichier(dossierId, ancienNom, nouveauNom) {
+    const dossier = await this.recupererDossierParId(dossierId);
+    const cheminRelatif = await this.construireCheminComplet(dossierId);
+    const dossierPhysique = path.join(SERVER_FILES_PATH, `user_${dossier.idCompteCreateur}`, cheminRelatif);
+
+    const ancienChemin = path.join(dossierPhysique, ancienNom);
+    const nouveauChemin = path.join(dossierPhysique, nouveauNom);
+
+    if (!fs.existsSync(ancienChemin)) {
+        throw new Error(`Le fichier "${ancienNom}" n'existe pas.`);
+    }
+
+    if (fs.existsSync(nouveauChemin)) {
+        throw new Error(`Un fichier nommé "${nouveauNom}" existe déjà.`);
+    }
+
+    // Renommage physique
+    fs.renameSync(ancienChemin, nouveauChemin);
+
+    // Mise à jour de la date de modification du dossier parent en DB
+    await this.dossierRepository.update(dossierId, { modifieLe: new Date() });
+
+    return { message: "Fichier renommé avec succès", ancienNom, nouveauNom };
+}
+
+    async recuperedpoints(dossierId) {
         return null;
     }
 
@@ -172,6 +259,16 @@ class DossierService {
         } else {
             return dossier.cheminDaccesDossier;
         }
+    }
+
+    async recupererIdsDescendants(dossierId) {
+        const sousDossiers = await this.recupererSousDossiers(dossierId);
+        let ids = sousDossiers.map(d => Number(d.idDossier));
+        for (const sd of sousDossiers) {
+            const subIds = await this.recupererIdsDescendants(sd.idDossier);
+            ids = ids.concat(subIds);
+        }
+        return ids;
     }
 
     async recupererFichiersDossier(dossierId) {
@@ -191,15 +288,19 @@ class DossierService {
                 }
 
                 const cheminFichier = path.join(cheminPhysique, nom);
-                const stat = fs.statSync(cheminFichier);
-
-                if (!stat.isDirectory()) {
-                    return {
-                        nom: nom,
-                        taille: stat.size,
-                        dateModification: stat.mtime,
-                        type: 'fichier'
-                    };
+                try {
+                    const stat = fs.statSync(cheminFichier);
+                    if (!stat.isDirectory()) {
+                        return {
+                            nom: nom,
+                            taille: stat.size,
+                            dateCreation: stat.birthtime || stat.ctime,
+                            dateModification: stat.mtime,
+                            type: 'fichier'
+                        };
+                    }
+                } catch (e) {
+                    return null;
                 }
                 return null;
             }).filter(f => f !== null);
@@ -255,6 +356,77 @@ class DossierService {
         return 0;
     }
 
+    async recupererHomeStats(idCompte) {
+        const compte = await this.compteRepository.findById(idCompte);
+        if (!compte) throw new Error("Compte non trouvé");
+
+        const quotaTotal = 32212254720n; // 30 Go
+        const stockageUtilise = quotaTotal - BigInt(compte.stockageCompte);
+
+        // Récupérer tous les dossiers pour le mapping
+        const tousLesDossiersDB = await this.dossierRepository.findByCompte(idCompte);
+        // Trouver le dossier racine "user_x"
+        const dossierRacine = tousLesDossiersDB.find(d => d.idDossierParent === null && d.cheminDaccesDossier !== '.corbeille');
+        
+        const allFiles = [];
+        const allFolders = [];
+
+        const scanDir = async (dirPath, currentParentId) => {
+            if (!fs.existsSync(dirPath)) return;
+            const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
+
+            for (const entry of entries) {
+                // Ignore les fichiers systèmes et la corbeille
+                if (entry.name === '.trash-meta.json' || entry.name === '.corbeille') continue;
+
+                const fullPath = path.join(dirPath, entry.name);
+                const stats = await fs.promises.stat(fullPath);
+
+                if (entry.isDirectory()) {
+                    // ID de ce sous-dossier en DB
+                    const dossierDB = tousLesDossiersDB.find(d => 
+                        d.cheminDaccesDossier === entry.name && Number(d.idDossierParent) === Number(currentParentId)
+                    );
+                    
+                    if (dossierDB) {
+                        allFolders.push({ 
+                            idDossier: dossierDB.idDossier, 
+                            nom: entry.name, 
+                            mtime: stats.mtime.getTime()
+                        });
+                        // Récursion dans le sous-dossier
+                        await scanDir(fullPath, dossierDB.idDossier);
+                    }
+                } else {
+                    // Ajoute le fichier trouvé à la liste
+                    allFiles.push({
+                        nom: entry.name,
+                        taille: stats.size,
+                        atime: stats.atime.getTime(),
+                        idDossierParent: currentParentId
+                    });
+                }
+            }
+        };
+
+        if (dossierRacine) {
+            // Commence le scan dans le dossier racine physique
+            const cheminPhysiqueRacine = path.join(SERVER_FILES_PATH, `user_${idCompte}`, dossierRacine.cheminDaccesDossier);
+            await scanDir(cheminPhysiqueRacine, dossierRacine.idDossier);
+        }
+
+        return {
+            stockage: {
+                total: Number(quotaTotal),
+                utilise: Number(stockageUtilise)
+            },
+            derniersDossiers: allFolders.sort((a, b) => b.mtime - a.mtime).slice(0, 5),
+            derniersFichiers: allFiles.sort((a, b) => b.atime - a.atime).slice(0, 5),
+            plusGrosFichiers: allFiles.sort((a, b) => b.taille - a.taille).slice(0, 5),
+            tousLesFichiers: allFiles.map(f => f.nom)
+        };
+    }
+
     async _genererNomUniqueFichier(dossierPhysique, nomSouhaite) {
         const extension = path.extname(nomSouhaite);
         const base = path.basename(nomSouhaite, extension);
@@ -283,46 +455,18 @@ class DossierService {
         return candidate;
     }
 
-    async copierFichierVersCompte(sourceDossierId, fileName, cibleCompteId) {
-        const dossierSource = await this.recupererDossierParId(sourceDossierId);
-        const cheminSourceRelatif = await this.construireCheminComplet(sourceDossierId);
-        const sourcePhysique = path.join(SERVER_FILES_PATH, `user_${dossierSource.idCompteCreateur}`, cheminSourceRelatif);
-        const fichierSource = path.join(sourcePhysique, fileName);
-
-        if (!fs.existsSync(fichierSource) || !fs.statSync(fichierSource).isFile()) {
-            throw new Error('Fichier source introuvable pour partage');
-        }
-
-        const racineCible = await this.recupererDossierRacineParCompte(cibleCompteId);
-        if (!racineCible || racineCible.length === 0) {
-            throw new Error('Dossier racine de l\'utilisateur cible introuvable');
-        }
-
-        const dossierRacineCible = racineCible[0];
-        const dossierCiblePhysique = path.join(SERVER_FILES_PATH, `user_${cibleCompteId}`, dossierRacineCible.cheminDaccesDossier);
-        if (!fs.existsSync(dossierCiblePhysique)) {
-            await mkdir(dossierCiblePhysique, { recursive: true });
-        }
-
-        const nouveauNomFichier = await this._genererNomUniqueFichier(dossierCiblePhysique, fileName);
-        const destination = path.join(dossierCiblePhysique, nouveauNomFichier);
-
-        try {
-            await fs.promises.symlink(fichierSource, destination, 'file');
-        } catch (error) {
-            await fs.promises.link(fichierSource, destination);
-        }
-
-        return {
-            chemin: path.join(dossierRacineCible.cheminDaccesDossier, nouveauNomFichier),
-            nom: nouveauNomFichier,
-            collaboratif: true,
-        };
-    }
-
     async copierDossierVersCompte(sourceDossierId, cibleCompteId) {
         const dossierSource = await this.recupererDossierParId(sourceDossierId);
         const cheminSourceRelatif = await this.construireCheminComplet(sourceDossierId);
+
+        const partageExistant = await this.dossierRepository.findFirst({
+            idCompteCreateur: cibleCompteId,
+            idDossierSource: Number(sourceDossierId)
+        });
+
+        if (partageExistant) {
+            throw new Error("Ce dossier est déjà partagé avec cet utilisateur.");
+        }
 
         const sourcePhysique = path.resolve(
             SERVER_FILES_PATH,
@@ -347,11 +491,13 @@ class DossierService {
             dossierRacineCible.cheminDaccesDossier
         );
 
-        await mkdir(dossierCiblePhysique, { recursive: true });
+        await fs.promises.mkdir(dossierCiblePhysique, { recursive: true });
 
+        // On ajoute le suffixe -partage par défaut pour la clarté
+        const nomBase = `${dossierSource.cheminDaccesDossier}-partage`;
         const nomCible = await this._genererNomUniqueDossier(
             dossierRacineCible.idDossier,
-            dossierSource.cheminDaccesDossier
+            nomBase
         );
 
         const destinationDossierPhysique = path.join(dossierCiblePhysique, nomCible);
@@ -360,14 +506,18 @@ class DossierService {
             throw new Error(`Le dossier cible "${nomCible}" existe déjà physiquement`);
         }
 
+        // Création en base avec la traçabilité robuste (idDossierSource)
         const nouveauDossier = await this.dossierRepository.create({
             idCompteCreateur: cibleCompteId,
             idCompteAcces: dossierSource.idCompteCreateur,
+            idDossierSource: Number(sourceDossierId),
             cheminDaccesDossier: nomCible,
             idDossierParent: dossierRacineCible.idDossier,
         });
 
         try {
+            // Utilisation d'un lien symbolique/junction pour ne pas dupliquer la taille sur le disque
+            // et permettre une vraie synchronisation bidirectionnelle
             const typeLien = process.platform === 'win32' ? 'junction' : 'dir';
 
             await fs.promises.symlink(
@@ -384,9 +534,8 @@ class DossierService {
             };
         } catch (error) {
             await this.dossierRepository.delete(nouveauDossier.idDossier);
-
             throw new Error(
-                `Erreur lors de la création du lien symbolique du dossier partagé : ${error.message}`
+                `Erreur lors de la création du lien collaboratif du dossier partagé : ${error.message}`
             );
         }
     }
@@ -560,32 +709,72 @@ class DossierService {
             throw new Error('Corbeille non trouvée pour cet utilisateur');
         }
 
+        // Supprime les liens publics associés à ce dossier et à tous ses sous-dossiers
+        const idsDescendants = [Number(dossierId), ...(await this.recupererIdsDescendants(dossierId))];
+        for (const descId of idsDescendants) {
+            await this.lienService.supprimerLiensDossier(descId);
+        }
+
+        // Supprime les copies chez les destinataires
+        if (!dossier.idDossierSource) {
+            const copies = await this.dossierRepository.findMany({
+                idDossierSource: Number(dossierId)
+            });
+            
+            for (const copie of copies) {
+                // Enlève les liens publics que le destinataire aurait pu générer sur sa copie
+                const copyDescendants = [Number(copie.idDossier), ...(await this.recupererIdsDescendants(copie.idDossier))];
+                for (const descId of copyDescendants) {
+                    await this.lienService.supprimerLiensDossier(descId);
+                }
+
+                // Supprime les lien de partage chez le destinataire
+                const cheminRelatifCopie = await this.construireCheminComplet(copie.idDossier);
+                const cheminPhysiqueCopie = path.join(SERVER_FILES_PATH, `user_${copie.idCompteCreateur}`, cheminRelatifCopie);
+                try {
+                    let statsCopie = null;
+                    try { statsCopie = fs.lstatSync(cheminPhysiqueCopie); } catch(e){}
+                    
+                    if (statsCopie) {
+                        if (statsCopie.isSymbolicLink()) {
+                            fs.unlinkSync(cheminPhysiqueCopie);
+                        } else {
+                            fs.rmSync(cheminPhysiqueCopie, { recursive: true, force: true });
+                        }
+                    }
+                } catch (e) {
+                    console.error(`Erreur suppression physique pour copie partagée ${copie.idDossier}:`, e);
+                }
+
+                // Supprime le dossier de la base de données du destinataire
+                await this.dossierRepository.delete(copie.idDossier);
+            }
+        }
+
         const cheminSourceRelatif = await this.construireCheminComplet(dossierId);
-        const cheminSourcePhysique = path.join(
-            SERVER_FILES_PATH,
-            `user_${idCompteCreateur}`,
-            cheminSourceRelatif
-        );
+        const cheminSourcePhysique = path.join(SERVER_FILES_PATH, `user_${idCompteCreateur}`, cheminSourceRelatif);
 
         const cheminCorbeilleRelatif = await this.construireCheminComplet(corbeille.idDossier);
-        const cheminCorbeillePhysique = path.join(
-            SERVER_FILES_PATH,
-            `user_${idCompteCreateur}`,
-            cheminCorbeilleRelatif
-        );
+        const cheminCorbeillePhysique = path.join(SERVER_FILES_PATH, `user_${idCompteCreateur}`, cheminCorbeilleRelatif);
 
         if (!fs.existsSync(cheminCorbeillePhysique)) {
             await mkdir(cheminCorbeillePhysique, { recursive: true });
         }
 
-        let cheminDestinationPhysique = path.join(cheminCorbeillePhysique, dossier.cheminDaccesDossier);
+        let nomFinalDossier = dossier.cheminDaccesDossier;
+        let cheminDestinationPhysique = path.join(cheminCorbeillePhysique, nomFinalDossier);
+        
+        // Si un dossier avec ce nom existe déjà dans la corbeille, on modifie le nom
         if (fs.existsSync(cheminDestinationPhysique)) {
             const suff = `-${Date.now()}`;
-            cheminDestinationPhysique = path.join(cheminCorbeillePhysique, `${dossier.cheminDaccesDossier}${suff}`);
+            nomFinalDossier = `${dossier.cheminDaccesDossier}${suff}`;
+            cheminDestinationPhysique = path.join(cheminCorbeillePhysique, nomFinalDossier);
         }
 
         try {
-            if (fs.existsSync(cheminSourcePhysique)) {
+            let sourceExists = false;
+            try { fs.lstatSync(cheminSourcePhysique); sourceExists = true; } catch(e){}
+            if (sourceExists) {
                 fs.renameSync(cheminSourcePhysique, cheminDestinationPhysique);
             }
         } catch (error) {
@@ -596,6 +785,7 @@ class DossierService {
         return await this.dossierRepository.update(dossierId, {
             idDossierParent: corbeille.idDossier,
             status: cheminSourceRelatif,
+            cheminDaccesDossier: nomFinalDossier 
         });
     }
 
@@ -619,13 +809,7 @@ class DossierService {
             dossier.cheminDaccesDossier
         );
 
-        const cheminDestinationRelatif = dossier.status || dossier.cheminDaccesDossier;
-        const cheminDestinationPhysique = path.join(
-            SERVER_FILES_PATH,
-            `user_${dossier.idCompteCreateur}`,
-            cheminDestinationRelatif
-        );
-
+        let cheminDestinationRelatif = dossier.status || dossier.cheminDaccesDossier;
         const dossierDestinationParentRelatif = path.dirname(cheminDestinationRelatif);
         let destinationParentId = null;
 
@@ -633,6 +817,24 @@ class DossierService {
             const parentDossier = await this.recupererDossierParChemin(dossier.idCompteCreateur, dossierDestinationParentRelatif);
             destinationParentId = parentDossier ? parentDossier.idDossier : null;
         }
+
+        const dossierRacine = await this._recupererDossierRacineUtilisateur(dossier.idCompteCreateur);
+        if (!destinationParentId) {
+            destinationParentId = dossierRacine?.idDossier || null;
+            const dossierRacineChemin = destinationParentId
+                ? await this.construireCheminComplet(destinationParentId)
+                : '';
+            cheminDestinationRelatif = path.join(
+                dossierRacineChemin,
+                dossier.cheminDaccesDossier
+            );
+        }
+
+        const cheminDestinationPhysique = path.join(
+            SERVER_FILES_PATH,
+            `user_${dossier.idCompteCreateur}`,
+            cheminDestinationRelatif
+        );
 
         const parentDestinationPhysique = path.dirname(cheminDestinationPhysique);
         if (!fs.existsSync(parentDestinationPhysique)) {
@@ -667,6 +869,8 @@ class DossierService {
         if (!corbeille) {
             throw new Error('Corbeille non trouvée pour cet utilisateur');
         }
+
+        await this.lienService.supprimerLienFichier(dossierId, nomFichier);
 
         const cheminSourceRelatif = await this.construireCheminComplet(dossierId);
         const cheminSourcePhysique = path.join(
@@ -819,7 +1023,7 @@ class DossierService {
             return [];
         }
 
-        // 1. Supprimer tous les dossiers qui sont dans la corbeille (cela restaure déjà leur quota via supprimerDossier)
+        // Supprimer tous les dossiers qui sont dans la corbeille (cela restaure déjà leur quota via supprimerDossier)
         const dossiersCorbeille = await this.dossierRepository.findSubDossiers(corbeille.idDossier);
 
         const dossiersSupprimes = [];
@@ -832,7 +1036,7 @@ class DossierService {
             }
         }
 
-        // 2. Restaurer le quota pour les fichiers "orphelins" (fichiers mis à la corbeille sans dossier parent)
+        // Restaurer le quota pour les fichiers "orphelins" (fichiers mis à la corbeille sans dossier parent)
         try {
             const cheminCorbeilleRelatif = await this.construireCheminComplet(corbeille.idDossier);
             const cheminCorbeillePhysique = path.join(SERVER_FILES_PATH, `user_${idCompteCreateur}`, cheminCorbeilleRelatif);
@@ -919,98 +1123,6 @@ class DossierService {
         return { message: `Fichier '${nomFichier}' déplacé avec succès.`, dossierCibleId: idNouveauDossierParent };
     }
 
-    async copierFichierVersCompte(dossierSourceId, nomFichier, cibleCompteId) {
-        const dossierSource = await this.recupererDossierParId(dossierSourceId);
-        const dossierRacineCible = await this.recupererDossierRacineParCompte(cibleCompteId);
-        
-        if (!dossierRacineCible || dossierRacineCible.length === 0) {
-            throw new Error("Dossier racine de destination introuvable.");
-        }
-        
-        const idDossierCible = dossierRacineCible[0].idDossier;
-        
-        const cheminSourceRelatif = await this.construireCheminComplet(dossierSourceId);
-        const cheminSourcePhysique = path.join(SERVER_FILES_PATH, `user_${dossierSource.idCompteCreateur}`, cheminSourceRelatif, nomFichier);
-        
-        const cheminCibleRelatif = await this.construireCheminComplet(idDossierCible);
-        const cheminCiblePhysique = path.join(SERVER_FILES_PATH, `user_${cibleCompteId}`, cheminCibleRelatif, nomFichier);
-        
-        if (!fs.existsSync(cheminSourcePhysique)) {
-            throw new Error("Fichier source introuvable.");
-        }
-        
-        let finalCible = cheminCiblePhysique;
-        if (fs.existsSync(finalCible)) {
-            const ext = path.extname(nomFichier);
-            const base = path.basename(nomFichier, ext);
-            finalCible = path.join(path.dirname(cheminCiblePhysique), `${base}-partage-${Date.now()}${ext}`);
-        }
-        
-        fs.copyFileSync(cheminSourcePhysique, finalCible);
-        
-        // Mettre à jour le quota du destinataire
-        const stats = fs.statSync(finalCible);
-        const compteCible = await this.compteRepository.findById(cibleCompteId);
-        if (compteCible) {
-            await this.compteRepository.update(cibleCompteId, {
-                stockageCompte: BigInt(compteCible.stockageCompte) - BigInt(stats.size)
-            });
-        }
-        
-        return { message: "Fichier copié avec succès", destinationId: idDossierCible };
-    }
-
-    async copierDossierVersCompte(dossierSourceId, cibleCompteId) {
-        const dossierSource = await this.recupererDossierParId(dossierSourceId);
-        const dossierRacineCible = await this.recupererDossierRacineParCompte(cibleCompteId);
-        
-        if (!dossierRacineCible || dossierRacineCible.length === 0) {
-            throw new Error("Dossier racine de destination introuvable.");
-        }
-
-        const idDossierCibleParent = dossierRacineCible[0].idDossier;
-        
-        // Créer le dossier dans la base de données pour le nouveau propriétaire
-        const nouveauDossier = await this.creerDossier({
-            idCompteCreateur: cibleCompteId,
-            cheminDaccesDossier: `${dossierSource.cheminDaccesDossier}-partage`,
-            idDossierParent: idDossierCibleParent
-        });
-
-        const cheminSourceRelatif = await this.construireCheminComplet(dossierSourceId);
-        const cheminSourcePhysique = path.join(SERVER_FILES_PATH, `user_${dossierSource.idCompteCreateur}`, cheminSourceRelatif);
-        
-        const cheminCibleRelatif = await this.construireCheminComplet(nouveauDossier.idDossier);
-        const cheminCiblePhysique = path.join(SERVER_FILES_PATH, `user_${cibleCompteId}`, cheminCibleRelatif);
-
-        // Copie récursive physique
-        const copierRecursif = (src, dest) => {
-            if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
-            const elements = fs.readdirSync(src);
-            for (const el of elements) {
-                const srcPath = path.join(src, el);
-                const destPath = path.join(dest, el);
-                if (fs.statSync(srcPath).isDirectory()) {
-                    copierRecursif(srcPath, destPath);
-                } else {
-                    fs.copyFileSync(srcPath, destPath);
-                }
-            }
-        };
-
-        copierRecursif(cheminSourcePhysique, cheminCiblePhysique);
-
-        // Mettre à jour le quota (on calcule la taille totale copiée)
-        const tailleCopiee = await this.recupererTailleDossier(nouveauDossier.idDossier);
-        const compteCible = await this.compteRepository.findById(cibleCompteId);
-        if (compteCible) {
-            await this.compteRepository.update(cibleCompteId, {
-                stockageCompte: BigInt(compteCible.stockageCompte) - BigInt(tailleCopiee)
-            });
-        }
-
-        return nouveauDossier;
-    }
 
     async rechercherFichiers(dossierId, query, type) {
         const dossier = await this.recupererDossierParId(dossierId);
@@ -1070,6 +1182,7 @@ class DossierService {
                         resultats.fichiers.push({
                             nom,
                             taille: stat.size,
+                            dateCreation: stat.birthtime || stat.ctime,
                             dateModification: stat.mtime,
                             type: 'fichier',
                             idDossier: idDossierCourant,
@@ -1105,12 +1218,14 @@ class DossierService {
                     }
 
                     const cheminFichier = path.join(cheminDir, fichier);
-                    const stat = fs.statSync(cheminFichier);
-
-                    if (stat.isDirectory()) {
-                        tailleTotale += calculerTaille(cheminFichier);
-                    } else {
-                        tailleTotale += stat.size;
+                    try {
+                        const stat = fs.statSync(cheminFichier);
+                        if (stat.isDirectory()) {
+                            tailleTotale += calculerTaille(cheminFichier);
+                        } else {
+                            tailleTotale += stat.size;
+                        }
+                    } catch (e) {
                     }
                 });
 

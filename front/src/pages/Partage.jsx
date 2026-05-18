@@ -1,205 +1,136 @@
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import axios from 'axios';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useVoirPartage } from '../hooks/useVoirPartage';
 import '../styles/Partage.css';
 
-const Partage = () => {
-    const { token } = useParams();
-    const [details, setDetails] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-    const [password, setPassword] = useState('');
-    const [passwordRequired, setPasswordRequired] = useState(false);
-    const [currentFolderId, setCurrentFolderId] = useState(null);
+function Partage() {
+    const navigate = useNavigate();
+    const { 
+        liensPublics, partagesEnvoyes, partagesRecus, 
+        chargement, erreur, setErreur, 
+        supprimerLienPublic, resilierPartageInterne 
+    } = useVoirPartage();
 
-    const fetchDetails = async (pass = '', folderId = null) => {
-        setLoading(true);
-        setError('');
-        try {
-            const config = {
-                params: folderId ? { idSousDossier: folderId } : {},
-                headers: pass ? { 'x-lien-password': pass } : {}
-            };
-            const response = await axios.get(`http://localhost:3000/api/liens/${token}/details`, config);
-            setDetails(response.data);
-            setPasswordRequired(false);
-            if (response.data.type === 'dossier') {
-                setCurrentFolderId(response.data.idDossier);
-            }
-        } catch (err) {
-            if (err.response && err.response.status === 401) {
-                setPasswordRequired(true);
-                if (pass) setError('Mot de passe incorrect.');
-            } else {
-                setError(err.response?.data?.error || 'Erreur lors de la récupération des détails.');
-            }
-        } finally {
-            setLoading(false);
-        }
+    if (chargement) return <div className="dashboard-container"><div className="div-chargement">Chargement...</div></div>;
+
+    const allerVersDossier = (idDossier) => {
+        navigate(`/dashboard?folder=${idDossier}`);
     };
 
-    useEffect(() => {
-        fetchDetails();
-    }, [token]);
-
-    const handlePasswordSubmit = (e) => {
-        e.preventDefault();
-        fetchDetails(password);
+    const copierLien = (url) => {
+        navigator.clipboard.writeText(`${window.location.origin}${url}`);
+        alert("Lien copié dans le presse-papier !");
     };
-
-    const handleAction = (fileName = null, folderId = null, download = false) => {
-        const idToUse = folderId || (details.type === 'dossier' ? details.idDossier : null);
-        const nameToUse = fileName || (details.type === 'fichier' ? details.nom : null);
-        
-        let url = `http://localhost:3000/api/liens/${token}?password=${encodeURIComponent(password)}`;
-        if (idToUse) url += `&idDossier=${idToUse}`;
-        if (nameToUse) url += `&fileName=${encodeURIComponent(nameToUse)}`;
-        if (download) url += `&download=true`;
-        
-        window.open(url, '_blank');
-    };
-
-    const navigateToFolder = (folderId) => {
-        fetchDetails(password, folderId);
-    };
-
-    const getFileIcon = (fileName) => {
-        const ext = fileName.split('.').pop().toLowerCase();
-        const types = {
-            images: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'],
-            videos: ['mp4', 'webm'],
-            audio: ['mp3', 'wav', 'm4a', 'ogg'],
-            pdf: ['pdf'],
-            zip: ['zip', 'rar', '7z', 'tar', 'gz'],
-        };
-        if (types.images.includes(ext)) return '🖼️';
-        if (types.videos.includes(ext)) return '🎥';
-        if (types.audio.includes(ext)) return '🎵';
-        if (types.pdf.includes(ext)) return '📄';
-        if (types.zip.includes(ext)) return '📦';
-        return '📄';
-    };
-
-    if (loading && !details) {
-        return <div className="partage-container"><div className="spinner-recherche-grand"></div></div>;
-    }
-
-    if (passwordRequired) {
-        return (
-            <div className="partage-container">
-                <div className="partage-card auth-card">
-                    <h2>Lien protégé</h2>
-                    <p>Ce lien est protégé par un mot de passe.</p>
-                    <form onSubmit={handlePasswordSubmit}>
-                        <input
-                            type="password"
-                            placeholder="Mot de passe"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                        />
-                        <button type="submit" className="btn-primary">Accéder</button>
-                    </form>
-                    {error && <p className="error-message">{error}</p>}
-                </div>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="partage-container">
-                <div className="partage-card error-card">
-                    <h2>Erreur</h2>
-                    <p>{error}</p>
-                    <button onClick={() => window.location.reload()} className="btn-secondary">Réessayer</button>
-                </div>
-            </div>
-        );
-    }
-
-    if (!details) return null;
 
     return (
-        <div className="partage-guest-dashboard">
-            <header className="guest-header">
-                <div className="header-info">
-                    <h1>{details.nom}</h1>
-                    <span className="badge-guest">Mode Invité</span>
-                </div>
-                <div className="header-actions">
-                    <button onClick={() => handleAction(null, null, true)} className="btn-download-main">
-                        {details.type === 'dossier' ? 'Télécharger tout (ZIP)' : 'Télécharger'}
-                    </button>
-                </div>
-            </header>
+        <div className="dashboard-container">
+            <div className="partage-enveloppe-tableau">
+                <header className="page-liste-header">
+                    <h1>Gestion des partages</h1>
+                    <p>Gérez vos accès, vos envois et vos liens publics en un clin d'œil.</p>
+                </header>
 
-            <main className="guest-main">
-                <div className="guest-content-card">
-                    {details.type === 'dossier' && (
-                        <div className="guest-navigation">
-                            {!details.isRacinePartage && (
-                                <button className="btn-back" onClick={() => navigateToFolder(details.idDossierParent)}>
-                                    ⬅ Dossier parent
-                                </button>
-                            )}
-                            <div className="current-path">
-                                Contenu de : <strong>{details.nom}</strong>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="guest-items-table">
-                        <div className="table-header">
-                            <div className="col-icon"></div>
-                            <div className="col-name">Nom</div>
-                            <div className="col-size">Taille</div>
-                            <div className="col-actions">Actions</div>
-                        </div>
-
-                        {details.type === 'fichier' && !currentFolderId ? (
-                            <div className="table-row">
-                                <div className="col-icon">{getFileIcon(details.nom)}</div>
-                                <div className="col-name">{details.nom}</div>
-                                <div className="col-size">{(details.taille / 1024 / 1024).toFixed(2)} Mo</div>
-                                <div className="col-actions">
-                                    <button onClick={() => handleAction()} title="Consulter">👁️</button>
-                                    <button onClick={() => handleAction(null, null, true)} title="Télécharger">⬇️</button>
-                                </div>
-                            </div>
-                        ) : (
-                            <>
-                                {details.sousDossiers?.map(folder => (
-                                    <div key={folder.idDossier} className="table-row folder-row" onClick={() => navigateToFolder(folder.idDossier)}>
-                                        <div className="col-icon">📁</div>
-                                        <div className="col-name">{folder.cheminDaccesDossier}</div>
-                                        <div className="col-size">--</div>
-                                        <div className="col-actions">
-                                            <button onClick={(e) => { e.stopPropagation(); handleAction(null, folder.idDossier, true); }} title="Télécharger ZIP">⬇️</button>
-                                        </div>
-                                    </div>
-                                ))}
-                                {details.fichiers?.map(file => (
-                                    <div key={file.nom} className="table-row">
-                                        <div className="col-icon">{getFileIcon(file.nom)}</div>
-                                        <div className="col-name">{file.nom}</div>
-                                        <div className="col-size">{(file.taille / 1024 / 1024).toFixed(2)} Mo</div>
-                                        <div className="col-actions">
-                                            <button onClick={() => handleAction(file.nom)} title="Consulter">👁️</button>
-                                            <button onClick={() => handleAction(file.nom, null, true)} title="Télécharger">⬇️</button>
-                                        </div>
-                                    </div>
-                                ))}
-                                {(!details.sousDossiers?.length && !details.fichiers?.length) && (
-                                    <div className="empty-message">Ce dossier est vide.</div>
-                                )}
-                            </>
-                        )}
+                {erreur && (
+                    <div className="page-liste-erreur-globale">
+                        <span>{erreur}</span>
+                        <button className="btn-fermer-erreur" onClick={() => setErreur('')}>✕</button>
                     </div>
+                )}
+
+                <div className="partage-grille-principale">
+                    
+                    {/* PARTAGES REÇUS */}
+                    <div className="partage-panneau-donnees partage-pleine-largeur">
+                        <div className="partage-en-tete-description">
+                            <h3>Partages reçus</h3>
+                            <p>Dossiers partagés par d'autres utilisateurs avec vous.</p>
+                        </div>
+                        <div className="partage-liste-large">
+                            {partagesRecus.length === 0 ? <div className="partage-etat-vide">Aucun dossier reçu.</div> : 
+                                partagesRecus.map(p => (
+                                    <div key={p.idDossier} className="partage-element-liste cliquable" onClick={() => allerVersDossier(p.idDossier)}>
+                                        <div className="partage-element-principal">
+                                            <span className="partage-icone-fichier">📥</span>
+                                            <div className="partage-infos-texte">
+                                                <span className="partage-nom-fichier">{p.cheminDaccesDossier}</span>
+                                                <span className="partage-email">De : {p.emailContact || 'Utilisateur inconnu'}</span>
+                                            </div>
+                                        </div>
+                                        <div className="partage-element-lateral">
+                                            <span className="partage-date-fichier">Reçu le {new Date(p.dateCreation).toLocaleDateString()}</span>
+                                            <button className="partage-bouton-danger-contour" onClick={(e) => { e.stopPropagation(); resilierPartageInterne(p.idDossier); }}>Quitter</button>
+                                        </div>
+                                    </div>
+                                ))
+                            }
+                        </div>
+                    </div>
+
+                    {/* PARTAGES ENVOYÉS */}
+                    <div className="partage-panneau-donnees partage-pleine-largeur">
+                        <div className="partage-en-tete-description">
+                            <h3>Partages envoyés</h3>
+                            <p>Dossiers que vous avez partagés avec d'autres comptes.</p>
+                        </div>
+                        <div className="partage-liste-large">
+                            {partagesEnvoyes.length === 0 ? <div className="partage-etat-vide">Aucun partage envoyé.</div> : 
+                                partagesEnvoyes.map(p => (
+                                    <div key={p.idDossier} className="partage-element-liste cliquable" onClick={() => allerVersDossier(p.idDossier)}>
+                                        <div className="partage-element-principal">
+                                            <span className="partage-icone-fichier">📤</span>
+                                            <div className="partage-infos-texte">
+                                                <span className="partage-nom-fichier">{p.cheminDaccesDossier}</span>
+                                                <span className="partage-email">Vers : {p.emailContact || 'Utilisateur inconnu'}</span>
+                                            </div>
+                                        </div>
+                                        <div className="partage-element-lateral">
+                                            <span className="partage-date-fichier">Envoyé le {new Date(p.dateCreation).toLocaleDateString()}</span>
+                                            <button className="partage-bouton-danger-contour" onClick={(e) => { e.stopPropagation(); resilierPartageInterne(p.idDossier); }}>Révoquer</button>
+                                        </div>
+                                    </div>
+                                ))
+                            }
+                        </div>
+                    </div>
+
+                    {/* LIENS PUBLICS */}
+                    <div className="partage-panneau-donnees partage-pleine-largeur">
+                        <div className="partage-en-tete-description">
+                            <h3>Liens publics (Invités)</h3>
+                            <p>Cliquez sur un élément pour copier le lien dans votre presse-papier.</p>
+                        </div>
+                        <div className="partage-liste-large">
+                            {liensPublics.length === 0 ? <div className="partage-etat-vide">Aucun lien généré.</div> : 
+                                liensPublics.map(l => (
+                                    <div key={l.idLien} className="partage-element-liste cliquable" onClick={() => copierLien(l.url)} title="Cliquez pour copier le lien">
+                                        <div className="partage-element-principal">
+                                            <span className="partage-icone-fichier">{l.type === 'dossier' ? '📁' : '📄'}</span>
+                                            <div className="partage-infos-texte">
+                                                <div className="partage-nom-ligne">
+                                                    <span className="partage-nom-fichier">{l.nom}</span>
+                                                    <span className={`partage-etiquette-statut ${l.protege ? 'partage-etiquette-protege' : 'partage-etiquette-public'}`}>
+                                                        {l.protege ? '🔒 Protégé' : '🔓 Public'}
+                                                    </span>
+                                                </div>
+                                                <span className="partage-email">
+                                                    Expire le : {l.dateExpiration ? new Date(l.dateExpiration).toLocaleDateString() : 'Jamais'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="partage-element-lateral">
+                                            <span className="partage-date-fichier">Créé le {new Date(l.createdAt).toLocaleDateString()}</span>
+                                            <button className="partage-bouton-danger-contour" onClick={(e) => { e.stopPropagation(); supprimerLienPublic(l.idLien); }}>Supprimer</button>
+                                        </div>
+                                    </div>
+                                ))
+                            }
+                        </div>
+                    </div>
+
                 </div>
-            </main>
+            </div>
         </div>
     );
-};
+}
 
 export default Partage;
