@@ -177,8 +177,8 @@
     gap: 1rem;
 }
 
-.feature h3 {
-    margin: 1rem 0 0.5rem 0;
+.accueil-nom-fichier, .accueil-nom-dossier {
+    font-weight: 600;
     color: var(--text-primary-color);
 }
 
