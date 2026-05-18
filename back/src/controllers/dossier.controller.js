@@ -26,15 +26,13 @@ class DossierController {
                 return res.status(400).json({ error: 'cheminDaccesDossier est requis' });
             }
 
-            // Récupérer le dossier personnel de l'utilisateur
             const dossiersUtilisateur = await this.dossierService.recupererDossiersParCompte(idUtilisateurAuthentifie);
             if (!dossiersUtilisateur || dossiersUtilisateur.length === 0) {
                 return res.status(404).json({ error: 'Dossier personnel non trouvé' });
             }
             
-            let dossierParentId = dossiersUtilisateur[0].idDossier; // Par défaut, le dossier personnel
+            let dossierParentId = dossiersUtilisateur[0].idDossier;
 
-            // Si un dossier parent est spécifié, vérifier qu'il appartient à l'utilisateur
             if (idDossierParent) {
                 const dossierParent = await this.dossierService.recupererDossierParId(idDossierParent);
                 if (dossierParent.idCompteCreateur !== idUtilisateurAuthentifie) {
@@ -43,16 +41,17 @@ class DossierController {
                 dossierParentId = idDossierParent;
             }
 
-            // Vérifier qu'il n'existe pas déjà un dossier avec le même nom dans le même dossier parent
             let dossiersExistants = [];
             if (dossierParentId) {
                 dossiersExistants = await this.dossierService.recupererSousDossiers(dossierParentId);
             } else {
                 dossiersExistants = await this.dossierService.recupererDossierRacineParCompte(idUtilisateurAuthentifie);
             }
+
             const nomExisteDeja = dossiersExistants.some(
                 d => d.cheminDaccesDossier.toLowerCase() === cheminDaccesDossier.trim().toLowerCase()
             );
+
             if (nomExisteDeja) {
                 return res.status(409).json({ error: 'Un dossier portant ce nom existe déjà à cet emplacement.' });
             }
@@ -62,6 +61,7 @@ class DossierController {
                 cheminDaccesDossier, 
                 idDossierParent: dossierParentId 
             };
+
             const resultat = await this.dossierService.creerDossier(dossier);
             res.status(201).json(resultat);
         } catch (error) {
@@ -166,9 +166,12 @@ class DossierController {
             } else {
                 dossiersExistants = await this.dossierService.recupererDossierRacineParCompte(idUtilisateurAuthentifie);
             }
+
             const nomExisteDeja = dossiersExistants.some(
-                d => d.cheminDaccesDossier.toLowerCase() === cheminDaccesDossier.trim().toLowerCase() && d.idDossier !== Number(dossierId)
+                d => d.cheminDaccesDossier.toLowerCase() === cheminDaccesDossier.trim().toLowerCase()
+                    && d.idDossier !== Number(dossierId)
             );
+
             if (nomExisteDeja) {
                 return res.status(409).json({ error: 'Un dossier portant ce nom existe déjà à cet emplacement.' });
             }
@@ -207,13 +210,11 @@ class DossierController {
                 return res.status(400).json({ error: 'idNouveauDossierParent est requis' });
             }
 
-            // Vérifier que le dossier source appartient à l'user
             const dossierSource = await this.dossierService.recupererDossierParId(dossierId);
             if (dossierSource.idCompteCreateur !== idUtilisateurAuthentifie) {
                 return res.status(403).json({ error: 'Le dossier source ne vous appartient pas' });
             }
 
-            // Vérifier que le dossier cible appartient à l'user
             const dossierCible = await this.dossierService.recupererDossierParId(idNouveauDossierParent);
             if (dossierCible.idCompteCreateur !== idUtilisateurAuthentifie) {
                 return res.status(403).json({ error: 'Le dossier de destination ne vous appartient pas' });
@@ -336,7 +337,7 @@ class DossierController {
             fs.renameSync(ancienChemin, nouveauChemin);
             req.file.path = nouveauChemin;
 
-            const resultat = await this.dossierService.televerserFichier(dossierId, req.file);
+            const resultat = await this.dossierService.televerserFichier(dossierId, req.file, idUtilisateurAuthentifie);
             res.status(201).json(resultat);
         } catch (error) {
             next(error);
@@ -355,6 +356,14 @@ class DossierController {
             if (req.idCompteCreateur !== idUtilisateurAuthentifie) {
                 await Promise.all(req.files.map(f => fsPromises.unlink(f.path).catch(() => {})));
                 return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
+            }
+
+            // Vérification globale du quota avant de commencer
+            const totalSize = req.files.reduce((acc, f) => acc + f.size, 0);
+            const compte = await this.dossierService.compteRepository.findById(idUtilisateurAuthentifie);
+            if (BigInt(compte.stockageCompte) < BigInt(totalSize)) {
+                await Promise.all(req.files.map(f => fsPromises.unlink(f.path).catch(() => {})));
+                return res.status(400).json({ error: "Espace de stockage insuffisant pour l'ensemble des fichiers" });
             }
 
             const fichiersExistants = await this.dossierService.recupererFichiersDossier(dossierId);
@@ -383,8 +392,9 @@ class DossierController {
             });
 
             const resultats = await Promise.all(
-                fichiersDeplaces.map(file => this.dossierService.televerserFichier(dossierId, file))
+                fichiersDeplaces.map(file => this.dossierService.televerserFichier(dossierId, file, idUtilisateurAuthentifie))
             );
+
             res.status(201).json({ message: 'Fichiers téléversés avec succès', files: resultats });
         } catch (error) {
             next(error);
@@ -482,7 +492,6 @@ class DossierController {
         }
     };
 
-
     // ===== GESTION DE LA CORBEILLE =====
 
     getCorbeille = async (req, res, next) => {
@@ -509,7 +518,12 @@ class DossierController {
                 return res.status(400).json({ error: 'Impossible de supprimer la corbeille' });
             }
 
-            const resultat = await this.dossierService.deplacerVersCorbeille(dossierId, idUtilisateurAuthentifie);
+            const resultat = await this.dossierService.deplacerVersCorbeille(
+                dossierId,
+                idUtilisateurAuthentifie,
+                { idDossierParentOrigine: dossier.idDossierParent }
+            );
+
             res.json({ message: 'Dossier déplacé à la corbeille', dossier: resultat });
         } catch (error) {
             next(error);
@@ -526,7 +540,17 @@ class DossierController {
                 return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
             }
 
-            const resultat = await this.dossierService.deplacerFichierVersCorbeille(dossierId, decodeURIComponent(nomFichier));
+            const nomFichierDecode = decodeURIComponent(nomFichier);
+
+            const resultat = await this.dossierService.deplacerFichierVersCorbeille(
+                dossierId,
+                nomFichierDecode,
+                {
+                    idDossierParentOrigine: Number(dossierId),
+                    idCompte: idUtilisateurAuthentifie
+                }
+            );
+
             res.json({ message: 'Fichier déplacé à la corbeille', fichier: resultat });
         } catch (error) {
             next(error);
@@ -548,7 +572,16 @@ class DossierController {
                 return res.status(400).json({ error: 'Ce dossier n\'est pas dans la corbeille' });
             }
 
-            const resultat = await this.dossierService.restaurerDossier(dossierId);
+            const dossierRacine = await this._recupererDossierRacineUtilisateur(idUtilisateurAuthentifie);
+
+            const resultat = await this.dossierService.restaurerDossier(
+                dossierId,
+                {
+                    idCompte: idUtilisateurAuthentifie,
+                    idDossierParentFallback: dossierRacine?.idDossier
+                }
+            );
+
             res.json({ message: 'Dossier restauré avec succès', dossier: resultat });
         } catch (error) {
             next(error);
@@ -560,7 +593,17 @@ class DossierController {
             const { nomFichier } = req.params;
             const idUtilisateurAuthentifie = +req.utilisateur.id;
 
-            const resultat = await this.dossierService.restaurerFichierDepuisCorbeille(idUtilisateurAuthentifie, decodeURIComponent(nomFichier));
+            const dossierRacine = await this._recupererDossierRacineUtilisateur(idUtilisateurAuthentifie);
+
+            const resultat = await this.dossierService.restaurerFichierDepuisCorbeille(
+                idUtilisateurAuthentifie,
+                decodeURIComponent(nomFichier),
+                {
+                    idCompte: idUtilisateurAuthentifie,
+                    idDossierParentFallback: dossierRacine?.idDossier
+                }
+            );
+
             res.json({ message: 'Fichier restauré avec succès', fichier: resultat });
         } catch (error) {
             next(error);
@@ -575,6 +618,17 @@ class DossierController {
         } catch (error) {
             next(error);
         }
+    };
+
+    _recupererDossierRacineUtilisateur = async (idUtilisateur) => {
+        const dossiersUtilisateur = await this.dossierService.recupererDossiersParCompte(idUtilisateur);
+        if (!dossiersUtilisateur || dossiersUtilisateur.length === 0) {
+            return null;
+        }
+
+        return dossiersUtilisateur.find(dossier => !dossier.idDossierParent && dossier.cheminDaccesDossier !== '.corbeille')
+            || dossiersUtilisateur.find(dossier => dossier.cheminDaccesDossier !== '.corbeille')
+            || dossiersUtilisateur[0];
     };
 }
 
