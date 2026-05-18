@@ -652,9 +652,13 @@ function Dashboard() {
                                         />
                                     </div>
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
                                     
 >>>>>>> 96387c2a4e56f29a09012a6aed27411921073119
+=======
+                                    
+>>>>>>> origin/main-front
                                     <div className="col-nom">
                                         <span>{emojiFichier}</span>
                                         <span className="dossier-nom" title={fichier.nom}>
