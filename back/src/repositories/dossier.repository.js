@@ -8,6 +8,8 @@ class DossierRepository {
                 cheminDaccesDossier: data.cheminDaccesDossier,
                 idDossierParent: data.idDossierParent || null,
                 status: data.status || null,
+                idDossierSource: data.idDossierSource || null,
+                idCompteAcces: data.idCompteAcces || null,
             },
         });
     }

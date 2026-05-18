@@ -1,132 +1,218 @@
 import path from 'node:path';
 import fs from 'node:fs';
-import { promises as fsPromises } from 'node:fs';
 import crypto from 'node:crypto';
 import archiver from 'archiver';
 import LienService from '../services/lien.service.js';
-import DossierService from '../services/dossier.service.js';
 import CompteService from '../services/compte.service.js';
+import DossierService from '../services/dossier.service.js';
 import { SERVER_FILES_PATH } from '../config/env.js';
 
 class LienController {
     constructor() {
         this.lienService = new LienService();
-        this.dossierService = new DossierService();
         this.compteService = new CompteService();
+        this.dossierService = new DossierService();
     }
 
-    genererLienPartage = async (req, res, next) => {
+    // ==========================================
+    // PARTAGE INTERNE (ENTRE UTILISATEURS)
+    // ==========================================
+
+    partagerVersUtilisateur = async (req, res, next) => {
         try {
             const { dossierId } = req.params;
-            const { email, fileName, motDePasse, mdpLienGenere, dateExpiration } = req.body;
-            const idUtilisateurAuthentifie = +req.utilisateur.id;
-            const emailNormalise = typeof email === 'string' ? email.trim() : '';
-            const motDePasseParamFinal = motDePasse || mdpLienGenere;
+            const { email, fileName } = req.body;
+            const idProprietaire = +req.utilisateur.id;
 
-            // Mode "Générer un lien" : pas d'email, mais mot de passe obligatoire.
-            if (!emailNormalise && !motDePasseParamFinal) {
-                return res.status(400).json({ error: 'Mot de passe requis pour générer un lien.' });
+            const dossierSource = await this.dossierService.recupererDossierParId(dossierId);
+            if (dossierSource.idCompteCreateur !== idProprietaire) {
+                return res.status(403).json({ error: "Vous n'êtes pas autorisé à partager ce dossier." });
             }
 
-            const dossier = await this.dossierService.recupererDossierParId(dossierId);
-            if (dossier.idCompteCreateur !== idUtilisateurAuthentifie) {
-                return res.status(403).json({ error: 'Vous ne pouvez partager que vos propres dossiers et fichiers.' });
-            }
-
-            const dossierCheminPhysique = path.join(
-                SERVER_FILES_PATH,
-                `user_${idUtilisateurAuthentifie}`,
-                await this.dossierService.construireCheminComplet(dossierId)
-            );
-
+            // Partage uniquement pour les dossiers
             if (fileName) {
-                const fichierPhysique = path.join(dossierCheminPhysique, fileName);
-                if (!fs.existsSync(fichierPhysique) || !fs.statSync(fichierPhysique).isFile()) {
-                    return res.status(404).json({ error: 'Le fichier à partager est introuvable.' });
-                }
-            }
-
-            let expirationDate = null;
-            if (dateExpiration) {
-                expirationDate = new Date(dateExpiration);
-                if (Number.isNaN(expirationDate.getTime())) {
-                    return res.status(400).json({ error: 'dateExpiration invalide. Utilisez une date ISO valide.' });
-                }
-            }
-
-            const type = fileName ? 'fichier' : 'dossier';
-            const cheminDaccesLien = fileName ? `fichier:${dossierId}:${fileName}` : `dossier:${dossierId}`;
-            const urlLienGenere = crypto.randomUUID();
-
-            let compteExistant = null;
-            if (emailNormalise) {
-                compteExistant = await this.compteService.trouverParEmail(emailNormalise);
-            }
-
-            if (compteExistant) {
-                if (motDePasseParamFinal) {
-                    return res.status(400).json({ error: 'Impossible de définir un mot de passe pour un partage vers un compte existant.' });
-                }
-
-                try {
-                    if (fileName) {
-                        await this.dossierService.copierFichierVersCompte(dossierId, fileName, compteExistant.idCompte);
-                    } else {
-                        await this.dossierService.copierDossierVersCompte(dossierId, compteExistant.idCompte);
-                    }
-                } catch (err) {
-                    console.error('Erreur lors du partage vers compte existant :', err);
-                    return res.status(500).json({ error: 'Erreur lors du partage vers ce compte.' });
-                }
-
-                return res.status(200).json({
-                    message: 'Partage effectué avec succès. Le fichier/dossier a été ajouté à la racine de l\'utilisateur.',
-                    lien: null,
-                    sharedWithAccount: true,
+                return res.status(400).json({ 
+                    error: "Le partage interne est limité aux dossiers. Veuillez placer votre fichier dans un dossier avant de le partager." 
                 });
             }
 
-            const lien = await this.lienService.creerLien({
-                idCompte: idUtilisateurAuthentifie,
-                cheminDaccesLien,
-                dateExpiration: expirationDate,
-                mdpLienGenere: motDePasseParamFinal || null,
-                urlLienGenere,
-            });
+            if (!email) {
+                return res.status(400).json({ error: "L'email de destination est requis." });
+            }
 
-            res.status(201).json({
-                message: 'Lien de partage créé avec succès.',
-                lien: {
-                    idLienGenere: lien.idLienGenere,
-                    url: `/partage/${urlLienGenere}`, // Changé de /api/liens/ à /partage/
-                    type,
-                    chemin: cheminDaccesLien,
-                    protégé: Boolean(motDePasseParamFinal),
-                    dateExpiration: expirationDate,
-                    sharedWithAccount: false,
-                },
+            const cible = await this.compteService.trouverParEmail(email);
+            
+            if (!cible) {
+                return res.status(404).json({ 
+                    error: "Aucun compte n'est associé à cette adresse email." 
+                });
+            }
+
+            if (cible.idCompte === idProprietaire) {
+                return res.status(400).json({ error: "Vous ne pouvez pas partager une ressource avec vous-même." });
+            }
+
+            // On délègue au DossierService qui va faire la copie physique et relier l'idDossierSource
+            const partage = await this.dossierService.copierDossierVersCompte(parseInt(dossierId), cible.idCompte);
+            
+            res.json({
+                message: "Dossier partagé avec succès.",
+                partage
             });
         } catch (error) {
             next(error);
         }
     };
 
+    getPartagesEnvoyes = async (req, res, next) => {
+        try {
+            const idUtilisateur = +req.utilisateur.id;
+            const partages = await this.lienService.recupererPartagesEnvoyes(idUtilisateur);
+            
+            // Récupère l'email du compte qui a reçu l'accès
+            const partagesAvecEmail = await Promise.all(partages.map(async (p) => {
+                const compteCible = await this.compteService.compteRepository.findById(p.idCompteCreateur); // Celui qui détient la copie
+                return { ...p, emailContact: compteCible?.adresseMailCompte };
+            }));
+
+            res.json(partagesAvecEmail);
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    getPartagesRecus = async (req, res, next) => {
+        try {
+            const idUtilisateur = +req.utilisateur.id;
+            const partages = await this.lienService.recupererPartagesRecus(idUtilisateur);
+            
+            // Récupère l'email du compte qui a initié le partage (idCompteAcces)
+            const partagesAvecEmail = await Promise.all(partages.map(async (p) => {
+                const compteSource = await this.compteService.compteRepository.findById(p.idCompteAcces);
+                return { ...p, emailContact: compteSource?.adresseMailCompte };
+            }));
+
+            res.json(partagesAvecEmail);
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    supprimerPartageInterne = async (req, res, next) => {
+        try {
+            const { dossierIdPartage } = req.params;
+            const idDemandeur = +req.utilisateur.id;
+            const dossier = await this.dossierService.recupererDossierParId(dossierIdPartage);
+            if (dossier.idCompteCreateur !== idDemandeur && dossier.idCompteAcces !== idDemandeur) {
+                return res.status(403).json({ error: "Vous n'avez pas l'autorisation d'annuler ce partage." });
+            }
+            await this.dossierService.supprimerDossier(dossierIdPartage);
+            
+            res.json({ message: "Le partage a été révoqué et supprimé pour l'ensemble des participants." });
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    // ==========================================
+    // PARTAGE PAR LIEN (INVITÉS / PUBLIC)
+    // ==========================================
+
+    creerLienPublic = async (req, res, next) => {
+        try {
+            const { dossierId } = req.params;
+            const { fileName, motDePasse, dateExpiration } = req.body;
+            const idUtilisateur = +req.utilisateur.id;
+
+            const dossierSource = await this.dossierService.recupererDossierParId(dossierId);
+            if (dossierSource.idCompteCreateur !== idUtilisateur) {
+                return res.status(403).json({ error: "Vous n'êtes pas autorisé à partager ce dossier." });
+            }
+
+            const token = crypto.randomBytes(16).toString('hex');
+            const cheminDaccesLien = fileName ? `fichier:${dossierId}:${fileName}` : `dossier:${dossierId}`;
+
+            const lien = await this.lienService.creerLien({
+                idCompte: idUtilisateur,
+                cheminDaccesLien: cheminDaccesLien,
+                dateExpiration: dateExpiration ? new Date(dateExpiration) : null,
+                mdpLienGenere: motDePasse,
+                urlLienGenere: token
+            });
+
+            res.json({
+                message: 'Lien de partage généré.',
+                url: `/liens/${token}`,
+                token: token
+            });
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    getMesLiensPublics = async (req, res, next) => {
+        try {
+            const idUtilisateur = +req.utilisateur.id;
+            const liens = await this.lienService.recupererLiensParCompte(idUtilisateur);
+            
+            // Récupère le nom du dossier à partir du chemin d'accès du lien
+            const ressources = await Promise.all(liens.map(async (lien) => {
+                const info = this._parserCheminDaccesLien(lien.cheminDaccesLien);
+                
+                let vraiNom = info?.fileName || 'Ressource inconnue';
+                if (info?.type === 'dossier') {
+                    try {
+                        const dossierSource = await this.dossierService.recupererDossierParId(info.dossierId);
+                        vraiNom = dossierSource.cheminDaccesDossier;
+                    } catch (e) {
+                        vraiNom = 'Dossier introuvable';
+                    }
+                }
+
+                return {
+                    idLien: lien.idLienGenere,
+                    token: lien.urlLienGenere,
+                    url: `/liens/${lien.urlLienGenere}`,
+                    type: info?.type,
+                    nom: vraiNom,
+                    dateExpiration: lien.dateExpiration,
+                    protege: !!lien.mdpLienGenere,
+                    createdAt: lien.dateCreation
+                };
+            }));
+            res.json(ressources);
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    supprimerLienPublic = async (req, res, next) => {
+        try {
+            const { idLien } = req.params;
+            const idUtilisateur = +req.utilisateur.id;
+
+            await this.lienService.supprimerLienSpecifique(idLien, idUtilisateur);
+            res.json({ message: "Lien de partage supprimé avec succès." });
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    // ==========================================
+    // ACCÈS INVITÉS (LECTURE SEULE)
+    // ==========================================
+
     accederLienPartage = async (req, res, next) => {
         try {
             const { token } = req.params;
-            const { idDossier, fileName, download } = req.query; 
+            const { download, idDossier, fileName } = req.query; 
             const lien = await this.lienService.recupererParToken(token);
 
-            if (!lien) {
-                return res.status(404).json({ error: 'Lien introuvable.' });
-            }
-
-            // Vérification expiration
+            if (!lien) return res.status(404).json({ error: 'Lien introuvable.' });
             if (lien.dateExpiration && new Date(lien.dateExpiration) <= new Date()) {
                 return res.status(410).json({ error: 'Ce lien a expiré.' });
             }
 
-            // Vérification mot de passe
             const password = req.query.password || req.headers['x-lien-password'];
             const isPasswordValid = await this.lienService.verifierMdpLien(password, lien.mdpLienGenere);
             if (!isPasswordValid) {
@@ -134,41 +220,48 @@ class LienController {
             }
 
             const resource = this._parserCheminDaccesLien(lien.cheminDaccesLien);
-            if (!resource) {
-                return res.status(400).json({ error: 'Lien de partage corrompu.' });
-            }
+            if (!resource) return res.status(400).json({ error: 'Lien corrompu.' });
 
-            let targetDossierId = resource.dossierId;
-            let targetFileName = resource.fileName;
-
-            if (idDossier) {
-                const isDescendant = await this.dossierService.estDescendant(idDossier, resource.dossierId);
-                if (!isDescendant) {
-                    return res.status(403).json({ error: 'Accès non autorisé.' });
-                }
-                targetDossierId = parseInt(idDossier, 10);
-            }
-
-            if (fileName) {
-                targetFileName = fileName;
-            }
-
-            if (targetFileName) {
-                const dossier = await this.dossierService.recupererDossierParId(targetDossierId);
-                const sourcePath = await this.dossierService.construireCheminComplet(targetDossierId);
-                const cheminFichierPhysique = path.join(SERVER_FILES_PATH, `user_${dossier.idCompteCreateur}`, sourcePath, targetFileName);
-
-                if (!fs.existsSync(cheminFichierPhysique) || !fs.statSync(cheminFichierPhysique).isFile()) {
-                    return res.status(404).json({ error: 'Fichier introuvable.' });
-                }
-
-                if (download === 'true') {
-                    res.download(cheminFichierPhysique, targetFileName);
-                } else {
-                    res.sendFile(cheminFichierPhysique);
-                }
+            if (resource.type === 'fichier') {
+                const dossier = await this.dossierService.recupererDossierParId(resource.dossierId);
+                const sourcePath = await this.dossierService.construireCheminComplet(resource.dossierId);
+                const cheminFichier = path.join(SERVER_FILES_PATH, `user_${dossier.idCompteCreateur}`, sourcePath, resource.fileName);
+                
+                if (!fs.existsSync(cheminFichier)) return res.status(404).json({ error: 'Fichier introuvable.' });
+                if (download === 'true') res.download(cheminFichier, resource.fileName);
+                else res.sendFile(cheminFichier);
             } else {
-                await this._telechargerDossierPartage({ dossierId: targetDossierId }, res, next);
+                let cibleId = resource.dossierId;
+                
+                // Vérifie si l'utilisateur veut accéder à un sous-dossier et s'assure que c'est un descendant du dossier partagé
+                if (idDossier && idDossier !== String(resource.dossierId)) {
+                    const estDescendant = await this.dossierService.estDescendant(idDossier, resource.dossierId);
+                    if (!estDescendant) return res.status(403).json({ error: 'Accès non autorisé.' });
+                    cibleId = parseInt(idDossier, 10);
+                }
+
+                const dossier = await this.dossierService.recupererDossierParId(cibleId);
+                const sourcePath = await this.dossierService.construireCheminComplet(cibleId);
+
+                if (fileName) {
+                    // Téléchargement d'un fichier spécifique dans le dossier
+                    const cheminFichier = path.join(SERVER_FILES_PATH, `user_${dossier.idCompteCreateur}`, sourcePath, fileName);
+                    if (!fs.existsSync(cheminFichier)) return res.status(404).json({ error: 'Fichier introuvable.' });
+
+                    if (download === 'true') res.download(cheminFichier, fileName);
+                    else res.sendFile(cheminFichier);
+                } else {
+                    // Téléchargement du dossier entier en ZIP
+                    const dossierPhysique = path.join(SERVER_FILES_PATH, `user_${dossier.idCompteCreateur}`, sourcePath);
+                    const nomArchive = `${path.basename(sourcePath)}.zip`;
+                    res.setHeader('Content-Type', 'application/zip');
+                    res.setHeader('Content-Disposition', `attachment; filename="${nomArchive}"`);
+                    
+                    const archive = archiver('zip', { zlib: { level: 9 } });
+                    archive.pipe(res);
+                    archive.directory(dossierPhysique, path.basename(sourcePath));
+                    await archive.finalize();
+                }
             }
         } catch (error) {
             next(error);
@@ -178,19 +271,14 @@ class LienController {
     obtenirDetailsLien = async (req, res, next) => {
         try {
             const { token } = req.params;
-            const { idSousDossier } = req.query; // Permet de naviguer dans les sous-dossiers
+            const { idSousDossier } = req.query;
             const lien = await this.lienService.recupererParToken(token);
 
-            if (!lien) {
-                return res.status(404).json({ error: 'Lien introuvable.' });
-            }
-
-            // Vérification expiration
+            if (!lien) return res.status(404).json({ error: 'Lien introuvable.' });
             if (lien.dateExpiration && new Date(lien.dateExpiration) <= new Date()) {
                 return res.status(410).json({ error: 'Ce lien a expiré.' });
             }
 
-            // Vérification mot de passe
             const password = req.query.password || req.headers['x-lien-password'];
             const isPasswordValid = await this.lienService.verifierMdpLien(password, lien.mdpLienGenere);
             if (!isPasswordValid) {
@@ -198,50 +286,38 @@ class LienController {
             }
 
             const resource = this._parserCheminDaccesLien(lien.cheminDaccesLien);
-            if (!resource) {
-                return res.status(400).json({ error: 'Lien de partage corrompu.' });
-            }
+            if (!resource) return res.status(400).json({ error: 'Lien corrompu.' });
 
-            // Si un idSousDossier est fourni, on vérifie qu'il appartient bien au partage original
-            let idDossierAExplorer = resource.dossierId;
-            if (idSousDossier) {
-                // TODO: Sécurité - Vérifier que idSousDossier est bien un descendant de resource.dossierId
-                idDossierAExplorer = parseInt(idSousDossier, 10);
-            }
-
-            // Récupération des infos de la ressource
-            if (resource.type === 'fichier' && !idSousDossier) {
+            if (resource.type === 'fichier') {
                 const dossier = await this.dossierService.recupererDossierParId(resource.dossierId);
                 const sourcePath = await this.dossierService.construireCheminComplet(resource.dossierId);
-                const cheminPhysique = path.join(SERVER_FILES_PATH, `user_${dossier.idCompteCreateur}`, sourcePath, resource.fileName);
+                const chemin = path.join(SERVER_FILES_PATH, `user_${dossier.idCompteCreateur}`, sourcePath, resource.fileName);
+                const stats = fs.statSync(chemin);
+                
+                res.json({ type: 'fichier', nom: resource.fileName, taille: stats.size, dateModification: stats.mtime });
+            } else {
+                let cibleId = resource.dossierId;
+                let isRacinePartage = true;
 
-                if (!fs.existsSync(cheminPhysique)) {
-                    return res.status(404).json({ error: 'Le fichier partagé n\'existe plus physiquement.' });
+                // Navigation dans un sous-dossier
+                if (idSousDossier && idSousDossier !== String(resource.dossierId)) {
+                    const estDescendant = await this.dossierService.estDescendant(idSousDossier, resource.dossierId);
+                    if (!estDescendant) return res.status(403).json({ error: "Accès non autorisé à ce sous-dossier." });
+                    cibleId = parseInt(idSousDossier, 10);
+                    isRacinePartage = false;
                 }
 
-                const stats = fs.statSync(cheminPhysique);
-                return res.json({
-                    type: 'fichier',
-                    nom: resource.fileName,
-                    taille: stats.size,
-                    dateModification: stats.mtime,
-                    token: token
-                });
-            } else {
-                // C'est un dossier (ou on explore un sous-dossier d'un partage)
-                const dossier = await this.dossierService.recupererDossierParId(idDossierAExplorer);
-                const fichiers = await this.dossierService.recupererFichiersDossier(idDossierAExplorer);
-                const sousDossiers = await this.dossierService.recupererSousDossiers(idDossierAExplorer);
+                const dossier = await this.dossierService.recupererDossierParId(cibleId);
+                const fichiers = await this.dossierService.recupererFichiersDossier(cibleId);
+                const sousDossiers = await this.dossierService.recupererSousDossiers(cibleId);
 
-                return res.json({
-                    type: 'dossier',
-                    nom: dossier.cheminDaccesDossier,
-                    idDossier: idDossierAExplorer,
-                    idDossierParent: dossier.idDossierParent, // Pour pouvoir remonter
-                    isRacinePartage: idDossierAExplorer === resource.dossierId,
-                    fichiers: fichiers,
-                    sousDossiers: sousDossiers,
-                    token: token
+                res.json({ 
+                    type: 'dossier', 
+                    nom: dossier.cheminDaccesDossier, 
+                    idDossier: cibleId,
+                    isRacinePartage,
+                    fichiers,
+                    sousDossiers 
                 });
             }
         } catch (error) {
@@ -252,76 +328,13 @@ class LienController {
     _parserCheminDaccesLien = (chemin) => {
         if (typeof chemin !== 'string') return null;
         if (chemin.startsWith('dossier:')) {
-            const idDossier = parseInt(chemin.split(':')[1], 10);
-            return { type: 'dossier', dossierId: idDossier };
+            return { type: 'dossier', dossierId: parseInt(chemin.split(':')[1], 10) };
         }
         if (chemin.startsWith('fichier:')) {
             const [_, dossierId, ...nomParts] = chemin.split(':');
             return { type: 'fichier', dossierId: parseInt(dossierId, 10), fileName: nomParts.join(':') };
         }
         return null;
-    };
-
-    async _partagerRessourceVersUtilisateur(resource, cibleCompteId) {
-        if (resource.type === 'fichier') {
-            const partage = await this.dossierService.copierFichierVersCompte(resource.dossierId, resource.fileName, cibleCompteId);
-            return {
-                message: 'Fichier partagé avec succès dans votre espace.',
-                partage,
-            };
-        }
-
-        const partage = await this.dossierService.copierDossierVersCompte(resource.dossierId, cibleCompteId);
-        return {
-            message: 'Dossier partagé avec succès dans votre espace.',
-            partage,
-        };
-    }
-
-    _telechargerFichierPartage = async (resource, res, next) => {
-        try {
-            const dossier = await this.dossierService.recupererDossierParId(resource.dossierId);
-            const sourcePath = await this.dossierService.construireCheminComplet(resource.dossierId);
-            const cheminFichierPhysique = path.join(SERVER_FILES_PATH, `user_${dossier.idCompteCreateur}`, sourcePath, resource.fileName);
-
-            if (!fs.existsSync(cheminFichierPhysique) || !fs.statSync(cheminFichierPhysique).isFile()) {
-                return res.status(404).json({ error: 'Fichier introuvable.' });
-            }
-
-            res.download(cheminFichierPhysique, resource.fileName);
-        } catch (error) {
-            next(error);
-        }
-    };
-
-    _telechargerDossierPartage = async (resource, res, next) => {
-        try {
-            const dossier = await this.dossierService.recupererDossierParId(resource.dossierId);
-            const sourcePath = await this.dossierService.construireCheminComplet(resource.dossierId);
-            const dossierPhysique = path.join(SERVER_FILES_PATH, `user_${dossier.idCompteCreateur}`, sourcePath);
-
-            if (!fs.existsSync(dossierPhysique) || !fs.statSync(dossierPhysique).isDirectory()) {
-                return res.status(404).json({ error: 'Dossier introuvable.' });
-            }
-
-            const nomArchive = `${path.basename(sourcePath)}.zip`;
-            res.setHeader('Content-Type', 'application/zip');
-            res.setHeader('Content-Disposition', `attachment; filename="${nomArchive}"`);
-
-            const archive = archiver('zip', { zlib: { level: 9 } });
-            archive.on('error', (archiveError) => {
-                console.error('Erreur lors de la création de l\'archive ZIP :', archiveError);
-                if (!res.headersSent) {
-                    res.status(500).json({ error: 'Erreur lors de la création de l\'archive ZIP' });
-                }
-            });
-
-            archive.pipe(res);
-            archive.directory(dossierPhysique, path.basename(sourcePath));
-            await archive.finalize();
-        } catch (error) {
-            next(error);
-        }
     };
 }
 
