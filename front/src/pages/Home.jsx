@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useHome } from '../hooks/useHome';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { PieChart as RechartsPieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { Folder, Upload, Settings, HardDrive, PieChart as LucidePieChart, Scale, Clock } from 'lucide-react';
 import '../styles/Home.css';
 
 const COULEURS = ['#06BCC1', '#474973', '#4ae61f', '#6a166f', '#f48d25'];
@@ -21,21 +22,27 @@ function Home() {
 
                     <div className="accueil-grille-actions">
                         <Link to="/dashboard" className="accueil-carte-action-geante">
-                            <span className="accueil-icone-geante">📂</span>
+                            <span className="accueil-icone-geante">
+                                <Folder size={40} color="#06BCC1" />
+                            </span>
                             <div className="accueil-contenu-carte-geante">
                                 <h3>Mon Espace</h3>
                                 <p>Gérez vos fichiers</p>
                             </div>
                         </Link>
                         <Link to="/upload" className="accueil-carte-action-geante accueil-action-primaire">
-                            <span className="accueil-icone-geante">📤</span>
+                            <span className="accueil-icone-geante">
+                                <Upload size={40} color="#fff" />
+                            </span>
                             <div className="accueil-contenu-carte-geante">
                                 <h3>Uploader</h3>
                                 <p>Ajoutez des documents</p>
                             </div>
                         </Link>
                         <Link to="/settings" className="accueil-carte-action-geante">
-                            <span className="accueil-icone-geante">⚙️</span>
+                            <span className="accueil-icone-geante">
+                                <Settings size={40} color="#474973" />
+                            </span>
                             <div className="accueil-contenu-carte-geante">
                                 <h3>Paramètres</h3>
                                 <p>Profil & Sécurité</p>
@@ -46,11 +53,16 @@ function Home() {
                     <div className="accueil-grille-principale">
                         
                         <div className="accueil-panneau-donnees accueil-mise-en-avant-stockage">
-                            <div className="accueil-en-tete-panneau"><h3>État du Stockage</h3></div>
+                            <div className="accueil-en-tete-panneau">
+                                <h3>
+                                    <HardDrive size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+                                    État du Stockage
+                                </h3>
+                            </div>
                             <div className="accueil-flex-stockage">
                                 <div className="accueil-graphique-stockage">
                                     <ResponsiveContainer width="100%" height={200}>
-                                        <PieChart>
+                                        <RechartsPieChart>
                                             <Pie 
                                                 data={[{v: stats.stockage.utilise}, {v: Math.max(0, stats.stockage.total - stats.stockage.utilise)}]} 
                                                 innerRadius={60} outerRadius={80} dataKey="v" stroke="none" paddingAngle={5}
@@ -59,7 +71,7 @@ function Home() {
                                                 <Cell fill="var(--bg-secondary-color)" />
                                             </Pie>
                                             <Tooltip formatter={(val) => formatOctets(val)} />
-                                        </PieChart>
+                                        </RechartsPieChart>
                                     </ResponsiveContainer>
                                     <div className="accueil-superposition-graphique">
                                         <span className="accueil-pourcentage">{((stats.stockage.utilise / stats.stockage.total) * 100).toFixed(0)}%</span>
@@ -76,23 +88,38 @@ function Home() {
                         </div>
 
                         <div className="accueil-panneau-donnees">
-                            <div className="accueil-en-tete-panneau"><h3>Répartition</h3></div>
+                            <div className="accueil-en-tete-panneau">
+                                <h3>
+                                    <LucidePieChart size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+                                    Répartition
+                                </h3>
+                            </div>
                             <ResponsiveContainer width="100%" height={200}>
-                                <PieChart>
+                                <RechartsPieChart>
                                     <Pie data={stats.typesFichiers} outerRadius={80} dataKey="value" stroke="none">
                                         {stats.typesFichiers.map((e, i) => <Cell key={i} fill={COULEURS[i % COULEURS.length]} />)}
                                     </Pie>
                                     <Tooltip />
-                                </PieChart>
+                                </RechartsPieChart>
                             </ResponsiveContainer>
                         </div>
 
                         <div className="accueil-panneau-donnees accueil-pleine-largeur">
-                            <div className="accueil-en-tete-panneau"><h3>Plus gros fichiers</h3></div>
+                            <div className="accueil-en-tete-panneau">
+                                <h3>
+                                    <Scale size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+                                    Plus gros fichiers
+                                </h3>
+                            </div>
                             <div className="accueil-liste-large">
                                 {stats.plusGrosFichiers.slice(0, 3).map((f, i) => (
                                     <Link key={i} to={`/dashboard?folder=${f.idDossierParent}`} className="accueil-element-liste-large">
-                                        <div className="accueil-element-principal"><span className="accueil-icone-fichier">⚖️</span><span className="accueil-nom-fichier">{f.nom}</span></div>
+                                        <div className="accueil-element-principal">
+                                            <span className="accueil-icone-fichier" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                                                <Scale size={16} style={{ marginRight: '8px' }} />
+                                            </span>
+                                            <span className="accueil-nom-fichier">{f.nom}</span>
+                                        </div>
                                         <div className="accueil-element-lateral"><span className="accueil-taille-fichier">{formatOctets(f.taille)}</span></div>
                                     </Link>
                                 ))}
@@ -100,7 +127,12 @@ function Home() {
                         </div>
 
                         <div className="accueil-panneau-donnees">
-                            <div className="accueil-en-tete-panneau"><h3>Vus récemment</h3></div>
+                            <div className="accueil-en-tete-panneau">
+                                <h3>
+                                    <Clock size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+                                    Vus récemment
+                                </h3>
+                            </div>
                             <div className="accueil-liste-compacte">
                                 {stats.derniersFichiers.slice(0, 4).map((f, i) => (
                                     <Link key={i} to={`/dashboard?folder=${f.idDossierParent}`} className="accueil-element-compact">
@@ -112,11 +144,19 @@ function Home() {
                         </div>
 
                         <div className="accueil-panneau-donnees">
-                            <div className="accueil-en-tete-panneau"><h3>Dossiers récents</h3></div>
+                            <div className="accueil-en-tete-panneau">
+                                <h3>
+                                    <Folder size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+                                    Dossiers récents
+                                </h3>
+                            </div>
                             <div className="accueil-liste-compacte">
                                 {stats.derniersDossiers.slice(0, 4).map((d, i) => (
                                     <Link key={i} to={`/dashboard?folder=${d.idDossier}`} className="accueil-element-compact">
-                                        <span className="accueil-nom-dossier">📁 {d.nom}</span>
+                                        <span className="accueil-nom-dossier" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                            <Folder size={16} />
+                                            {d.nom}
+                                        </span>
                                         <span className="accueil-date-dossier">{new Date(d.mtime).toLocaleDateString()}</span>
                                     </Link>
                                 ))}

@@ -704,7 +704,33 @@
     margin: 2rem auto;
     display: block;
 }
+.icon-folder {
+    color: #ffd166;
+    flex-shrink: 0;
+}
 
+.icon-file {
+    color: var(--text-secondary-color);
+    flex-shrink: 0;
+}
+
+.breadcrumb-separateur svg {
+    display: inline-block;
+    vertical-align: middle;
+    color: var(--text-secondary-color);
+}
+
+.icone-corbeille svg {
+    color: var(--error-color);
+}
+
+.action-icon-btn svg {
+    transition: transform 0.1s ease;
+}
+
+.action-icon-btn:hover svg {
+    transform: scale(1.1);
+}
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
