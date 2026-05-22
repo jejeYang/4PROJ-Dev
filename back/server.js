@@ -1,9 +1,11 @@
 import express from 'express';
+import swaggerUi from 'swagger-ui-express';
 import { patchBigIntSerialization } from './src/utils/bigint.utils.js';
 import { PORT } from './src/config/env.js';
 import routes from './src/routes/index.js';
 import { errorMiddleware } from './src/middlewares/error.middleware.js';
 import { lancerNettoyageLiensExpires } from './src/jobs/nettoyage-liens.job.js';
+import swaggerSpec from './src/docs/swagger.js';
 
 patchBigIntSerialization();
 
@@ -20,6 +22,13 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+app.get('/swagger.json', (req, res) => {
+    res.json(swaggerSpec);
+});
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+    customSiteTitle: 'SupFile API Docs',
+}));
 
 // Mounting routes
 app.use(routes);
