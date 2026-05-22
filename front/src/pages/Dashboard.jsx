@@ -108,6 +108,18 @@ function Dashboard() {
         setModalRechercheOuverte(false);
     };
 
+    const gererTelechargementDossierUnique = async (dossier) => {
+    const selectionOriginale = [...selection];
+    toggleSelection(dossier, 'dossier');
+    
+    setTimeout(async () => {
+        await telechargerSelection();
+        if (selectionOriginale.length > 0) {
+            window.dispatchEvent(new Event('profilMisAJour'));
+        }
+    }, 50);
+};
+
     return (
         <div
             className="dashboard-container"
@@ -627,7 +639,7 @@ function Dashboard() {
                                         <div className="actions-rapides" onClick={(e) => e.stopPropagation()}>
                                             {!estDansCorbeille ? (
                                                 <>
-                                                    <button className="action-icon-btn" onClick={() => telechargerSelection([{ type: 'dossier', item: dossier }])} title="Télécharger ZIP">
+                                                    <button className="action-icon-btn" onClick={() => gererTelechargementDossierUnique(dossier)} title="Télécharger ZIP">
                                                         <Download size={14} />
                                                     </button>
                                                     <button className="action-icon-btn" onClick={() => partagerRessource({ id_dossier: dossier.idDossier })} title="Partager">
