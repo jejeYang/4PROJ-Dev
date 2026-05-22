@@ -7,16 +7,20 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  Image,
+  ActivityIndicator,
+  Modal,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
 import { useMobileTheme } from '../context/MobileThemeContext';
 import { apiClient } from '../api/client';
+import { API_BASE_URL } from '../config';
 
 
 export default function ProfileScreen() {
-  const { user, logout, refreshUser, token } = useAuth();
+  const { user, logout, refreshUser, token, updateUserData } = useAuth();
   const { theme, toggleTheme } = useMobileTheme();
 
   // États pour la modification du profil
@@ -35,6 +39,15 @@ export default function ProfileScreen() {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
+  // États pour l'avatar
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
+
+  // États pour la modale de suppression de compte
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+
   // Rafraîchir automatiquement le profil quand on revient sur cet écran
   useFocusEffect(
     useCallback(() => {
@@ -44,10 +57,6 @@ export default function ProfileScreen() {
         
         try {
           await refreshUser();
-          setFormData({
-            nom: user?.nom || '',
-            email: user?.email || '',
-          });
         } catch (error: any) {
           // Ignorer les erreurs 401 (déconnexion en cours)
           if (error?.response?.status === 401) {
@@ -57,31 +66,149 @@ export default function ProfileScreen() {
         }
       };
       loadProfile();
-    }, [refreshUser, user, token])
+    }, [refreshUser, token])
   );
+
+  // Mettre à jour le formulaire uniquement si on n'est pas en train d'éditer
+  React.useEffect(() => {
+    if (!isEditingProfile) {
+      setFormData({
+        nom: user?.nom || '',
+        email: user?.email || '',
+      });
+    }
+  }, [user, isEditingProfile]);
+
+  // Charger l'avatar depuis l'URL si disponible
+  React.useEffect(() => {
+    if (user?.avatarUrl) {
+      // Toujours mettre à jour l'avatar (même si avatarUri existe déjà)
+      setAvatarUri(user.avatarUrl);
+      setAvatarError(false);
+    } else if (user?.id) {
+      // Construire l'URL de l'avatar par défaut
+      const defaultAvatarUrl = `${API_BASE_URL}/api/users/avatar/${user.id}?t=${Date.now()}`;
+      setAvatarUri(defaultAvatarUrl);
+    }
+  }, [user?.id, user?.avatarUrl]);
+
+  const pickImage = async () => {
+    try {
+      // Demander les permissions
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert('Permission refusée', 'Nous avons besoin de votre permission pour accéder à vos photos.');
+        return;
+      }
+
+      // Lancer le sélecteur d'image
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await uploadAvatar(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la sélection de l\'image:', error);
+      Alert.alert('Erreur', 'Impossible de sélectionner l\'image');
+    }
+  };
+
+  const uploadAvatar = async (imageUri: string) => {
+    try {
+      setIsUploadingAvatar(true);
+
+      // Créer le FormData pour l'upload
+      const formData = new FormData();
+      
+      // Extraire le nom du fichier et le type MIME
+      const filename = imageUri.split('/').pop() || 'avatar.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+      // Ajouter l'image au FormData
+      formData.append('avatar', {
+        uri: imageUri,
+        name: filename,
+        type: type,
+      } as any);
+
+      // Envoyer l'image au serveur
+      await apiClient.uploadFile('/api/users/avatar', formData);
+
+      // Mettre à jour l'URL de l'avatar avec un timestamp pour forcer le rechargement
+      const newAvatarUrl = `${API_BASE_URL}/api/users/avatar/${user?.id}?t=${Date.now()}`;
+      
+      // Mettre à jour l'utilisateur dans le contexte
+      if (user) {
+        await updateUserData({
+          ...user,
+          avatarUrl: newAvatarUrl,
+        });
+      }
+
+      setAvatarUri(newAvatarUrl);
+      setAvatarError(false);
+      Alert.alert('Succès', 'Photo de profil mise à jour avec succès');
+    } catch (error: any) {
+      console.error('Erreur lors de l\'upload de l\'avatar:', error);
+      Alert.alert('Erreur', error.response?.data?.message || 'Impossible de mettre à jour la photo de profil');
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
 
 
 
   const handleUpdateProfile = async () => {
+    // Validation côté client
+    if (!formData.nom || formData.nom.trim().length === 0) {
+      Alert.alert('Erreur', 'Le nom ne peut pas être vide');
+      return;
+    }
+    
+    if (!formData.email || formData.email.trim().length === 0) {
+      Alert.alert('Erreur', "L'email ne peut pas être vide");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      Alert.alert('Erreur', "L'email n'est pas valide");
+      return;
+    }
+
     try {
-      await apiClient.put(`/users/${user?.id}`, {
+      console.log('Sending update request with:', { nom: formData.nom, email: formData.email });
+      
+      const response = await apiClient.put<{ message: string; utilisateur: any }>(`/api/users/${user?.id}`, {
         nom: formData.nom,
         email: formData.email,
       });
 
-      // Mettre à jour AsyncStorage avec les nouvelles données (comme localStorage sur le web)
-      const updatedUser = {
-        ...user,
-        nom: formData.nom,
-        email: formData.email,
-      };
-      await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
-      await refreshUser();
+      console.log('Response from backend:', response);
+
+      // Vérifier que la réponse contient bien les données utilisateur
+      if (!response || !response.utilisateur) {
+        Alert.alert('Erreur', 'Réponse invalide du serveur');
+        return;
+      }
+
+      // Mettre à jour l'utilisateur avec les données normalisées
+      await updateUserData(response.utilisateur);
       
       Alert.alert('Succès', 'Profil mis à jour avec succès');
       setIsEditingProfile(false);
     } catch (error: any) {
-      Alert.alert('Erreur', error.response?.data?.message || 'Erreur lors de la mise à jour');
+      console.error('Erreur mise à jour profil:', error);
+      console.error('Error details:', error.response?.data);
+      const message = error.response?.data?.message || error.message || 'Erreur lors de la mise à jour';
+      Alert.alert('Erreur', message);
     }
   };
 
@@ -97,7 +224,7 @@ export default function ProfileScreen() {
     }
 
     try {
-      await apiClient.post('/change-password', {
+      await apiClient.post('/api/change-password', {
         ancienMdp: passwordData.ancien,
         nouveauMdp: passwordData.nouveau,
         confirmationMdp: passwordData.confirmation,
@@ -111,26 +238,33 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleDeleteAccount = () => {
-    Alert.alert(
-      'Supprimer le compte',
-      'Cette action est irréversible. Toutes vos données seront supprimées définitivement.',
-      [
-        { text: 'Annuler', style: 'cancel' },
+  const handleDeleteAccount = async () => {
+    if (!deletePassword || deletePassword.trim().length === 0) {
+      Alert.alert('Erreur', 'Veuillez entrer votre mot de passe');
+      return;
+    }
+
+    try {
+      await apiClient.delete('/api/users', {
+        data: { mot_de_passe: deletePassword }
+      });
+      
+      Alert.alert('Succès', 'Compte supprimé avec succès', [
         {
-          text: 'Supprimer',
-          style: 'destructive',
+          text: 'OK',
           onPress: async () => {
-            try {
-              await apiClient.delete('/users');
-              await logout();
-            } catch (error) {
-              Alert.alert('Erreur', 'Impossible de supprimer le compte');
-            }
-          },
-        },
-      ]
-    );
+            setShowDeleteModal(false);
+            setDeletePassword('');
+            await logout();
+          }
+        }
+      ]);
+    } catch (error: any) {
+      Alert.alert(
+        'Erreur',
+        error.response?.data?.message || 'Mot de passe incorrect ou erreur lors de la suppression'
+      );
+    }
   };
 
   const handleLogout = () => {
@@ -149,12 +283,36 @@ export default function ProfileScreen() {
       <View style={styles.content}>
         {/* Avatar et nom */}
         <View style={styles.avatarSection}>
-          <View style={[styles.avatar, { backgroundColor: theme.primaryColor }]}>
-            <Text style={styles.avatarText}>
-              {formData.nom.charAt(0).toUpperCase()}
-            </Text>
-          </View>
+          <TouchableOpacity 
+            style={styles.avatarContainer}
+            onPress={pickImage}
+            disabled={isUploadingAvatar}
+          >
+            {isUploadingAvatar ? (
+              <View style={[styles.avatar, { backgroundColor: theme.primaryColor }]}>
+                <ActivityIndicator size="large" color="#FFFFFF" />
+              </View>
+            ) : avatarUri && !avatarError ? (
+              <Image
+                source={{ uri: avatarUri }}
+                style={styles.avatarImage}
+                onError={() => setAvatarError(true)}
+              />
+            ) : (
+              <View style={[styles.avatar, { backgroundColor: theme.primaryColor }]}>
+                <Text style={styles.avatarText}>
+                  {formData.nom.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
+            <View style={styles.editAvatarBadge}>
+              <Text style={styles.editAvatarIcon}>📷</Text>
+            </View>
+          </TouchableOpacity>
           <Text style={[styles.name, { color: theme.textColor }]}>Mon Profil</Text>
+          <Text style={[styles.avatarHint, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
+            Appuyez sur l'avatar pour changer la photo
+          </Text>
         </View>
 
         {/* Section Thème */}
@@ -327,7 +485,10 @@ export default function ProfileScreen() {
           <Text style={[styles.dangerText, { color: theme.textColor }]}>
             La suppression de votre compte est définitive. Toutes vos données seront effacées.
           </Text>
-          <TouchableOpacity style={styles.dangerButton} onPress={handleDeleteAccount}>
+          <TouchableOpacity 
+            style={styles.dangerButton} 
+            onPress={() => setShowDeleteModal(true)}
+          >
             <Text style={styles.dangerButtonText}>Supprimer mon compte</Text>
           </TouchableOpacity>
         </View>
@@ -337,6 +498,56 @@ export default function ProfileScreen() {
           <Text style={styles.logoutButtonText}>Déconnexion</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Modale de confirmation de suppression */}
+      <Modal
+        visible={showDeleteModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowDeleteModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.backgroundColor }]}>
+            <Text style={[styles.modalTitle, { color: '#ff3b30' }]}>⚠️ Action Irréversible</Text>
+            <Text style={[styles.modalText, { color: theme.textColor }]}>
+              Attention : Toutes vos données seront définitivement effacées. 
+              Veuillez saisir votre mot de passe pour confirmer.
+            </Text>
+            
+            <TextInput
+              style={[
+                styles.input,
+                styles.modalInput,
+                { backgroundColor: theme.isDark ? '#3A3A3C' : '#F2F2F7', color: theme.textColor }
+              ]}
+              value={deletePassword}
+              onChangeText={setDeletePassword}
+              placeholder="Mot de passe de confirmation"
+              placeholderTextColor={theme.isDark ? '#8E8E93' : '#6C6C70'}
+              secureTextEntry
+              autoFocus
+            />
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.button, styles.cancelButton]}
+                onPress={() => {
+                  setShowDeleteModal(false);
+                  setDeletePassword('');
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.dangerButton]}
+                onPress={handleDeleteAccount}
+              >
+                <Text style={styles.buttonText}>Supprimer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -352,18 +563,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 30,
   },
+  avatarContainer: {
+    position: 'relative',
+    marginBottom: 8,
+  },
   avatar: {
     width: 100,
     height: 100,
     borderRadius: 50,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+  },
+  avatarImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
   },
   avatarText: {
     fontSize: 40,
     color: '#FFFFFF',
     fontWeight: 'bold',
+  },
+  editAvatarBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#007AFF',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  editAvatarIcon: {
+    fontSize: 16,
+  },
+  avatarHint: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 4,
   },
   name: {
     fontSize: 24,
@@ -498,5 +738,41 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    borderRadius: 12,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  modalText: {
+    fontSize: 14,
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  modalInput: {
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
   },
 });

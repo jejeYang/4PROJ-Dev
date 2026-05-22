@@ -47,7 +47,7 @@ export default function UploadScreen({ navigation }: any) {
       let dossiersDisponibles: Dossier[] = [];
       
       if (currentDossierId === null) {
-        // On est à la racine - charger le contenu de user_X
+        // charger le contenu de user_X
         const dossiersRacine = await dossierApi.getDossiersRacine(userId);
         const userFolder = dossiersRacine.find(d => d.cheminDaccesDossier === `user_${userId}`);
         
@@ -210,7 +210,7 @@ export default function UploadScreen({ navigation }: any) {
     return mimeToExt[mimeType] || '';
   };
 
-  // Fonction pour générer un nom de fichier avec extension
+  // génére un nom de fichier avec extension
   const generateFileName = (file: any, index: number): string => {
     let fileName = file.name;
     
@@ -219,10 +219,8 @@ export default function UploadScreen({ navigation }: any) {
       const extension = getExtensionFromMimeType(file.mimeType || file.type || '');
       
       if (fileName) {
-        // Le fichier a un nom mais pas d'extension
         fileName = fileName + extension;
       } else {
-        // Pas de nom du tout, générer un nom avec timestamp et extension
         const timestamp = new Date().getTime();
         fileName = `fichier_${timestamp}_${index}${extension}`;
       }
@@ -271,12 +269,11 @@ export default function UploadScreen({ navigation }: any) {
         // Mise à jour de la progression
         setUploadProgress(Math.round(((i + 1) / selectedFiles.length) * 100));
 
-        // Utiliser fetch directement au lieu d'axios pour FormData
         const response = await fetch(`${API_BASE_URL}/api/dossiers/${selectedDossier.idDossier}/televerser`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
-            // NE PAS définir Content-Type - fetch le fait automatiquement avec FormData
+      
           },
           body: formData,
         });

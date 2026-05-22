@@ -10,14 +10,27 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.supfile.mobile"
+      "bundleIdentifier": "com.supfile.mobile",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Cette application a besoin d'accéder à vos photos pour vous permettre de changer votre photo de profil."
+      }
     },
     "android": {
-      "package": "com.supfile.mobile"
+      "package": "com.supfile.mobile",
+      "permissions": [
+        "READ_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES"
+      ]
     },
     "plugins": [
       "expo-audio",
-      "expo-video"
+      "expo-video",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Cette application a besoin d'accéder à vos photos pour vous permettre de changer votre photo de profil."
+        }
+      ]
     ]
   }
 }

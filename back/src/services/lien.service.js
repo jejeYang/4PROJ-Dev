@@ -72,14 +72,18 @@ class LienService {
     async recupererPartagesEnvoyes(idCompte) {
         return await this.dossierRepository.findMany({
             idCompteAcces: parseInt(idCompte),
-            idDossierSource: { not: null }
+            NOT: {
+                idDossierSource: null
+            }
         });
     }
 
     async recupererPartagesRecus(idCompte) {
         return await this.dossierRepository.findMany({
             idCompteCreateur: parseInt(idCompte),
-            idDossierSource: { not: null }
+            NOT: {
+                idDossierSource: null
+            }
         });
     }
 }

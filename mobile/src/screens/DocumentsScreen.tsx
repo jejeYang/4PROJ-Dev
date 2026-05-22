@@ -40,7 +40,7 @@ interface DisplayItem {
 export default function DocumentsScreen({ navigation }: any) {
   const [items, setItems] = useState<DisplayItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [breadcrumb, setBreadcrumb] = useState<BreadcrumbItem[]>([{ id: null, name: 'Mes Documents' }]);
+  const [breadcrumb, setBreadcrumb] = useState<BreadcrumbItem[]>([{ id: null, name: '' }]);
   const [currentDossierId, setCurrentDossierId] = useState<number | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
@@ -779,13 +779,11 @@ export default function DocumentsScreen({ navigation }: any) {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
-      {/* Breadcrumb */}
       {renderBreadcrumb()}
 
       {/* Boutons d'action */}
       <View style={styles.actionBar}>
         {!isInTrash ? (
-          // Boutons normaux
           <>
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: theme.primaryColor }]}
@@ -816,7 +814,6 @@ export default function DocumentsScreen({ navigation }: any) {
             </TouchableOpacity>
           </>
         ) : (
-          // Boutons dans la corbeille
           <>
             <View style={[styles.trashInfoContainer, { backgroundColor: theme.isDark ? '#2C2C2E' : '#F2F2F7' }]}>
               <Text style={[styles.trashInfoText, { color: theme.textColor }]}>
