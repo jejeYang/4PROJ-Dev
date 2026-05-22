@@ -109,17 +109,16 @@ function Dashboard() {
     };
 
     const gererTelechargementDossierUnique = async (dossier) => {
-        const selectionOriginale = [...selection];
-        toggleSelection(dossier, 'dossier');
-        
-        setTimeout(async () => {
-            await telechargerSelection();
-            if (selectionOriginale.length > 0) {
-                const nouvelleSelectionApresTelechargement = selectionOriginale.map(s => ({ type: s.type, item: s.item }));
-                window.dispatchEvent(new Event('profilMisAJour'));
-            }
-        }, 50);
-    };
+    const selectionOriginale = [...selection];
+    toggleSelection(dossier, 'dossier');
+    
+    setTimeout(async () => {
+        await telechargerSelection();
+        if (selectionOriginale.length > 0) {
+            window.dispatchEvent(new Event('profilMisAJour'));
+        }
+    }, 50);
+};
 
     return (
         <div
