@@ -224,7 +224,6 @@ const Lien = () => {
                                         </span>
                                     </div>
                                     <div className="col-extension">{extension || 'fichier'}</div>
-                                    <div className="col-date">{fichier.dateCreation ? new Date(fichier.dateCreation).toLocaleDateString('fr-FR') : '-'}</div>
                                     <div className="col-date">{fichier.dateModification ? new Date(fichier.dateModification).toLocaleDateString('fr-FR') : '-'}</div>
                                     <div className="col-taille">{formatFileSize(fichier.taille)}</div>
                                     <div className="col-actions">
@@ -246,7 +245,6 @@ const Lien = () => {
                                     </span>
                                 </div>
                                 <div className="col-extension">{separerNomExtension(details.nom).extension || 'fichier'}</div>
-                                <div className="col-date">-</div>
                                 <div className="col-date">{details.dateModification ? new Date(details.dateModification).toLocaleDateString('fr-FR') : '-'}</div>
                                 <div className="col-taille">{formatFileSize(details.taille)}</div>
                                 <div className="col-actions">
