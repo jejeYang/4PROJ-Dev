@@ -1,20 +1,16 @@
 # 4PROJ-Dev
 
-
-## Lancer l'app mobile :
+## Lancer l'app mobile (se fait automatiquement avec la commande Docker à la racine du projet):
 cd mobile
 npm start 
 
 ## Prérequis 
-Avoir Expo go sur son telephone et mettre l'ip de votre ordi dans l'ip de config.ts 
+### Avoir Expo go (version 54) sur son telephone
+https://expo.dev/
+### Mettre l'ip de votre ordi dans l'ip de mobile/src/config.ts 
 (ex : export const API_BASE_URL = 'http://192.168.x.x:3000';)
+### Brancher son téléphone à son ordinateur
+Le téléphone doit être sur le même réseau que l'ordinateur.
 
-## Remarque
-Dans le back, server.js 
-Changement de la ligne : res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
-
-Par :
-res.setHeader('Access-Control-Allow-Origin', '*'); 
-
-Permet de ne plus bloquer l'application mobile (en développement) pour se connecter au back 
-Devra être changer (en production) pour n'accepter que le site web et l'app mobile
+### Accéder à l'application
+Sur Expo Go, utiliser le lien ex://192.168.x.x:8081, ou scanner le QR code

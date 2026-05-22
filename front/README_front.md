@@ -1,7 +1,7 @@
 # 4PROJ-Dev
 
 
-## Lancer le front :
+## Lancer le front (se fait automatiquement avec la commande Docker à la racine du projet) :
 cd front
 npm run dev
 
@@ -17,6 +17,4 @@ $env:VITE_GOOGLE_CLIENT_ID = "votre-client-id.apps.googleusercontent.com"
 npm run dev
 ```
 
-
-
-http://localhost:5173
+# Le front se lance sur le 5173 : http://localhost:5173
