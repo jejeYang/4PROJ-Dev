@@ -3,36 +3,8 @@ General :
 
 Front :
 - Ajouter des commentaires propres
-- Créer hooks pour Login, Register & Upload
+- Bouton télécharger un dossier
+- Enlever colonne date de création (vérifier que le responsive n'est pas affecté !)
 
-Mobile :
-# Modifier affichage pour fixer le header en haut (flex)
-
-# Connexion :
-- Connexion via google
-
-# Page d'accueil :
-- Fichiers récents
-- Dossiers récents
-
-# Dashboard :
-- Renommage de dossier
-- Voir date de modification
-## Selection multiple :
-	- Suppression multiple
-	- Téléchargement multiple
-	- Déplacement multiple
-## Visualisation :
-	- La visualisation du PDF partage le PDF au lieu de le visualiser
-## Partage :
-	- Choisir de partager à un utilisateur ou un invité
-
-# Partage & collaboration :
-- Tout faire :
-- Ajouter page de partage
-- Ajouter page de lien
-
-# Recherche & filtres :
-- Tout faire
-- Recherche
-- Filtre
+Back :
+///
