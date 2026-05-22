@@ -33,7 +33,7 @@ export const styles = StyleSheet.create({
     },
     actionButton: {
         flex: 1,
-        height: 44,\r
+        height: 44,
         borderRadius: 8,
         justifyContent: 'center',
         alignItems: 'center',

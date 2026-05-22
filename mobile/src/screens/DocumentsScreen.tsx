@@ -220,6 +220,7 @@ export default function DocumentsScreen({ navigation }: any) {
         />
       )}
 
+      {/* MODALE : CRÉATION DOSSIER */}
       <Modal visible={showCreateModal && !selectedItem} transparent animationType="fade">
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowCreateModal(false)}>
           <View style={[styles.modalContent, { backgroundColor: theme.isDark ? '#1C1C1E' : '#FFF' }]}>
@@ -244,6 +245,7 @@ export default function DocumentsScreen({ navigation }: any) {
         </TouchableOpacity>
       </Modal>
 
+      {/* MODALE : RENOMMER ÉLÉMENT */}
       <Modal visible={showCreateModal && selectedItem !== null} transparent animationType="fade">
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => { setShowCreateModal(false); setSelectedItem(null); }}>
           <View style={[styles.modalContent, { backgroundColor: theme.isDark ? '#1C1C1E' : '#FFF' }]}>
@@ -271,7 +273,7 @@ export default function DocumentsScreen({ navigation }: any) {
           <View style={[styles.modalContent, { backgroundColor: theme.isDark ? '#1C1C1E' : '#FFF', width: '100%', height: '80%', borderBottomRadius: 0 }]}>
             <Text style={[styles.modalTitle, { color: theme.textColor }]}>Déplacer vers...</Text>
             <View style={{ width: '100%', padding: 8, backgroundColor: theme.isDark ? '#2C2C2E' : '#F2F2F7', borderRadius: 8, flexDirection: 'row' }}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.breadcrumbItem}>
                 {moveBreadcrumb.map((b, idx) => (
                   <TouchableOpacity key={idx} onPress={() => navigateMoveLevel(b.id, b.name)}>
                     <Text style={{ color: theme.primaryColor }}>{b.name} {idx < moveBreadcrumb.length - 1 ? '› ' : ''}</Text>
