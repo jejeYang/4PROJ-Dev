@@ -65,6 +65,10 @@ class LienService {
         return await this.lienRepository.deleteByChemin(chemin);
     }
 
+    async supprimerLiensExpires() {
+        return await this.lienRepository.deleteExpired(new Date());
+    }
+
     // ==========================================
     // PARTAGES INTERNES (DOSSIERS)
     // ==========================================

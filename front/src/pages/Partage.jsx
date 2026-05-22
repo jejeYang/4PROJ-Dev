@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVoirPartage } from '../hooks/useVoirPartage';
+import { FolderInput, FolderOutput, Link2, Lock, Unlock, File, Trash2 } from 'lucide-react';
 import '../styles/Partage.css';
 
 function Partage() {
@@ -39,7 +40,6 @@ function Partage() {
 
                 <div className="partage-grille-principale">
                     
-                    {/* PARTAGES REÇUS */}
                     <div className="partage-panneau-donnees partage-pleine-largeur">
                         <div className="partage-en-tete-description">
                             <h3>Partages reçus</h3>
@@ -50,14 +50,15 @@ function Partage() {
                                 partagesRecus.map(p => (
                                     <div key={p.idDossier} className="partage-element-liste cliquable" onClick={() => allerVersDossier(p.idDossier)}>
                                         <div className="partage-element-principal">
-                                            <span className="partage-icone-fichier">📥</span>
+                                            <span className="partage-icone-fichier" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                                                <FolderInput size={22} style={{ color: 'var(--btn-primary-color)' }} />
+                                            </span>
                                             <div className="partage-infos-texte">
                                                 <span className="partage-nom-fichier">{p.cheminDaccesDossier}</span>
                                                 <span className="partage-email">De : {p.emailContact || 'Utilisateur inconnu'}</span>
                                             </div>
                                         </div>
                                         <div className="partage-element-lateral">
-                                            <span className="partage-date-fichier">Reçu le {new Date(p.dateCreation).toLocaleDateString()}</span>
                                             <button className="partage-bouton-danger-contour" onClick={(e) => { e.stopPropagation(); resilierPartageInterne(p.idDossier); }}>Quitter</button>
                                         </div>
                                     </div>
@@ -66,7 +67,6 @@ function Partage() {
                         </div>
                     </div>
 
-                    {/* PARTAGES ENVOYÉS */}
                     <div className="partage-panneau-donnees partage-pleine-largeur">
                         <div className="partage-en-tete-description">
                             <h3>Partages envoyés</h3>
@@ -77,14 +77,15 @@ function Partage() {
                                 partagesEnvoyes.map(p => (
                                     <div key={p.idDossier} className="partage-element-liste cliquable" onClick={() => allerVersDossier(p.idDossier)}>
                                         <div className="partage-element-principal">
-                                            <span className="partage-icone-fichier">📤</span>
+                                            <span className="partage-icone-fichier" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                                                <FolderOutput size={22} style={{ color: 'var(--btn-primary-color)' }} />
+                                            </span>
                                             <div className="partage-infos-texte">
                                                 <span className="partage-nom-fichier">{p.cheminDaccesDossier}</span>
                                                 <span className="partage-email">Vers : {p.emailContact || 'Utilisateur inconnu'}</span>
                                             </div>
                                         </div>
                                         <div className="partage-element-lateral">
-                                            <span className="partage-date-fichier">Envoyé le {new Date(p.dateCreation).toLocaleDateString()}</span>
                                             <button className="partage-bouton-danger-contour" onClick={(e) => { e.stopPropagation(); resilierPartageInterne(p.idDossier); }}>Révoquer</button>
                                         </div>
                                     </div>
@@ -93,7 +94,6 @@ function Partage() {
                         </div>
                     </div>
 
-                    {/* LIENS PUBLICS */}
                     <div className="partage-panneau-donnees partage-pleine-largeur">
                         <div className="partage-en-tete-description">
                             <h3>Liens publics (Invités)</h3>
@@ -104,12 +104,15 @@ function Partage() {
                                 liensPublics.map(l => (
                                     <div key={l.idLien} className="partage-element-liste cliquable" onClick={() => copierLien(l.url)} title="Cliquez pour copier le lien">
                                         <div className="partage-element-principal">
-                                            <span className="partage-icone-fichier">{l.type === 'dossier' ? '📁' : '📄'}</span>
+                                            <span className="partage-icone-fichier" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                                                {l.type === 'dossier' ? <Link2 size={22} /> : <File size={22} />}
+                                            </span>
                                             <div className="partage-infos-texte">
                                                 <div className="partage-nom-ligne">
                                                     <span className="partage-nom-fichier">{l.nom}</span>
-                                                    <span className={`partage-etiquette-statut ${l.protege ? 'partage-etiquette-protege' : 'partage-etiquette-public'}`}>
-                                                        {l.protege ? '🔒 Protégé' : '🔓 Public'}
+                                                    <span className={`partage-etiquette-statut ${l.protege ? 'partage-etiquette-protege' : 'partage-etiquette-public'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                                        {l.protege ? <Lock size={12} /> : <Unlock size={12} />}
+                                                        {l.protege ? 'Protégé' : 'Public'}
                                                     </span>
                                                 </div>
                                                 <span className="partage-email">
@@ -119,7 +122,10 @@ function Partage() {
                                         </div>
                                         <div className="partage-element-lateral">
                                             <span className="partage-date-fichier">Créé le {new Date(l.createdAt).toLocaleDateString()}</span>
-                                            <button className="partage-bouton-danger-contour" onClick={(e) => { e.stopPropagation(); supprimerLienPublic(l.idLien); }}>Supprimer</button>
+                                            <button className="partage-bouton-danger-contour" onClick={(e) => { e.stopPropagation(); supprimerLienPublic(l.idLien); }}>
+                                                <Trash2 size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+                                                Supprimer
+                                            </button>
                                         </div>
                                     </div>
                                 ))

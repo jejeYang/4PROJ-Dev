@@ -9,5 +9,14 @@ Ce projet a été réalisé dans le cadre de module de 4eme année à SUPINFO To
 ## Lancer l'application' :
 docker compose up --build
 
-### Préciser la variable google id si besoin (exemple) :
-$env:VITE_GOOGLE_CLIENT_ID="60122681226-56ehoh7uj46u1ot03dlct24srh1j83p0.apps.googleusercontent.com"
+## Variables d'environnement :
+Définir ces variables d'environnement avant de lancer l'API :
+
+- `GOOGLE_CLIENT_ID` : Client ID OAuth 2.0 (Web) Google
+- `JWT_SECRET` : secret de signature JWT
+
+Exemple PowerShell :
+
+```powershell
+$env:GOOGLE_CLIENT_ID = "votre-client-id.apps.googleusercontent.com"
+$env:JWT_SECRET = "un-secret-fort"

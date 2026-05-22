@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { formatFileSize, obtenirTypeFichier, tronquerNom, separerNomExtension, obtenirEmojiFichier } from '../utils/fichierUtils';
+import { Lock, ChevronRight, Download, X } from 'lucide-react';
 import '../styles/Dashboard.css';
 
 const Lien = () => {
@@ -10,13 +11,11 @@ const Lien = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     
-    // Auth & Navigation
     const [password, setPassword] = useState('');
     const [passwordRequired, setPasswordRequired] = useState(false);
     const [nomRacine, setNomRacine] = useState('');
-    const [fil_ariane, setFilAriane] = useState([]); // [{id, nom}]
+    const [fil_ariane, setFilAriane] = useState([]); 
     
-    // Aperçu
     const [fichier_preview, setFichierPreview] = useState(null);
 
     const fetchDetails = async (pass = password, folderId = null) => {
@@ -91,7 +90,6 @@ const Lien = () => {
         window.open(url, '_blank');
     };
 
-    // Vues conditionnelles
     if (loading && !details) {
         return <div className="dashboard-container"><div className="div-chargement">Chargement du partage...</div></div>;
     }
@@ -100,7 +98,10 @@ const Lien = () => {
         return (
             <div className="dashboard-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
                 <div className="modal-contenu" style={{ maxWidth: '400px', width: '100%' }}>
-                    <h3>🔒 Lien protégé</h3>
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Lock size={20} />
+                        Lien protégé
+                    </h3>
                     <p style={{ marginBottom: '1.5rem', color: 'var(--text-secondary-color)' }}>Ce partage est protégé par un mot de passe.</p>
                     <form onSubmit={handlePasswordSubmit}>
                         <input
@@ -145,7 +146,9 @@ const Lien = () => {
                             <button className="breadcrumb-objet" onClick={() => gestionClicBreadcrumb(-1)}>{nomRacine}</button>
                             {fil_ariane.map((dossier, index) => (
                                 <React.Fragment key={dossier.id}>
-                                    <span className="breadcrumb-separateur">›</span>
+                                    <span className="breadcrumb-separateur">
+                                        <ChevronRight size={16} />
+                                    </span>
                                     <button className="breadcrumb-objet" onClick={() => gestionClicBreadcrumb(index)}>
                                         {dossier.nom}
                                     </button>
@@ -188,12 +191,11 @@ const Lien = () => {
                             <div className="col-actions">Actions</div>
                         </div>
 
-                        {/* PARTIE : SOUS-DOSSIERS */}
                         {details.sousDossiers?.map((dossier) => (
                             <div key={dossier.idDossier} className="dossier-ligne" onClick={() => naviguerVersDossier(dossier.idDossier, dossier.cheminDaccesDossier)}>
                                 <div className="col-checkbox" style={{ width: '20px' }}></div>
                                 <div className="col-nom">
-                                    <span>📁</span>
+                                    <span style={{ marginRight: '8px', display: 'inline-flex', alignItems: 'center' }}>📁</span>
                                     <span className="dossier-nom" title={dossier.cheminDaccesDossier}>
                                         {tronquerNom(dossier.cheminDaccesDossier)}
                                     </span>
@@ -203,50 +205,52 @@ const Lien = () => {
                                 <div className="col-date">-</div>
                                 <div className="col-taille">...</div>
                                 <div className="col-actions">
-                                    <button className="action-icon-btn action-primary" onClick={(e) => { e.stopPropagation(); telechargerDossier(dossier.idDossier); }} title="Télécharger ZIP">⬇️</button>
+                                    <button className="action-icon-btn action-primary" onClick={(e) => { e.stopPropagation(); telechargerDossier(dossier.idDossier); }} title="Télécharger ZIP">
+                                        <Download size={14} />
+                                    </button>
                                 </div>
                             </div>
                         ))}
 
-                        {/* PARTIE : FICHIERS */}
                         {details.fichiers?.map((fichier) => {
                             const { nomBase, extension } = separerNomExtension(fichier.nom);
                             return (
                                 <div key={fichier.nom} className="dossier-ligne fichier-ligne" onClick={() => ouvrirApercu(fichier)}>
                                     <div className="col-checkbox" style={{ width: '20px' }}></div>
                                     <div className="col-nom">
-                                        <span>{obtenirEmojiFichier(fichier.nom)}</span>
+                                        {obtenirEmojiFichier(fichier.nom)}
                                         <span className="dossier-nom" title={fichier.nom}>
                                             {tronquerNom(nomBase)}
                                         </span>
                                     </div>
                                     <div className="col-extension">{extension || 'fichier'}</div>
-                                    <div className="col-date">{fichier.dateCreation ? new Date(fichier.dateCreation).toLocaleDateString('fr-FR') : '-'}</div>
                                     <div className="col-date">{fichier.dateModification ? new Date(fichier.dateModification).toLocaleDateString('fr-FR') : '-'}</div>
                                     <div className="col-taille">{formatFileSize(fichier.taille)}</div>
                                     <div className="col-actions">
-                                        <button className="action-icon-btn action-primary" onClick={(e) => { e.stopPropagation(); telechargerFichier(fichier); }} title="Télécharger">⬇️</button>
+                                        <button className="action-icon-btn action-primary" onClick={(e) => { e.stopPropagation(); telechargerFichier(fichier); }} title="Télécharger">
+                                            <Download size={14} />
+                                        </button>
                                     </div>
                                 </div>
                             );
                         })}
 
-                        {/* PARTIE : FICHIER UNIQUE (Partage direct de fichier) */}
                         {details.type === 'fichier' && (
                              <div className="dossier-ligne fichier-ligne" onClick={() => ouvrirApercu(details)}>
                                 <div className="col-checkbox" style={{ width: '20px' }}></div>
                                 <div className="col-nom">
-                                    <span>{obtenirEmojiFichier(details.nom)}</span>
+                                    {obtenirEmojiFichier(details.nom)}
                                     <span className="dossier-nom" title={details.nom}>
                                         {tronquerNom(separerNomExtension(details.nom).nomBase)}
                                     </span>
                                 </div>
                                 <div className="col-extension">{separerNomExtension(details.nom).extension || 'fichier'}</div>
-                                <div className="col-date">-</div>
                                 <div className="col-date">{details.dateModification ? new Date(details.dateModification).toLocaleDateString('fr-FR') : '-'}</div>
                                 <div className="col-taille">{formatFileSize(details.taille)}</div>
                                 <div className="col-actions">
-                                    <button className="action-icon-btn action-primary" onClick={(e) => { e.stopPropagation(); telechargerFichier(details); }} title="Télécharger">⬇️</button>
+                                    <button className="action-icon-btn action-primary" onClick={(e) => { e.stopPropagation(); telechargerFichier(details); }} title="Télécharger">
+                                        <Download size={14} />
+                                    </button>
                                 </div>
                             </div>
                         )}
@@ -254,7 +258,6 @@ const Lien = () => {
                 )}
             </div>
 
-            {/* MODALE D'APERÇU */}
             {fichier_preview && (
                 <div className="modal-overlay" onMouseDown={(e) => {
                     if (e.target === e.currentTarget) setFichierPreview(null);
@@ -262,7 +265,9 @@ const Lien = () => {
                     <div className="modal-preview-contenu" onClick={e => e.stopPropagation()}>
                         <div className="preview-header">
                             <h3>{fichier_preview.nom}</h3>
-                            <button className="btn-fermer-preview" onClick={() => setFichierPreview(null)}>✕</button>
+                            <button className="btn-fermer-preview" onClick={() => setFichierPreview(null)}>
+                                <X size={20} />
+                            </button>
                         </div>
                         <div className="preview-body">
                             {fichier_preview.type === 'image' && <img src={fichier_preview.url} alt={fichier_preview.nom} />}

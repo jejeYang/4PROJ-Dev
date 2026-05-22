@@ -1,9 +1,58 @@
 General :
+- Le Docker doit également lancer le mobile
+- Modifier le message du Docker (lien expo mobile / qr code + lien front app)
+
+Front :
 - Ajouter des commentaires propres
-- Remplacer les emoji par une bibliothèque (ex : Flaticon)
+- Bouton télécharger un dossier
+- Enlever colonne date de création (vérifier que le responsive n'est pas affecté !)
 
 Back :
 - Restaurer un élement doit le remettre dans le dossier dans lequel il était plutôt qu'à la racine
 - Récupérer la date de création d'un fichier
 - Gestion date d'expiration des liens
 - Vérification de la compléxité du mot de passe lors de sa création
+
+Mobile :
+# Séparer les fonctions et le css du return
+
+# Modifier affichage pour fixer le header en haut (flex)
+
+# Connexion :
+- Connexion via google
+
+# Page d'accueil :
+- Bouton page partage
+- Etat du stockage
+- Repartition
+- Fichiers récents
+- Dossiers récents
+
+# Paramètres :
+- Pouvoir modifier l'image de profile
+## Suppression de compte :
+	- Bouton ne fonctionne pas
+	- Doit demander le mot de passe
+## Changer de mot de passe ne fonctionne pas
+
+# Dashboard :
+- Renommage de dossier
+- Voir date de modification
+## Selection multiple :
+	- Suppression multiple
+	- Téléchargement multiple
+	- Déplacement multiple
+## Visualisation :
+	- La visualisation du PDF partage le PDF au lieu de le visualiser
+## Partage :
+	- Choisir de partager à un utilisateur ou un invité
+
+# Partage & collaboration :
+- Tout faire :
+- Ajouter page de partage
+- Ajouter page de lien
+
+# Recherche & filtres :
+- Tout faire
+- Recherche
+- Filtre

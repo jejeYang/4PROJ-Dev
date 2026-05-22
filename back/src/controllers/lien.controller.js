@@ -124,6 +124,13 @@ class LienController {
             const { fileName, motDePasse, dateExpiration } = req.body;
             const idUtilisateur = +req.utilisateur.id;
 
+            if (dateExpiration) {
+                const expiration = new Date(dateExpiration);
+                if (Number.isNaN(expiration.getTime()) || expiration <= new Date()) {
+                    return res.status(400).json({ error: "La date d'expiration doit être une date future valide." });
+                }
+            }
+
             const dossierSource = await this.dossierService.recupererDossierParId(dossierId);
             if (dossierSource.idCompteCreateur !== idUtilisateur) {
                 return res.status(403).json({ error: "Vous n'êtes pas autorisé à partager ce dossier." });
