@@ -459,7 +459,7 @@ export default function DocumentsScreen({ navigation, route }: any) {
                           value={expiryDate}
                           mode="date"
                           display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                          onChange={(event, selectedDate) => {
+                          onChange={(event: any, selectedDate?: Date) => {
                             if (Platform.OS === 'android') {
                               setShowDatePicker(false);
                             }

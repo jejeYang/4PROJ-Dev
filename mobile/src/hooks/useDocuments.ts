@@ -783,7 +783,6 @@ export interface BreadcrumbItem {
         newName,
         setNewName,
         handleRename,
-        createShareLink,
         handleShare,
         copyShareLink,
         showItemOptions,
