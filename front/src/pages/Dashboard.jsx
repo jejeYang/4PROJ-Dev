@@ -2,6 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { useDashboard } from '../hooks/useDashboard';
 import '../styles/Dashboard.css';
 
+import { 
+    Folder, 
+    ChevronRight, 
+    Trash2, 
+    Download, 
+    Move, 
+    RefreshCw, 
+    X, 
+    Share2, 
+    Edit2, 
+    Search 
+} from 'lucide-react';
+
 function Dashboard() {
     const {
         loading, creating, error, setError,
@@ -116,7 +129,9 @@ function Dashboard() {
                             <button className="breadcrumb-objet" onClick={() => gestionClicBreadcrumb(-1)}>Mon Espace</button>
                             {fil_ariane.map((dossier, index) => (
                                 <React.Fragment key={dossier.idDossier}>
-                                    <span className="breadcrumb-separateur">›</span>
+                                    <span className="breadcrumb-separateur">
+                                        <ChevronRight size={16} />
+                                    </span>
                                     <button className="breadcrumb-objet" onClick={() => gestionClicBreadcrumb(index)}>
                                         {dossier.cheminDaccesDossier}
                                     </button>
@@ -142,7 +157,9 @@ function Dashboard() {
             {error && !ouvre_modal.type && !formulaire_partage_ouvert && (
                 <div className="page-liste-erreur-globale">
                     <span>{error}</span>
-                    <button className="btn-fermer-erreur" onClick={() => setError('')} title="Fermer">✕</button>
+                    <button className="btn-fermer-erreur" onClick={() => setError('')} title="Fermer">
+                        <X size={18} />
+                    </button>
                 </div>
             )}
 
@@ -225,7 +242,9 @@ function Dashboard() {
                                         <span className="modal-lien-ariane" onClick={() => naviguerDeplacement(null)}>Mon Espace</span>
                                         {chemin_deplacement.map((dossier, index) => (
                                             <React.Fragment key={dossier.idDossier}>
-                                                <span className="separateur">›</span>
+                                                <span className="separateur">
+                                                    <ChevronRight size={14} />
+                                                </span>
                                                 <span className="modal-lien-ariane" onClick={() => naviguerDeplacement(dossier, index)}>
                                                     {dossier.cheminDaccesDossier}
                                                 </span>
@@ -475,6 +494,7 @@ function Dashboard() {
                             }
                             onClick={() => setModalRechercheOuverte(true)}
                         >
+                            <Search size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
                             Rechercher
                         </button>
                     )}
@@ -563,15 +583,25 @@ function Dashboard() {
                             <div className="col-actions">
                                 {selection.length > 0 && !estDansCorbeille && (
                                     <div className="actions-multiples">
-                                        <button className="action-icon-btn action-danger" onClick={ouvrirModalSuppressionMultiple} title="Supprimer la sélection">🗑️</button>
-                                        <button className="action-icon-btn action-primary" onClick={telechargerSelection} title="Télécharger la sélection en ZIP">⬇️</button>
-                                        <button className="action-icon-btn action-primary" onClick={() => ouvrirModalDeplacement()} title="Déplacer la sélection">↪️</button>
+                                        <button className="action-icon-btn action-danger" onClick={ouvrirModalSuppressionMultiple} title="Supprimer la sélection">
+                                            <Trash2 size={16} />
+                                        </button>
+                                        <button className="action-icon-btn action-primary" onClick={telechargerSelection} title="Télécharger la sélection en ZIP">
+                                            <Download size={16} />
+                                        </button>
+                                        <button className="action-icon-btn action-primary" onClick={() => abrirModalDeplacement()} title="Déplacer la sélection">
+                                            <Move size={16} />
+                                        </button>
                                     </div>
                                 )}
                                 {selection.length > 0 && estDansCorbeille && (
                                     <div className="actions-multiples">
-                                        <button className="action-icon-btn action-primary" onClick={ouvrirModalRestaurerMultiple} title="Restaurer la sélection">♻️</button>
-                                        <button className="action-icon-btn action-danger" onClick={ouvrirModalSuppressionDefinitiveMultiple} title="Supprimer définitivement la sélection">❌</button>
+                                        <button className="action-icon-btn action-primary" onClick={ouvrirModalRestaurerMultiple} title="Restaurer la sélection">
+                                            <RefreshCw size={16} />
+                                        </button>
+                                        <button className="action-icon-btn action-danger" onClick={ouvrirModalSuppressionDefinitiveMultiple} title="Supprimer définitivement la sélection">
+                                            <X size={16} />
+                                        </button>
                                     </div>
                                 )}
                             </div>
@@ -595,7 +625,7 @@ function Dashboard() {
                                     />
                                 </div>
                                 <div className="col-nom">
-                                    <span>📁</span>
+                                    <Folder size={18} className="icon-folder" style={{ marginRight: '8px', verticalAlign: 'middle' }} />
                                     <span className="dossier-nom" title={dossier.cheminDaccesDossier}>
                                         {tronquerNom(dossier.cheminDaccesDossier)}
                                     </span>
@@ -608,15 +638,27 @@ function Dashboard() {
                                         <div className="actions-rapides" onClick={(e) => e.stopPropagation()}>
                                             {!estDansCorbeille ? (
                                                 <>
-                                                    <button className="action-icon-btn" onClick={() => partagerRessource({ id_dossier: dossier.idDossier })} title="Partager">🔗</button>
-                                                    <button className="action-icon-btn" onClick={() => ouvrirModalRenommerDossier(dossier)} title="Renommer">✏️</button>
-                                                    <button className="action-icon-btn" onClick={() => ouvrirModalDeplacement(dossier)} title="Déplacer">↪️</button>
-                                                    <button className="action-icon-btn" onClick={() => ouvrirModalSuppressionDossier(dossier)} title="Déplacer vers la corbeille">🗑️</button>
+                                                    <button className="action-icon-btn" onClick={() => partagerRessource({ id_dossier: dossier.idDossier })} title="Partager">
+                                                        <Share2 size={14} />
+                                                    </button>
+                                                    <button className="action-icon-btn" onClick={() => ouvrirModalRenommerDossier(dossier)} title="Renommer">
+                                                        <Edit2 size={14} />
+                                                    </button>
+                                                    <button className="action-icon-btn" onClick={() => ouvrirModalDeplacement(dossier)} title="Déplacer">
+                                                        <Move size={14} />
+                                                    </button>
+                                                    <button className="action-icon-btn" onClick={() => ouvrirModalSuppressionDossier(dossier)} title="Déplacer vers la corbeille">
+                                                        <Trash2 size={14} />
+                                                    </button>
                                                 </>
                                             ) : (
                                                 <>
-                                                    <button className="action-icon-btn" onClick={() => restaurerDossier(dossier)} title="Restaurer le dossier">♻️</button>
-                                                    <button className="action-icon-btn" onClick={() => ouvrirModalSuppressionDefinitiveDossier(dossier)} title="Supprimer définitivement">❌</button>
+                                                    <button className="action-icon-btn" onClick={() => restaurerDossier(dossier)} title="Restaurer le dossier">
+                                                        <RefreshCw size={14} />
+                                                    </button>
+                                                    <button className="action-icon-btn" onClick={() => ouvrirModalSuppressionDefinitiveDossier(dossier)} title="Supprimer définitivement">
+                                                        <X size={14} />
+                                                    </button>
                                                 </>
                                             )}
                                         </div>
@@ -632,7 +674,6 @@ function Dashboard() {
 
                         {fichiersTries.map((fichier, index) => {
                             const { nomBase, extension } = separerNomExtension(fichier.nom);
-                            const emojiFichier = obtenirEmojiFichier(fichier.nom);
                             return (
                                 <div
                                     key={`file-${index}`}
@@ -649,7 +690,7 @@ function Dashboard() {
                                     </div>
                                     
                                     <div className="col-nom">
-                                        <span>{emojiFichier}</span>
+                                        {obtenirEmojiFichier(fichier.nom)}
                                         <span className="dossier-nom" title={fichier.nom}>
                                             {tronquerNom(nomBase)}
                                         </span>
@@ -662,15 +703,27 @@ function Dashboard() {
                                             <div className="actions-rapides" onClick={(e) => e.stopPropagation()}>
                                                 {!estDansCorbeille ? (
                                                     <>
-                                                        <button className="action-icon-btn" onClick={() => telechargerFichier(fichier)} title="Télécharger">⬇️</button>
-                                                        <button className="action-icon-btn" onClick={() => ouvrirModalRenommerFichier(fichier)} title="Renommer">✏️</button>
-                                                        <button className="action-icon-btn" onClick={() => ouvrirModalDeplacement(fichier)} title="Déplacer">↪️</button>
-                                                        <button className="action-icon-btn" onClick={() => ouvrirModalSuppressionFichier(fichier)} title="Déplacer vers la corbeille">🗑️</button>
+                                                        <button className="action-icon-btn" onClick={() => telechargerFichier(fichier)} title="Télécharger">
+                                                            <Download size={14} />
+                                                        </button>
+                                                        <button className="action-icon-btn" onClick={() => ouvrirModalRenommerFichier(fichier)} title="Renommer">
+                                                            <Edit2 size={14} />
+                                                        </button>
+                                                        <button className="action-icon-btn" onClick={() => ouvrirModalDeplacement(fichier)} title="Déplacer">
+                                                            <Move size={14} />
+                                                        </button>
+                                                        <button className="action-icon-btn" onClick={() => ouvrirModalSuppressionFichier(fichier)} title="Déplacer vers la corbeille">
+                                                            <Trash2 size={14} />
+                                                        </button>
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <button className="action-icon-btn" onClick={() => restaurerFichier(fichier)} title="Restaurer le fichier">♻️</button>
-                                                        <button className="action-icon-btn" onClick={() => ouvrirModalSuppressionDefinitiveFichier(fichier)} title="Supprimer définitivement">❌</button>
+                                                        <button className="action-icon-btn" onClick={() => restaurerFichier(fichier)} title="Restaurer le fichier">
+                                                            <RefreshCw size={14} />
+                                                        </button>
+                                                        <button className="action-icon-btn" onClick={() => ouvrirModalSuppressionDefinitiveFichier(fichier)} title="Supprimer définitivement">
+                                                            <X size={14} />
+                                                        </button>
                                                     </>
                                                 )}
                                             </div>
@@ -699,7 +752,9 @@ function Dashboard() {
                         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') gestionClicDossier(corbeille_info); }}
                         aria-label="Ouvrir la corbeille"
                     >
-                        <div className="icone-corbeille">🗑️</div>
+                        <div className="icone-corbeille">
+                            <Trash2 size={32} />
+                        </div>
                         <h3>Corbeille</h3>
                         <p className="taille-corbeille">{taille_dossiers[corbeille_info.idDossier] !== undefined ? formatFileSize(taille_dossiers[corbeille_info.idDossier]) : 'Calcul...'}</p>
                     </div>
@@ -713,7 +768,9 @@ function Dashboard() {
                     <div className="modal-preview-contenu" onClick={e => e.stopPropagation()}>
                         <div className="preview-header">
                             <h3>{fichier_preview.nom}</h3>
-                            <button className="btn-fermer-preview" onClick={fermerApercu}>✕</button>
+                            <button className="btn-fermer-preview" onClick={fermerApercu}>
+                                <X size={20} />
+                            </button>
                         </div>
                         <div className="preview-body">
                             {fichier_preview.type === 'image' && <img src={fichier_preview.url} alt={fichier_preview.nom} />}

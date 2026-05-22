@@ -1,6 +1,7 @@
 import React, { useState, useContext, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { Edit2, AlertTriangle } from 'lucide-react';
 import '../styles/Settings.css';
 import { ThemeContext } from '../context/theme_context';
 
@@ -178,7 +179,10 @@ function Settings() {
             {afficherModalSuppression && (
                 <div className="overlay-modal">
                     <div className="carte-parametres modal-danger">
-                        <h3>⚠️ Action Irréversible</h3>
+                        <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <AlertTriangle size={20} />
+                            Action Irréversible
+                        </h3>
                         <p>Attention : Toutes vos données seront définitivement effacées. Veuillez saisir votre mot de passe pour confirmer.</p>
                         <form onSubmit={confirmerSuppressionCompte}>
                             <div className="groupe-formulaire">
@@ -227,7 +231,7 @@ function Settings() {
                                     )}
                                 </div>
                                 <div className="bouton-editer-avatar" onClick={declencherSelectionFichier} title="Changer la photo de profil">
-                                    <span className="icone-crayon">✎</span>
+                                    <Edit2 size={14} style={{ display: 'block' }} />
                                 </div>
                                 <input 
                                     type="file" 

@@ -17,5 +17,8 @@
   "bugs": {
     "url": "https://github.com/jejeYang/4PROJ-Dev/issues"
   },
-  "homepage": "https://github.com/jejeYang/4PROJ-Dev#readme"
+  "homepage": "https://github.com/jejeYang/4PROJ-Dev#readme",
+  "dependencies": {
+    "lucide-react": "^1.16.0"
+  }
 }

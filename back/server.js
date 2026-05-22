@@ -3,6 +3,7 @@ import { patchBigIntSerialization } from './src/utils/bigint.utils.js';
 import { PORT } from './src/config/env.js';
 import routes from './src/routes/index.js';
 import { errorMiddleware } from './src/middlewares/error.middleware.js';
+import { lancerNettoyageLiensExpires } from './src/jobs/nettoyage-liens.job.js';
 
 patchBigIntSerialization();
 
@@ -10,7 +11,6 @@ const app = express();
 
 // CORS
 app.use((req, res, next) => {
-    //res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-lien-password');
@@ -30,6 +30,8 @@ app.get('/', (req, res) => {
 
 // Global error handler
 app.use(errorMiddleware);
+
+lancerNettoyageLiensExpires();
 
 app.listen(PORT, () => {
     console.log(`🚀 Server is running on port ${PORT}`);

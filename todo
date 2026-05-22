@@ -1,6 +1,11 @@
 General :
+- Le Docker doit également lancer le mobile
+- Modifier le message du Docker (lien expo mobile / qr code + lien front app)
+
+Front :
 - Ajouter des commentaires propres
-- Remplacer les emoji par une bibliothèque (ex : Flaticon)
+- Bouton télécharger un dossier
+- Enlever colonne date de création (vérifier que le responsive n'est pas affecté !)
 
 Back :
 ///

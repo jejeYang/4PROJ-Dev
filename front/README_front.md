@@ -1,7 +1,7 @@
 # 4PROJ-Dev
 
 
-## Lancer le front :
+## Lancer le front (se fait automatiquement avec la commande Docker à la racine du projet) :
 cd front
 npm run dev
 
@@ -16,3 +16,5 @@ Exemple PowerShell :
 $env:VITE_GOOGLE_CLIENT_ID = "votre-client-id.apps.googleusercontent.com"
 npm run dev
 ```
+
+# Le front se lance sur le 5173 : http://localhost:5173
