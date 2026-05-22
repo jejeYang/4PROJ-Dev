@@ -28,7 +28,7 @@ export interface BreadcrumbItem {
     
     const [items, setItems] = useState<DisplayItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [breadcrumb, setBreadcrumb] = useState<BreadcrumbItem[]>([{ id: null, name: 'Mes Documents' }]);
+    const [breadcrumb, setBreadcrumb] = useState<BreadcrumbItem[]>([{ id: null, name: '' }]);
     const [currentDossierId, setCurrentDossierId] = useState<number | null>(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [newFolderName, setNewFolderName] = useState('');

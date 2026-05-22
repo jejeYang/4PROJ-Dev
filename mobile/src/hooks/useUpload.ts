@@ -10,9 +10,9 @@ import { API_BASE_URL } from '../config';
 export interface BreadcrumbItem {
     id: number | null;
     name: string;
-    }
+}
 
-    export function useUpload(navigation: any) {
+export function useUpload(navigation: any) {
     const { user } = useAuth();
     const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
     const [uploading, setUploading] = useState(false);
@@ -28,7 +28,6 @@ export interface BreadcrumbItem {
         loadDossiers();
     }, [currentDossierId]);
 
-    // Fonction pour charger les dossiers disponibles
     const loadDossiers = async () => {
         try {
         setLoadingDossiers(true);
@@ -37,19 +36,27 @@ export interface BreadcrumbItem {
         let dossiersDisponibles: Dossier[] = [];
         
         if (currentDossierId === null) {
-            // On est à la racine - charger le contenu de user_X
+            // charger le contenu de user_X
             const dossiersRacine = await dossierApi.getDossiersRacine(userId);
             const userFolder = dossiersRacine.find(d => d.cheminDaccesDossier === `user_${userId}`);
             
             if (userFolder) {
+            // Sauvegarder l'ID du dossier user_X
             setUserRootFolderId(userFolder.idDossier);
+            
+            // Charger les sous-dossiers de user_X
             dossiersDisponibles = await dossierApi.getSousDossiers(userFolder.idDossier);
+            
+            // Filtrer .corbeille
             dossiersDisponibles = dossiersDisponibles.filter(
                 d => !d.cheminDaccesDossier.includes('.corbeille')
             );
             }
         } else {
+            // On est dans un sous-dossier - charger ses sous-dossiers
             dossiersDisponibles = await dossierApi.getSousDossiers(currentDossierId);
+            
+            // Filtrer .corbeille
             dossiersDisponibles = dossiersDisponibles.filter(
             d => !d.cheminDaccesDossier.includes('.corbeille')
             );
@@ -64,22 +71,20 @@ export interface BreadcrumbItem {
         }
     };
 
-    // Navigation dans les dossiers
     const navigateToFolder = (dossier: Dossier) => {
         const folderName = dossier.cheminDaccesDossier.split('/').pop() || dossier.cheminDaccesDossier;
         setBreadcrumb([...breadcrumb, { id: dossier.idDossier, name: folderName }]);
         setCurrentDossierId(dossier.idDossier);
     };
 
-    // Navigation vers un niveau spécifique dans le breadcrumb
     const navigateToLevel = (index: number) => {
         const newBreadcrumb = breadcrumb.slice(0, index + 1);
         setBreadcrumb(newBreadcrumb);
         setCurrentDossierId(newBreadcrumb[newBreadcrumb.length - 1].id);
     };
 
-    // Sélection du dossier actuel (dernier niveau du breadcrumb)
     const selectCurrentFolder = () => {
+        // Sélectionner le dossier courant comme destination
         const dossierId = currentDossierId || userRootFolderId;
         if (dossierId) {
         setSelectedDossier({ 
@@ -92,7 +97,6 @@ export interface BreadcrumbItem {
         }
     };
 
-    // Sélection de fichiers
     const pickDocument = async () => {
         try {
         const result = await DocumentPicker.getDocumentAsync({
@@ -109,7 +113,6 @@ export interface BreadcrumbItem {
         }
     };
 
-    // Sélection d'images ou de vidéos
     const pickImage = async () => {
         const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
@@ -134,7 +137,6 @@ export interface BreadcrumbItem {
         }
     };
 
-    // Prendre une photo ou une vidéo
     const takePhoto = async () => {
         const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
 
@@ -144,7 +146,9 @@ export interface BreadcrumbItem {
         }
 
         try {
-        const result = await ImagePicker.launchCameraAsync({ quality: 1 });
+        const result = await ImagePicker.launchCameraAsync({
+            quality: 1,
+        });
 
         if (!result.canceled && result.assets) {
             setSelectedFiles([...selectedFiles, ...result.assets]);
@@ -155,12 +159,11 @@ export interface BreadcrumbItem {
         }
     };
 
-    // Suppression d'un fichier sélectionné
     const removeFile = (index: number) => {
         setSelectedFiles(selectedFiles.filter((_, i) => i !== index));
     };
 
-    // Fonction pour obtenir l'extension à partir du type MIME
+    // Fonction pour obtenir l'extension depuis le mimeType
     const getExtensionFromMimeType = (mimeType: string): string => {
         const mimeToExt: { [key: string]: string } = {
         'image/jpeg': '.jpg',
@@ -196,10 +199,11 @@ export interface BreadcrumbItem {
         return mimeToExt[mimeType] || '';
     };
 
-    // Génération d'un nom de fichier unique si nécessaire
+    // génére un nom de fichier avec extension
     const generateFileName = (file: any, index: number): string => {
         let fileName = file.name;
         
+        // Si pas de nom ou pas d'extension dans le nom
         if (!fileName || !fileName.includes('.')) {
         const extension = getExtensionFromMimeType(file.mimeType || file.type || '');
         
@@ -210,10 +214,10 @@ export interface BreadcrumbItem {
             fileName = `fichier_${timestamp}_${index}${extension}`;
         }
         }
+        
         return fileName;
     };
 
-    // Fonction d'upload des fichiers
     const uploadFiles = async () => {
         if (selectedFiles.length === 0) {
         Alert.alert('Aucun fichier', 'Veuillez sélectionner au moins un fichier');
@@ -235,19 +239,23 @@ export interface BreadcrumbItem {
             setUploading(false);
             return;
         }
-        // Upload séquentiel pour la barre de progression
+
+        // Uploader chaque fichier individuellement
         for (let i = 0; i < selectedFiles.length; i++) {
             const file = selectedFiles[i];
             const formData = new FormData();
+
             const fileName = generateFileName(file, i);
             const fileType = file.mimeType || file.type || 'application/octet-stream';
 
+            // Construire l'objet fichier pour React Native
             formData.append('fichier', {
             uri: file.uri,
             name: fileName,
             type: fileType,
             } as any);
-            // Mettre à jour la progression avant chaque upload (barre progression)
+
+            // Mise à jour de la progression
             setUploadProgress(Math.round(((i + 1) / selectedFiles.length) * 100));
 
             const response = await fetch(`${API_BASE_URL}/api/dossiers/${selectedDossier.idDossier}/televerser`, {
@@ -286,7 +294,6 @@ export interface BreadcrumbItem {
         }
     };
 
-    // Fonction pour formater la taille des fichiers
     const formatFileSize = (bytes: number) => {
         if (bytes === 0) return '0 Bytes';
         const k = 1024;
