@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useLocation } from 'react-router-dom';
+import { FolderUp, X } from 'lucide-react';
 import '../styles/Upload.css';
 
 function Upload() {
@@ -18,17 +19,16 @@ function Upload() {
     const [erreur_upload, setErreurUpload] = useState('');
 
     useEffect(() => {
-        // Charge les sous-dossiers du dossier actuellement sélectionné
         const recupererDossiers = async () => {
             try {
                 const token = localStorage.getItem('token');
                 const utilisateur = JSON.parse(localStorage.getItem('user'));
                 
-                if (dossier_actuel) {// Si on est dans un sous-dossier, on charge ses enfants
+                if (dossier_actuel) {
                     const url_api = `http://localhost:3000/api/dossiers/${dossier_actuel.idDossier}/sous-dossiers`;
                     const reponse = await axios.get(url_api, { headers: { Authorization: `Bearer ${token}` } });
                     setSousDossiersAffiches(reponse.data || []);
-                } else {// Si on est à la base, on cherche le dossier racine
+                } else {
                     const url_api_racine = `http://localhost:3000/api/comptes/${utilisateur.id}/dossiers`;
                     const reponse_racine = await axios.get(url_api_racine, { headers: { Authorization: `Bearer ${token}` } });
                     
@@ -36,7 +36,6 @@ function Upload() {
                     
                     if (d_racine) {
                         setDossierRacine(d_racine);
-                        // Charge les sous-dossiers de ce dossier racine pour le menu select
                         const url_api_sous = `http://localhost:3000/api/dossiers/${d_racine.idDossier}/sous-dossiers`;
                         const reponse_sous = await axios.get(url_api_sous, { headers: { Authorization: `Bearer ${token}` } });
                         setSousDossiersAffiches(reponse_sous.data || []);
@@ -54,10 +53,8 @@ function Upload() {
         if (dossier_cible === null) {
             setCheminAcces([]);
         } else if (index !== null) {
-            // Retour en arrière dans le fil d'Ariane
             setCheminAcces(chemin_acces.slice(0, index + 1));
         } else {
-            // Avancer dans un sous-dossier
             setCheminAcces([...chemin_acces, dossier_cible]);
         }
     };
@@ -112,7 +109,6 @@ function Upload() {
             return;
         }
         
-        // On cible soit le dossier actuel, soit la base
         const cible_id = dossier_actuel ? dossier_actuel.idDossier : dossier_racine?.idDossier;
 
         if (!cible_id) {
@@ -203,8 +199,6 @@ function Upload() {
                                         const dossier_trouve = sous_dossiers_affiches.find(d => d.idDossier == event.target.value);
                                         if(dossier_trouve) naviguerDansDossier(dossier_trouve);
                                         event.target.value = "";
-                                        // Réinitialise le select après le clic sinon il reste sur le dernier dossier sélectionné
-                                        // et déclenche pas l'événement si on clique à nouveau dessus
                                     }}
                                 >
                                     <option value="">+ Aller dans un sous-dossier...</option>
@@ -229,7 +223,9 @@ function Upload() {
                         onDrop={gestionDepot}
                     >
                         <div className="contenu-glisser-deposer">
-                            <span className="icone-upload">📁</span>
+                            <span className="icone-upload" style={{ display: 'inline-block', marginBottom: '10px' }}>
+                                <FolderUp size={42} style={{ color: 'var(--btn-primary-color)' }} />
+                            </span>
                             <p>Glissez vos fichiers ici ou</p>
                             <label htmlFor="entree-fichier" className="etiquette-fichier">
                                 cliquez pour parcourir
@@ -257,8 +253,9 @@ function Upload() {
                                         type="button"
                                         onClick={() => supprimerFichier(index)}
                                         className="bouton-supprimer"
+                                        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                                     >
-                                        ✕
+                                        <X size={14} />
                                     </button>
                                 </div>
                             ))}

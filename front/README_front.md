@@ -16,3 +16,7 @@ Exemple PowerShell :
 $env:VITE_GOOGLE_CLIENT_ID = "votre-client-id.apps.googleusercontent.com"
 npm run dev
 ```
+
+
+
+http://localhost:5173

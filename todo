@@ -1,6 +1,5 @@
 General :
 - Ajouter des commentaires propres
-- Remplacer les emoji par une bibliothèque (ex : Flaticon)
 
 Back :
 - Restaurer un élement doit le remettre dans le dossier dans lequel il était plutôt qu'à la racine
