@@ -33,7 +33,7 @@ export const styles = StyleSheet.create({
     },
     actionButton: {
         flex: 1,
-        height: 44,
+        height: 44,\r
         borderRadius: 8,
         justifyContent: 'center',
         alignItems: 'center',
@@ -48,179 +48,118 @@ export const styles = StyleSheet.create({
         marginRight: 4,
     },
     actionButtonText: {
-        color: '#FFFFFF',
         fontSize: 14,
         fontWeight: '600',
     },
-    trashInfoContainer: {
-        flex: 1,
-        height: 44,
-        borderRadius: 8,
-        justifyContent: 'center',
-        paddingHorizontal: 16,
+    listContainer: {
+        paddingBottom: 80,
     },
-    trashInfoText: {
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    fileItem: {
+    itemContainer: {
         flexDirection: 'row',
-        padding: 12,
-        marginHorizontal: 12,
-        marginVertical: 6,
-        borderRadius: 10,
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
+        padding: 14,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E5E5EA',
     },
-    fileItemContent: {
-        flexDirection: 'row',
-        flex: 1,
-        alignItems: 'center',
-    },
-    fileIcon: {
+    itemIcon: {
+        width: 28,
+        height: 28,
         marginRight: 12,
     },
-    iconImage: {
-        width: 32,
-        height: 32,
-    },
-    iconText: {
-        fontSize: 32,
-    },
-    fileInfo: {
+    itemTextContainer: {
         flex: 1,
+        justifyContent: 'center',
     },
-    fileName: {
+    itemText: {
         fontSize: 16,
         fontWeight: '500',
-        marginBottom: 4,
     },
-    fileSize: {
-        fontSize: 13,
+    itemMetaRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 4,
     },
-    trashButton: {
+    itemDateText: {
+        fontSize: 12,
+        opacity: 0.55,
+    },
+    metaSeparator: {
+        fontSize: 12,
+        marginHorizontal: 6,
+        opacity: 0.4,
+    },
+    itemSizeText: {
+        fontSize: 12,
+        opacity: 0.55,
+    },
+    optionsButton: {
         padding: 8,
-        marginLeft: 4,
     },
-    trashIconImage: {
+    optionsIcon: {
         width: 20,
         height: 20,
     },
-    moreButton: {
-        padding: 8,
-    },
-    emptyList: {
-        flex: 1,
-    },
-    emptyContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 40,
-    },
-    emptyIconImage: {
-        width: 60,
-        height: 60,
-        marginBottom: 16,
-    },
-    emptyText: {
-        fontSize: 18,
-        fontWeight: '600',
-        marginBottom: 8,
-    },
-    emptySubtext: {
-        fontSize: 14,
-        textAlign: 'center',
-    },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: 'rgba(0,0,0,0.4)',
         justifyContent: 'center',
         alignItems: 'center',
     },
     modalContent: {
         width: '85%',
-        borderRadius: 12,
-        padding: 24,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        elevation: 5,
+        borderRadius: 14,
+        padding: 20,
+        alignItems: 'center',
     },
     modalTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        marginBottom: 20,
-        textAlign: 'center',
+        fontSize: 18,
+        fontWeight: '600',
+        marginBottom: 16,
     },
-    modalInput: {
-        height: 48,
+    input: {
+        width: '100%',
+        height: 44,
+        borderWidth: 1,
+        borderColor: '#E5E5EA',
         borderRadius: 8,
-        paddingHorizontal: 16,
-        fontSize: 16,
-        marginBottom: 20,
+        paddingHorizontal: 12,
+        marginBottom: 16,
+        fontSize: 15,
     },
     modalButtons: {
         flexDirection: 'row',
         gap: 12,
+        width: '100%',
     },
     modalButton: {
         flex: 1,
-        height: 48,
+        height: 44,
         borderRadius: 8,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    modalButtonContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    modalButtonIcon: {
-        width: 18,
-        height: 18,
-        tintColor: '#FFFFFF',
-    },
-    cancelButton: {
-        backgroundColor: '#8E8E93',
-    },
-    cancelButtonText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: '600',
-    },
     modalButtonText: {
-        color: '#FFFFFF',
-        fontSize: 16,
+        fontSize: 15,
         fontWeight: '600',
     },
-    moveBreadcrumb: {
-        padding: 10,
-        marginBottom: 10,
-        borderRadius: 8,
-    },
-    folderList: {
-        maxHeight: 300,
-        marginVertical: 10,
-    },
-    folderItem: {
+    moveFolderItem: {
         flexDirection: 'row',
         alignItems: 'center',
         padding: 12,
-        marginVertical: 4,
-        borderRadius: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E5E5EA',
+        justifyContent: 'space-between',
     },
-    folderIconImage: {
-        width: 20,
-        height: 20,
-        marginRight: 10,
+    moveFolderLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
     },
-    folderName: {
-        flex: 1,
+    moveFolderIcon: {
+        width: 24,
+        height: 24,
+    },
+    moveFolderName: {
         fontSize: 16,
     },
     folderArrow: {
@@ -236,6 +175,7 @@ export const styles = StyleSheet.create({
         padding: 15,
         borderRadius: 8,
         marginVertical: 10,
+        width: '100%',
     },
     linkText: {
         fontSize: 14,
@@ -268,25 +208,26 @@ export const styles = StyleSheet.create({
     optionItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
+        padding: 14,
         borderBottomWidth: 1,
+        borderBottomColor: '#E5E5EA',
     },
     optionIconImage: {
-        width: 24,
-        height: 24,
+        width: 22,
+        height: 22,
         marginRight: 12,
     },
     optionText: {
         fontSize: 16,
-        flex: 1,
     },
     cancelOptionButton: {
-        padding: 16,
-        borderTopWidth: 1,
+        height: 50,
+        justifyContent: 'center',
         alignItems: 'center',
+        borderTopWidth: 1,
     },
     cancelOptionText: {
-        fontSize: 16,
+        fontSize: 17,
         fontWeight: '600',
-    },
+    }
 });
