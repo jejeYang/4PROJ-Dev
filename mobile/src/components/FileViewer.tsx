@@ -8,7 +8,9 @@ import {
   ActivityIndicator,
   Dimensions,
   Image as RNImage,
+  Platform,
 } from 'react-native';
+import * as IntentLauncher from 'expo-intent-launcher';
 import Slider from '@react-native-community/slider';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useAudioPlayer } from 'expo-audio';
@@ -44,23 +46,28 @@ function PDFViewer({ localUri, fileName, theme }: { localUri: string | null; fil
       setIsOpening(true);
       console.log('PDFViewer - Ouverture avec le viewer système:', localUri);
       
-      const isAvailable = await Sharing.isAvailableAsync();
-      if (!isAvailable) {
-        alert('Le partage de fichiers n\'est pas disponible sur cet appareil');
-        setIsOpening(false);
-        return;
+      if (Platform.OS === 'android') {
+        // Sur Android : On génère une URI content:// et on force l'ouverture en mode "Vue"
+        const contentUri = await (FileSystem as any).getContentUriAsync(localUri);
+        
+        await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+          data: contentUri,
+          flags: 1, // FLAG_GRANT_READ_URI_PERMISSION (Autorise l'app tierce à lire le PDF)
+          type: 'application/pdf',
+        });
+      } else {
+        // Fallback iOS (au cas où on appellerait ce bouton sur iOS)
+        await Sharing.shareAsync(localUri, {
+          mimeType: 'application/pdf',
+          dialogTitle: 'Ouvrir le PDF',
+          UTI: 'com.adobe.pdf',
+        });
       }
-
-      await Sharing.shareAsync(localUri, {
-        mimeType: 'application/pdf',
-        dialogTitle: 'Ouvrir le PDF',
-        UTI: 'com.adobe.pdf',
-      });
       
       setIsOpening(false);
     } catch (error) {
       console.error('PDFViewer - Erreur ouverture:', error);
-      alert('Impossible d\'ouvrir le fichier PDF');
+      alert('Impossible d\'ouvrir le fichier. Vérifiez qu\'une application de lecture de PDF (comme Google Drive ou Adobe Reader) est installée sur cet appareil.');
       setIsOpening(false);
     }
   };
@@ -374,8 +381,27 @@ export default function FileViewer({ visible, fileUrl, fileName, onClose }: File
     }
 
     if (isPDF) {
-      return <PDFViewer localUri={localUri} fileName={fileName} theme={theme} />;
-    }
+  if (Platform.OS === 'ios') {
+    // iOS : le PDF s'affiche directement dans la WebView
+    return (
+      <WebView
+        source={{ uri: localUri }}
+        style={styles.webview}
+        startInLoadingState
+        renderLoading={() => (
+          <ActivityIndicator
+            size="large"
+            color={theme.primaryColor}
+            style={styles.webviewLoader}
+          />
+        )}
+      />
+    );
+  } else {
+    // Android : Affiche le bouton qui lance l'application PDF
+    return <PDFViewer localUri={localUri} fileName={fileName} theme={theme} />;
+  }
+}
 
     if (isDoc) {
       return (
