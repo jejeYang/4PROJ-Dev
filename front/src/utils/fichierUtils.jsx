@@ -76,11 +76,11 @@ export function separerNomExtension(nomFichier) {
 }
 
 export function obtenirTypeFichier(nomFichier) {
-    if (!nomFichier) return 'inconnu';
+    if (!nomFichier) return 'autre';
     const ext = nomFichier.split('.').pop().toLowerCase();
     if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return 'image';
     if (['mp4', 'mov', 'avi', 'mkv'].includes(ext)) return 'video';
     if (['mp3', 'wav', 'ogg', 'flac'].includes(ext)) return 'audio';
     if (['pdf', 'doc', 'docx', 'txt', 'xls', 'xlsx'].includes(ext)) return 'document';
-    return 'inconnu';
+    return 'autre';
 }
