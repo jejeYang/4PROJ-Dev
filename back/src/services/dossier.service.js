@@ -294,7 +294,6 @@ class DossierService {
                         return {
                             nom: nom,
                             taille: stat.size,
-                            dateCreation: stat.birthtime || stat.ctime,
                             dateModification: stat.mtime,
                             type: 'fichier'
                         };
@@ -1182,7 +1181,6 @@ class DossierService {
                         resultats.fichiers.push({
                             nom,
                             taille: stat.size,
-                            dateCreation: stat.birthtime || stat.ctime,
                             dateModification: stat.mtime,
                             type: 'fichier',
                             idDossier: idDossierCourant,

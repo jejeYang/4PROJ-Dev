@@ -45,7 +45,6 @@ model Dossier {
   idDossierParent      Int?
   cheminDaccesDossier  String
   status               String?   @db.VarChar(50)
-  dateCreation         DateTime  @default(now())
   modifieLe            DateTime  @default(now()) @updatedAt
 
   compteCreateur       Compte    @relation("CompteCreateur", fields: [idCompteCreateur], references: [idCompte], onDelete: Cascade)
