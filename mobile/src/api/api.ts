@@ -154,17 +154,39 @@ export const dossierApi = {
 
 // API des liens de partage
 export const lienApi = {
-  // Créer un lien de partage pour un dossier ou fichier
-  createShareLink: (dossierId: number, data: {
-    email: string;
-    fileName?: string;
-    motDePasse?: string;
-    mdpLienGenere?: string;
-    dateExpiration?: string;
-  }) =>
-    apiClient.post(`/api/dossiers/${dossierId}/partager`, data),
+  // Partage interne à un utilisateur (seulement pour les dossiers)
+  shareToUser: (dossierId: number, data: { email: string }) =>
+    apiClient.post(`/api/partage/utilisateur/${dossierId}`, data),
 
-  // Accéder à un lien de partage
+  // Créer un lien public pour invité (dossier ou fichier)
+  createGuestLink: (dossierId: number, data: {
+    motDePasse?: string;
+    dateExpiration?: string;
+    fileName?: string;
+  }): Promise<{ message: string; url: string; token: string }> =>
+    apiClient.post(`/api/partage/lien/${dossierId}`, data),
+
+  // Récupérer les partages envoyés
+  getPartagesEnvoyes: () =>
+    apiClient.get('/api/partage/envoyes'),
+
+  // Récupérer les partages reçus
+  getPartagesRecus: () =>
+    apiClient.get('/api/partage/recus'),
+
+  // Récupérer mes liens publics
+  getMesLiensPublics: () =>
+    apiClient.get('/api/partage/mes-liens'),
+
+  // Supprimer un lien public
+  deleteLink: (idLien: number) =>
+    apiClient.delete(`/api/partage/lien/${idLien}`),
+
+  // Supprimer un partage interne
+  deleteInternalShare: (dossierIdPartage: number) =>
+    apiClient.delete(`/api/partage/interne/${dossierIdPartage}`),
+
+  // Accéder à un lien de partage (invité)
   accessShareLink: (token: string) =>
     apiClient.get(`/api/liens/${token}`),
 };

@@ -11,7 +11,9 @@ import {
   Modal,
   ScrollView,
   Image,
+  Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect } from '@react-navigation/native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
@@ -59,7 +61,11 @@ export default function DocumentsScreen({ navigation }: any) {
   // États pour les liens de partage
   const [showShareModal, setShowShareModal] = useState(false);
   const [itemToShare, setItemToShare] = useState<DisplayItem | null>(null);
+  const [shareMode, setShareMode] = useState<'utilisateur' | 'invité'>('utilisateur');
   const [shareEmail, setShareEmail] = useState('');
+  const [sharePassword, setSharePassword] = useState('');
+  const [expiryDate, setExpiryDate] = useState<Date>(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)); // Par défaut: dans 7 jours
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [shareLink, setShareLink] = useState('');
   
   // État pour le menu d'options
@@ -542,16 +548,20 @@ export default function DocumentsScreen({ navigation }: any) {
   
   const openShareModal = (item: DisplayItem) => {
     setItemToShare(item);
+    
+    // Mode utilisateur par défaut 
+    setShareMode('utilisateur');
+    
     setShareEmail('');
+    setSharePassword('');
+    setExpiryDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)); // Réinitialiser à +7 jours
+    setShowDatePicker(false);
     setShareLink('');
     setShowShareModal(true);
   };
 
-  const createShareLink = async () => {
-    if (!itemToShare || !shareEmail.trim()) {
-      Alert.alert('Erreur', 'Veuillez entrer une adresse email');
-      return;
-    }
+  const handleShare = async () => {
+    if (!itemToShare) return;
 
     try {
       const dossierId = itemToShare.type === 'folder' 
@@ -563,27 +573,49 @@ export default function DocumentsScreen({ navigation }: any) {
         return;
       }
 
-      const data: any = {
-        email: shareEmail,
-      };
+      if (shareMode === 'utilisateur') {
+        // Partage interne à un utilisateur
+        if (!shareEmail.trim()) {
+          Alert.alert('Erreur', 'Veuillez entrer une adresse email');
+          return;
+        }
 
-      // Si c'est un fichier, ajouter le nom du fichier
-      if (itemToShare.type === 'file' && itemToShare.fichier) {
-        data.fileName = itemToShare.fichier.nom;
-      }
-
-      const response = await lienApi.createShareLink(dossierId, data);
-      
-      if ((response as any).data?.lien?.url) {
-        const fullLink = `${API_BASE_URL}${(response as any).data.lien.url}`;
-        setShareLink(fullLink);
+        await lienApi.shareToUser(dossierId, { email: shareEmail });
+        Alert.alert('Succès', `Dossier partagé avec ${shareEmail}`);
         
-        // Copier automatiquement dans le presse-papier
-        await Clipboard.setStringAsync(fullLink);
-        Alert.alert('Succès', 'Lien créé et copié dans le presse-papier !');
+        // Fermer le modal
+        setShowShareModal(false);
+        setShareEmail('');
+        
+      } else {
+        // Création d'un lien pour invité
+        if (!sharePassword.trim()) {
+          Alert.alert('Erreur', 'Veuillez définir un mot de passe');
+          return;
+        }
+
+        // Formater la date au format ISO pour l'API
+        const formattedDate = expiryDate.toISOString();
+
+        const data: any = {
+          motDePasse: sharePassword,
+          dateExpiration: formattedDate,
+        };
+
+        // Si c'est un fichier, ajouter le nom du fichier
+        if (itemToShare.type === 'file' && itemToShare.fichier) {
+          data.fileName = itemToShare.fichier.nom;
+        }
+
+        const response = await lienApi.createGuestLink(dossierId, data);
+        
+        if (response.token) {
+          const fullLink = `${API_BASE_URL}/liens/${response.token}`;
+          setShareLink(fullLink);
+        }
       }
     } catch (error: any) {
-      Alert.alert('Erreur', error.response?.data?.error || 'Impossible de créer le lien');
+      Alert.alert('Erreur', error.response?.data?.error || 'Impossible de partager');
     }
   };
 
@@ -969,7 +1001,7 @@ export default function DocumentsScreen({ navigation }: any) {
         </View>
       </Modal>
 
-      {/* Modal de création de lien de partage */}
+      {/* Modal de partage */}
       <Modal
         visible={showShareModal}
         transparent
@@ -982,29 +1014,145 @@ export default function DocumentsScreen({ navigation }: any) {
               Partager "{itemToShare?.name}"
             </Text>
             
+            {/* Boutons de sélection du mode (seulement pour les dossiers) */}
+            {itemToShare?.type === 'folder' && !shareLink && (
+              <View style={styles.shareModeButtons}>
+                <TouchableOpacity
+                  style={[
+                    styles.shareModeButton,
+                    shareMode === 'utilisateur' && { backgroundColor: theme.primaryColor },
+                    shareMode !== 'utilisateur' && { backgroundColor: theme.isDark ? '#2C2C2E' : '#E5E5EA' }
+                  ]}
+                  onPress={() => setShareMode('utilisateur')}
+                >
+                  <Text style={[
+                    styles.shareModeButtonText,
+                    { color: shareMode === 'utilisateur' ? '#FFFFFF' : theme.textColor }
+                  ]}>
+                    Utilisateur
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.shareModeButton,
+                    shareMode === 'invité' && { backgroundColor: theme.primaryColor },
+                    shareMode !== 'invité' && { backgroundColor: theme.isDark ? '#2C2C2E' : '#E5E5EA' }
+                  ]}
+                  onPress={() => setShareMode('invité')}
+                >
+                  <Text style={[
+                    styles.shareModeButtonText,
+                    { color: shareMode === 'invité' ? '#FFFFFF' : theme.textColor }
+                  ]}>
+                    Invité
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Description du mode */}
+            <Text style={[styles.modalSubtitle, { color: theme.textColor }]}>
+              {shareMode === 'utilisateur' 
+                ? 'Collaborer avec un utilisateur' 
+                : 'Partager à un invité'}
+            </Text>
+            
             {!shareLink ? (
               <>
-                <Text style={[styles.modalDescription, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
-                  Entrez l'adresse email de la personne avec qui vous souhaitez partager
-                </Text>
-                <TextInput
-                  style={[
-                    styles.modalInput,
-                    {
-                      backgroundColor: theme.isDark ? '#2C2C2E' : '#F2F2F7',
-                      color: theme.textColor,
-                    },
-                  ]}
-                  placeholder="email@example.com"
-                  placeholderTextColor={theme.isDark ? '#8E8E93' : '#6C6C70'}
-                  value={shareEmail}
-                  onChangeText={setShareEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoFocus
-                />
+                {shareMode === 'utilisateur' ? (
+                  // Mode utilisateur : seulement l'email
+                  <>
+                    <Text style={[styles.modalDescription, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
+                      Entrez l'adresse email de l'utilisateur
+                    </Text>
+                    <TextInput
+                      style={[
+                        styles.modalInput,
+                        {
+                          backgroundColor: theme.isDark ? '#2C2C2E' : '#F2F2F7',
+                          color: theme.textColor,
+                        },
+                      ]}
+                      placeholder="email@example.com"
+                      placeholderTextColor={theme.isDark ? '#8E8E93' : '#6C6C70'}
+                      value={shareEmail}
+                      onChangeText={setShareEmail}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoFocus
+                    />
+                  </>
+                ) : (
+                  // Mode invité : mot de passe et date d'expiration
+                  <>
+                    <Text style={[styles.modalDescription, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
+                      Définissez un mot de passe et une date d'expiration
+                    </Text>
+                    <TextInput
+                      style={[
+                        styles.modalInput,
+                        {
+                          backgroundColor: theme.isDark ? '#2C2C2E' : '#F2F2F7',
+                          color: theme.textColor,
+                          marginBottom: 10,
+                        },
+                      ]}
+                      placeholder="Mot de passe"
+                      placeholderTextColor={theme.isDark ? '#8E8E93' : '#6C6C70'}
+                      value={sharePassword}
+                      onChangeText={setSharePassword}
+                      secureTextEntry
+                      autoFocus
+                    />
+                    
+                    <TouchableOpacity
+                      style={[
+                        styles.datePickerButton,
+                        {
+                          backgroundColor: theme.isDark ? '#2C2C2E' : '#F2F2F7',
+                        },
+                      ]}
+                      onPress={() => setShowDatePicker(true)}
+                    >
+                      <Text style={[styles.datePickerButtonText, { color: theme.textColor }]}>
+                        📅 {expiryDate.toLocaleDateString('fr-FR', { 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })}
+                      </Text>
+                    </TouchableOpacity>
+
+                    {showDatePicker && (
+                      <DateTimePicker
+                        value={expiryDate}
+                        mode="date"
+                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                        minimumDate={new Date()}
+                        onChange={(event: any, selectedDate?: Date) => {
+                          if (Platform.OS === 'android') {
+                            setShowDatePicker(false);
+                          }
+                          if (selectedDate) {
+                            setExpiryDate(selectedDate);
+                          }
+                        }}
+                      />
+                    )}
+
+                    {Platform.OS === 'ios' && showDatePicker && (
+                      <TouchableOpacity
+                        style={[styles.datePickerCloseButton, { backgroundColor: theme.primaryColor }]}
+                        onPress={() => setShowDatePicker(false)}
+                      >
+                        <Text style={styles.datePickerCloseButtonText}>OK</Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
+                )}
               </>
             ) : (
+              // Affichage du lien créé
               <>
                 <Text style={[styles.modalDescription, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
                   Lien de partage créé :
@@ -1034,6 +1182,8 @@ export default function DocumentsScreen({ navigation }: any) {
                     onPress={() => {
                       setShowShareModal(false);
                       setShareEmail('');
+                      setSharePassword('');
+                      setShowDatePicker(false);
                       setShareLink('');
                     }}
                   >
@@ -1041,9 +1191,11 @@ export default function DocumentsScreen({ navigation }: any) {
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.modalButton, { backgroundColor: theme.primaryColor }]}
-                    onPress={createShareLink}
+                    onPress={handleShare}
                   >
-                    <Text style={styles.modalButtonText}>Créer le lien</Text>
+                    <Text style={styles.modalButtonText}>
+                      {shareMode === 'utilisateur' ? 'Confirmer' : 'Générer'}
+                    </Text>
                   </TouchableOpacity>
                 </>
               ) : (
@@ -1052,6 +1204,8 @@ export default function DocumentsScreen({ navigation }: any) {
                   onPress={() => {
                     setShowShareModal(false);
                     setShareEmail('');
+                    setSharePassword('');
+                    setShowDatePicker(false);
                     setShareLink('');
                   }}
                 >
@@ -1145,13 +1299,15 @@ export default function DocumentsScreen({ navigation }: any) {
                         <Text style={[styles.optionText, { color: theme.textColor }]}>Déplacer</Text>
                       </TouchableOpacity>
 
-                      <TouchableOpacity
-                        style={[styles.optionItem, { borderBottomColor: theme.isDark ? '#2C2C2E' : '#E5E5EA' }]}
-                        onPress={() => handleOptionPress('share')}
-                      >
-                        <Image source={require('../assets/lien.png')} style={styles.optionIconImage} />
-                        <Text style={[styles.optionText, { color: theme.textColor }]}>Créer un lien de partage</Text>
-                      </TouchableOpacity>
+                      {selectedItem.type === 'folder' && (
+                        <TouchableOpacity
+                          style={[styles.optionItem, { borderBottomColor: theme.isDark ? '#2C2C2E' : '#E5E5EA' }]}
+                          onPress={() => handleOptionPress('share')}
+                        >
+                          <Image source={require('../assets/lien.png')} style={styles.optionIconImage} />
+                          <Text style={[styles.optionText, { color: theme.textColor }]}>Créer un lien de partage</Text>
+                        </TouchableOpacity>
+                      )}
                     </>
                   )}
                 </>
@@ -1341,12 +1497,57 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: 'center',
   },
+  shareModeButtons: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 20,
+  },
+  shareModeButton: {
+    flex: 1,
+    height: 40,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  shareModeButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  modalSubtitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
   modalInput: {
     height: 48,
     borderRadius: 8,
     paddingHorizontal: 16,
     fontSize: 16,
     marginBottom: 20,
+  },
+  datePickerButton: {
+    height: 48,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  datePickerButtonText: {
+    fontSize: 16,
+  },
+  datePickerCloseButton: {
+    height: 40,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  datePickerCloseButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   modalButtons: {
     flexDirection: 'row',

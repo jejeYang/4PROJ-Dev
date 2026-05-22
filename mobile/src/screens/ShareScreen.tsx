@@ -9,10 +9,12 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useMobileTheme } from '../context/MobileThemeContext';
 import { apiClient } from '../api/client';
+import { API_BASE_URL } from '../config';
 
 interface PartageRecu {
   idDossier: number;
@@ -133,6 +135,16 @@ export default function ShareScreen({ navigation }: any) {
     navigation.navigate('Documents', { folderId: idDossier });
   };
 
+  const copierLien = async (url: string) => {
+    try {
+      const fullUrl = `${API_BASE_URL}${url}`;
+      await Clipboard.setStringAsync(fullUrl);
+      Alert.alert('Succès', 'Lien copié dans le presse-papier !');
+    } catch (error) {
+      Alert.alert('Erreur', 'Impossible de copier le lien');
+    }
+  };
+
   if (isLoading) {
     return (
       <View style={[styles.container, styles.centered, { backgroundColor: theme.backgroundColor }]}>
@@ -151,7 +163,7 @@ export default function ShareScreen({ navigation }: any) {
       <View style={styles.content}>
         <Text style={[styles.title, { color: theme.textColor }]}>Gestion des partages</Text>
         <Text style={[styles.subtitle, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
-          Gérez vos accès, vos envois et vos liens publics en un clin d'œil.
+          Gérez vos accès, vos envois et vos liens publics.
         </Text>
 
         {/* PARTAGES REÇUS */}
@@ -262,7 +274,10 @@ export default function ShareScreen({ navigation }: any) {
                 key={l.idLien}
                 style={[styles.item, { backgroundColor: theme.isDark ? '#3A3A3C' : '#F2F2F7' }]}
               >
-                <View style={styles.itemMain}>
+                <TouchableOpacity
+                  style={styles.itemMain}
+                  onPress={() => copierLien(l.url)}
+                >
                   <Text style={styles.itemIcon}>{l.type === 'dossier' ? '📁' : '📄'}</Text>
                   <View style={styles.itemInfo}>
                     <View style={styles.itemTitleRow}>
@@ -277,8 +292,11 @@ export default function ShareScreen({ navigation }: any) {
                     <Text style={[styles.itemDate, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
                       Créé le {new Date(l.createdAt).toLocaleDateString()}
                     </Text>
+                    <Text style={[styles.copyHint, { color: theme.primaryColor }]}>
+                      👆 Appuyez pour copier le lien
+                    </Text>
                   </View>
-                </View>
+                </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.dangerButton}
                   onPress={() => supprimerLienPublic(l.idLien)}
@@ -374,6 +392,11 @@ const styles = StyleSheet.create({
   },
   itemDate: {
     fontSize: 12,
+  },
+  copyHint: {
+    fontSize: 12,
+    marginTop: 6,
+    fontStyle: 'italic',
   },
   badge: {
     paddingHorizontal: 8,
