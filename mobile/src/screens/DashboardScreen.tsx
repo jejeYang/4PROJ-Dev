@@ -8,14 +8,15 @@ export default function DashboardScreen({ navigation }: any) {
   // Récupère hooks et thème
   const { 
     user, 
+    storageStats, 
+    fileTypeStats, 
+    isLoadingStats, 
+    MAX_STORAGE, 
     navigateToDocuments, 
-    navigateToUpload,
-    storageStats,
-    fileTypeStats,
-    isLoadingStats,
-    MAX_STORAGE,
-    formatBytes,
-    getBarColor
+    navigateToUpload, 
+    navigateToShare, 
+    formatBytes, 
+    getBarColor 
   } = useDashboard(navigation);
   const { theme } = useMobileTheme();
 
@@ -30,56 +31,6 @@ export default function DashboardScreen({ navigation }: any) {
           Gérez vos fichiers en toute sécurité
         </Text>
 
-        {/* Section Statistiques de Stockage */}
-        <View style={[styles.actionCard, { backgroundColor: theme.isDark ? '#2C2C2E' : '#FFFFFF' }]}>
-          <Text style={[styles.cardTitle, { color: theme.textColor, marginBottom: 15 }]}>Mon Stockage</Text>
-          
-          {isLoadingStats ? (
-            <ActivityIndicator size="small" color={theme.primaryColor} style={{ padding: 20 }} />
-          ) : (
-            <>
-              {/* Barre de progression globale */}
-              <View style={{ marginBottom: 15 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
-                  <Text style={{ color: theme.textColor, fontWeight: 'bold' }}>
-                    {storageStats ? formatBytes(storageStats.utilise) : '0'} utilisés
-                  </Text>
-                  <Text style={{ color: theme.isDark ? '#8E8E93' : '#6C6C70' }}>
-                    sur {formatBytes(MAX_STORAGE)}
-                  </Text>
-                </View>
-                <View style={{ height: 10, backgroundColor: theme.isDark ? '#3A3A3C' : '#E5E5EA', borderRadius: 5, overflow: 'hidden' }}>
-                  <View style={{ 
-                    height: '100%', 
-                    backgroundColor: theme.primaryColor, 
-                    width: `${storageStats ? Math.min((storageStats.utilise / MAX_STORAGE) * 100, 100) : 0}%` 
-                  }} />
-                </View>
-              </View>
-
-              {/* Répartition par type de fichier */}
-              {fileTypeStats.length > 0 ? (
-                <View style={{ marginTop: 10 }}>
-                  {fileTypeStats.map((stat, index) => (
-                    <View key={stat.type} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                      <Text style={{ fontSize: 18, marginRight: 10 }}>{stat.emoji}</Text>
-                      <Text style={{ flex: 1, color: theme.textColor }}>{stat.label}</Text>
-                      <View style={{ backgroundColor: getBarColor(index), paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 }}>
-                        <Text style={{ color: '#FFF', fontSize: 12, fontWeight: 'bold' }}>{stat.count}</Text>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              ) : (
-                <Text style={{ color: theme.isDark ? '#8E8E93' : '#6C6C70', fontStyle: 'italic', marginTop: 10 }}>
-                  Aucun fichier pour le moment.
-                </Text>
-              )}
-            </>
-          )}
-        </View>
-
-        {/* Actions Rapides */}
         <View style={styles.quickActions}>
           <TouchableOpacity
             style={[styles.actionCard, { backgroundColor: theme.isDark ? '#2C2C2E' : '#FFFFFF' }]}
@@ -102,7 +53,84 @@ export default function DashboardScreen({ navigation }: any) {
               Ajouter des fichiers
             </Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionCard, { backgroundColor: theme.isDark ? '#2C2C2E' : '#FFFFFF' }]}
+            onPress={navigateToShare}
+          >
+            <Text style={styles.cardIcon}>🔗</Text>
+            <Text style={[styles.cardTitle, { color: theme.textColor }]}>Partages</Text>
+            <Text style={[styles.cardDescription, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
+              Gérer mes partages
+            </Text>
+          </TouchableOpacity>
         </View>
+
+        {/* stockage */}
+        {isLoadingStats ? (
+          <View style={[styles.storageCard, { backgroundColor: theme.isDark ? '#2C2C2E' : '#FFFFFF' }]}>
+            <ActivityIndicator size="small" color={theme.primaryColor} />
+          </View>
+        ) : storageStats ? (
+          <View style={[styles.storageCard, { backgroundColor: theme.isDark ? '#2C2C2E' : '#FFFFFF' }]}>
+            <View style={styles.storageHeader}>
+              <Text style={[styles.storageTitle, { color: theme.textColor }]}>💾 Stockage</Text>
+              <Text style={[styles.storagePercentage, { color: theme.primaryColor }]}>
+                {Math.round((storageStats.utilise / MAX_STORAGE) * 100)}%
+              </Text>
+            </View>
+            <View style={[styles.storageBar, { backgroundColor: theme.isDark ? '#1C1C1E' : '#E5E5EA' }]}>
+              <View 
+                style={[
+                  styles.storageBarFill, 
+                  { 
+                    backgroundColor: theme.primaryColor,
+                    width: `${Math.min((storageStats.utilise / MAX_STORAGE) * 100, 100)}%`
+                  }
+                ]} 
+              />
+            </View>
+            <Text style={[styles.storageText, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
+              {formatBytes(storageStats.utilise)} utilisé sur {formatBytes(MAX_STORAGE)}
+            </Text>
+          </View>
+        ) : null}
+
+        {/* répartition des fichiers */}
+        {!isLoadingStats && fileTypeStats.length > 0 && (
+          <View style={[styles.distributionCard, { backgroundColor: theme.isDark ? '#2C2C2E' : '#FFFFFF' }]}>
+            <Text style={[styles.distributionTitle, { color: theme.textColor }]}>📊 Répartition des fichiers</Text>
+            {fileTypeStats.map((item, index) => {
+              const totalFiles = fileTypeStats.reduce((sum, t) => sum + t.count, 0);
+              const percentage = (item.count / totalFiles) * 100;
+              
+              return (
+                <View key={item.type} style={styles.distributionItem}>
+                  <View style={styles.distributionHeader}>
+                    <View style={styles.distributionLabel}>
+                      <Text style={styles.distributionEmoji}>{item.emoji}</Text>
+                      <Text style={[styles.distributionType, { color: theme.textColor }]}>{item.label}</Text>
+                    </View>
+                    <Text style={[styles.distributionCount, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
+                      {item.count} fichier{item.count > 1 ? 's' : ''}
+                    </Text>
+                  </View>
+                  <View style={[styles.distributionBar, { backgroundColor: theme.isDark ? '#1C1C1E' : '#E5E5EA' }]}>
+                    <View 
+                      style={[
+                        styles.distributionBarFill, 
+                        { 
+                          backgroundColor: getBarColor(index),
+                          width: `${percentage}%`
+                        }
+                      ]} 
+                    />
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        )}
       </View>
     </ScrollView>
   );

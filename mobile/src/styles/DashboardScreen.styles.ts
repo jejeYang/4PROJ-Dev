@@ -14,7 +14,92 @@ export const styles = StyleSheet.create({
     },
     subtitle: {
         fontSize: 16,
-        marginBottom: 30,
+        marginBottom: 20,
+    },
+    storageCard: {
+        padding: 20,
+        borderRadius: 12,
+        marginBottom: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    storageHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    storageTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+    },
+    storagePercentage: {
+        fontSize: 20,
+        fontWeight: 'bold',
+    },
+    storageBar: {
+        height: 8,
+        borderRadius: 4,
+        overflow: 'hidden',
+        marginBottom: 8,
+    },
+    storageBarFill: {
+        height: '100%',
+        borderRadius: 4,
+    },
+    storageText: {
+        fontSize: 14,
+    },
+    distributionCard: {
+        padding: 20,
+        borderRadius: 12,
+        marginBottom: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    distributionTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        marginBottom: 16,
+    },
+    distributionItem: {
+        marginBottom: 16,
+    },
+    distributionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    distributionLabel: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    distributionEmoji: {
+        fontSize: 20,
+        marginRight: 8,
+    },
+    distributionType: {
+        fontSize: 16,
+        fontWeight: '500',
+    },
+    distributionCount: {
+        fontSize: 14,
+    },
+    distributionBar: {
+        height: 6,
+        borderRadius: 3,
+        overflow: 'hidden',
+    },
+    distributionBarFill: {
+        height: '100%',
+        borderRadius: 3,
     },
     quickActions: {
         gap: 16,
