@@ -1,0 +1,39 @@
+name: Docker Compose Validation
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Run Docker Compose Build and Up
+        run: |
+          # """
+          # Lancement des conteneurs en mode détaché (-d).
+          # Flag --build pour la recompilation des images à chaque run.
+          # """
+          docker compose up --build -d
+
+      - name: Check container status
+        run: |
+          # """
+          # Vérification rapide de l'état des conteneurs.
+          # """
+          docker compose ps
+          docker compose logs
+
+      - name: Shut down containers
+        if: always()
+        run: |
+          # """
+          # Nettoyage des conteneurs et des volumes créés
+          # """
+          docker compose down -v
