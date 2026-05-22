@@ -2,9 +2,9 @@ import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate 
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
-import Home from './pages/home';
-import Login from './pages/login';
-import Register from './pages/register';
+import Home from './pages/Home';
+import Login from './pages/Login';
+import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Upload from './pages/Upload';
 import Settings from './pages/Settings';

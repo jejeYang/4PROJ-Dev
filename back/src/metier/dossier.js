@@ -91,8 +91,8 @@ class ServiceDossier {
         return await this.dto_dossier.restaurerFichierDepuisCorbeille(idCompteCreateur, nomFichier);
     }
 
-    async rechercherFichiers(dossierId, query, type) {
-        return await this.dto_dossier.rechercherFichiers(dossierId, query, type);
+    async rechercherFichiers(dossierId, query, type, dateFiltre) {
+        return await this.dto_dossier.rechercherFichiers(dossierId, query, type, dateFiltre);
     }
 
     async recupererTailleDossier(dossierId) {

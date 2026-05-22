@@ -15,6 +15,7 @@ Le projet propose une plateforme complète avec une application web, une API RES
 ## Sommaire
 
 - [Fonctionnalités](#fonctionnalités)
+- [Diagramme de cas d'utilisation](#diagramme-de-cas-dutilisation)
 - [Architecture](#architecture)
 - [Technologies](#technologies)
 - [Prérequis](#prérequis)
@@ -22,6 +23,7 @@ Le projet propose une plateforme complète avec une application web, une API RES
 - [Installation locale](#installation-locale)
 - [Variables d'environnement](#variables-denvironnement)
 - [Documentation API Swagger](#documentation-api-swagger)
+- [Manuel utilisateur](#manuel-utilisateur)
 - [Application mobile](#application-mobile)
 - [Structure du projet](#structure-du-projet)
 - [Scripts utiles](#scripts-utiles)
@@ -48,6 +50,10 @@ Le projet propose une plateforme complète avec une application web, une API RES
 - Documentation API interactive avec Swagger UI.
 - Interface web responsive.
 - Application mobile Expo pour Mobile et web.
+
+## Diagramme de cas d'utilisation
+
+![Diagramme de cas d'utilisation de l'application SupFile](docs/Diagramme_de_cas_dutilisation.png)
 
 ## Architecture
 
@@ -121,7 +127,13 @@ Pour un lancement local sans Docker :
 
 ## Démarrage rapide avec Docker
 
-Depuis la racine du projet :
+Depuis la racine du projet, créer d'abord le fichier `.env` local à partir du modèle :
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Renseigner au minimum `POSTGRES_PASSWORD` et `JWT_SECRET`, puis lancer :
 
 ```bash
 docker compose up --build
@@ -157,12 +169,13 @@ npm install
 
 ### 2. Configurer la base de données
 
-Créer une base PostgreSQL nommée `supfile`, puis définir la variable `DATABASE_URL`.
+Créer une base PostgreSQL nommée `supfile`, puis définir les variables `DATABASE_URL` et `JWT_SECRET`.
 
 Exemple :
 
 ```bash
-export DATABASE_URL="postgresql://postgres:root@localhost:5432/supfile"
+export DATABASE_URL="postgresql://postgres:<mot_de_passe>@localhost:5432/supfile"
+export JWT_SECRET="<secret_jwt_long_et_aleatoire>"
 ```
 
 ### 3. Initialiser Prisma
@@ -212,20 +225,20 @@ Scanner ensuite le QR code avec Expo Go ou ouvrir l'application depuis un simula
 | `PORT` | Port d'écoute de l'API | `3000` |
 | `DATABASE_URL` | URL de connexion PostgreSQL utilisée par Prisma | Requise hors Docker |
 | `FILES_PATH` | Chemin de stockage physique des fichiers | `back/storage/files` |
-| `JWT_SECRET` | Secret de signature des tokens JWT | `your-secret-key` |
-| `GOOGLE_CLIENT_ID` | Client ID OAuth 2.0 Google | Client ID de développement |
+| `JWT_SECRET` | Secret de signature des tokens JWT | Requis |
+| `GOOGLE_CLIENT_ID` | Client ID OAuth 2.0 Google | Optionnel |
 | `PG_HOST` | Hôte PostgreSQL utilisé par la config interne | `localhost` |
 | `PG_PORT` | Port PostgreSQL | `5432` |
 | `PG_DATABASE` | Nom de la base | `supfile` |
 | `PG_USER` | Utilisateur PostgreSQL | `postgres` |
-| `PG_PASSWORD` | Mot de passe PostgreSQL | `user` |
+| `PG_PASSWORD` | Mot de passe PostgreSQL | Aucun |
 
 Exemple PowerShell :
 
 ```powershell
-$env:DATABASE_URL = "postgresql://postgres:root@localhost:5432/supfile"
+$env:DATABASE_URL = "postgresql://postgres:<mot_de_passe>@localhost:5432/supfile"
 $env:GOOGLE_CLIENT_ID = "votre-client-id.apps.googleusercontent.com"
-$env:JWT_SECRET = "un-secret-fort"
+$env:JWT_SECRET = "<secret_jwt_long_et_aleatoire>"
 ```
 
 ### Frontend
@@ -287,6 +300,12 @@ x-lien-password: <mot-de-passe>
 ```
 
 ou via le paramètre de requête `password`.
+
+## Manuel utilisateur
+
+Un manuel de prise en main de l'interface web est disponible ici :
+
+[Consulter le manuel utilisateur au format Google Docs](docs/manuel-utilisateur-google-docs.docx)
 
 ## Application mobile
 
@@ -359,6 +378,11 @@ npm run web
 │   │   ├── navigation
 │   │   └── screens
 │   └── App.tsx
+├── docs
+│   ├── Diagramme_de_cas_dutilisation.png
+│   ├── diagramme-uml-base-donnees.drawio
+|   ├── diagramme-uml-base-donnees.drawio.png
+│   └── manuel-utilisateur-google-docs.docx
 ├── docker-compose.yml
 └── README.md
 ```
@@ -399,6 +423,10 @@ npm run web
 
 Le backend utilise Prisma avec PostgreSQL.
 
+Le diagramme UML de la base est disponible au format png :
+
+[Ouvrir le diagramme UML de la base de données](docs/diagramme-uml-base-donnees.drawio.png)
+
 Les modèles principaux sont :
 
 - `Compte` : utilisateurs, email, mot de passe hashé, stockage et avatar.
@@ -438,7 +466,7 @@ npm run prisma:seed
 - La corbeille repose sur un dossier spécial `.corbeille`.
 - Un job planifié supprime les liens publics expirés chaque nuit.
 - Les tests automatisés ne sont pas encore configurés dans le projet.
-- Pour la production, remplacer les secrets par des valeurs sécurisées et ne pas conserver les valeurs de développement du `docker-compose.yml`.
+- Les secrets ne sont pas versionnés : conserver les vraies valeurs uniquement dans un fichier `.env` local.
 
 ## Licence
 

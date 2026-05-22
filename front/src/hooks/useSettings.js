@@ -128,8 +128,9 @@ export function useSettings() {
             await axios.post(
                 'http://localhost:3000/api/change-password',
                 {
-                    oldPassword: donnees_mot_de_passe.ancien_mot_de_passe,
-                    newPassword: donnees_mot_de_passe.nouveau_mot_de_passe
+                    ancienMdp: donnees_mot_de_passe.ancien_mot_de_passe,
+                    nouveauMdp: donnees_mot_de_passe.nouveau_mot_de_passe,
+                    confirmationMdp: donnees_mot_de_passe.confirmer_mot_de_passe
                 },
                 { headers: { Authorization: `Bearer ${jeton_authentification}` } }
             );

@@ -1,5 +1,7 @@
 Front :
 - Ajouter des commentaires propres
+- Bouton télécharger un dossier
+- Enlever colonne date de création (vérifier que le responsive n'est pas affecté !)
 
 Mobile :
 # Connexion :
@@ -9,8 +11,6 @@ Mobile :
 	- Suppression multiple
 	- Téléchargement multiple
 	- Déplacement multiple
-## Partage :
-	- Choisir de partager à un utilisateur ou un invité
 
 # Recherche & filtres :
 - Tout faire

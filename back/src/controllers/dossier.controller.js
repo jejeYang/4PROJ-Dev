@@ -71,7 +71,8 @@ class DossierController {
 
     getDossiers = async (req, res, next) => {
         try {
-            const dossiers = await this.dossierService.recupererDossiers();
+            const idUtilisateurAuthentifie = +req.utilisateur.id;
+            const dossiers = await this.dossierService.recupererDossiersParCompte(idUtilisateurAuthentifie);
             res.json(dossiers);
         } catch (error) {
             next(error);
@@ -82,6 +83,12 @@ class DossierController {
         try {
             const { dossierId } = req.params;
             const dossier = await this.dossierService.recupererDossierParId(dossierId);
+            const idUtilisateurAuthentifie = +req.utilisateur.id;
+
+            if (!this._peutAccederDossier(dossier, idUtilisateurAuthentifie)) {
+                return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
+            }
+
             res.json(dossier);
         } catch (error) {
             next(error);
@@ -91,6 +98,12 @@ class DossierController {
     getDossiersByCompte = async (req, res, next) => {
         try {
             const { idCompteCreateurDossier } = req.params;
+            const idUtilisateurAuthentifie = +req.utilisateur.id;
+
+            if (Number(idCompteCreateurDossier) !== idUtilisateurAuthentifie) {
+                return res.status(403).json({ error: 'Vous ne pouvez consulter que vos dossiers' });
+            }
+
             const dossiers = await this.dossierService.recupererDossierRacineParCompte(idCompteCreateurDossier);
             res.json(dossiers);
         } catch (error) {
@@ -101,6 +114,13 @@ class DossierController {
     getSousDossiers = async (req, res, next) => {
         try {
             const { dossierId } = req.params;
+            const dossier = await this.dossierService.recupererDossierParId(dossierId);
+            const idUtilisateurAuthentifie = +req.utilisateur.id;
+
+            if (!this._peutAccederDossier(dossier, idUtilisateurAuthentifie)) {
+                return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
+            }
+
             const sousDossiers = await this.dossierService.recupererSousDossiers(dossierId);
             res.json(sousDossiers);
         } catch (error) {
@@ -111,6 +131,13 @@ class DossierController {
     getFichiersDossier = async (req, res, next) => {
         try {
             const { dossierId } = req.params;
+            const dossier = await this.dossierService.recupererDossierParId(dossierId);
+            const idUtilisateurAuthentifie = +req.utilisateur.id;
+
+            if (!this._peutAccederDossier(dossier, idUtilisateurAuthentifie)) {
+                return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
+            }
+
             const fichiers = await this.dossierService.recupererFichiersDossier(dossierId);
             res.json(fichiers);
         } catch (error) {
@@ -138,6 +165,13 @@ class DossierController {
     getTailleDossier = async (req, res, next) => {
         try {
             const { dossierId } = req.params;
+            const dossier = await this.dossierService.recupererDossierParId(dossierId);
+            const idUtilisateurAuthentifie = +req.utilisateur.id;
+
+            if (!this._peutAccederDossier(dossier, idUtilisateurAuthentifie)) {
+                return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
+            }
+
             const taille = await this.dossierService.recupererTailleDossier(dossierId);
             res.json({ dossierId, taille });
         } catch (error) {
@@ -262,7 +296,7 @@ class DossierController {
     rechercherFichiers = async (req, res, next) => {
         try {
             const { dossierId } = req.params;
-            const { q, type } = req.query;
+            const { q, type, date } = req.query;
             const idUtilisateurAuthentifie = +req.utilisateur.id;
 
             const dossier = await this.dossierService.recupererDossierParId(dossierId);
@@ -270,7 +304,7 @@ class DossierController {
                 return res.status(403).json({ error: 'Ce dossier ne vous appartient pas' });
             }
 
-            const resultats = await this.dossierService.rechercherFichiers(dossierId, q, type);
+            const resultats = await this.dossierService.rechercherFichiers(dossierId, q, type, date);
             res.json(resultats);
         } catch (error) {
             console.error('Erreur lors de la recherche :', error);
@@ -674,6 +708,12 @@ class DossierController {
         return dossiersUtilisateur.find(dossier => !dossier.idDossierParent && dossier.cheminDaccesDossier !== '.corbeille')
             || dossiersUtilisateur.find(dossier => dossier.cheminDaccesDossier !== '.corbeille')
             || dossiersUtilisateur[0];
+    };
+
+    _peutAccederDossier = (dossier, idUtilisateur) => {
+        if (!dossier) return false;
+        return Number(dossier.idCompteCreateur) === Number(idUtilisateur)
+            || Number(dossier.idCompteAcces) === Number(idUtilisateur);
     };
 }
 

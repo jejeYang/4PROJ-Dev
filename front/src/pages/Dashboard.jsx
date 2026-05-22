@@ -34,7 +34,7 @@ function Dashboard() {
         naviguerVersUpload, handleDragEnterGlobal, handleDragLeaveGlobal, handleDragOverGlobal, handleDropGlobal,
         gestionClicDossier, gestionClicBreadcrumb,
         selection, estSelectionne, toggleSelection, toggleSelectionTout,
-        ouvrirModalSuppressionMultiple, supprimerSelection, telechargerSelection, action_en_cours,
+        ouvrirModalSuppressionMultiple, supprimerSelection, telechargerSelection, telechargerElements, action_en_cours,
         ouvrirModalRestaurerMultiple, restaurerSelection,
         ouvrirModalSuppressionDefinitiveMultiple, supprimerDefinitivementSelection,
         gestionCreeDossier, 
@@ -56,6 +56,7 @@ function Dashboard() {
     const [modal_recherche_ouverte, setModalRechercheOuverte] = useState(false);
     const [recherche_query, setRechercheQuery] = useState('');
     const [recherche_type, setRechercheType] = useState('tout');
+    const [recherche_date, setRechercheDate] = useState('tout');
 
     useEffect(() => {
         const handleKeyDown = (e) => {
@@ -97,7 +98,7 @@ function Dashboard() {
 
     const soumettreRecherche = async (e) => {
         e.preventDefault();
-        await lancerRecherche(recherche_query, recherche_type);
+        await lancerRecherche(recherche_query, recherche_type, recherche_date);
         setModalRechercheOuverte(false);
     };
 
@@ -105,20 +106,13 @@ function Dashboard() {
         reinitialiserRecherche();
         setRechercheQuery('');
         setRechercheType('tout');
+        setRechercheDate('tout');
         setModalRechercheOuverte(false);
     };
 
     const gererTelechargementDossierUnique = async (dossier) => {
-    const selectionOriginale = [...selection];
-    toggleSelection(dossier, 'dossier');
-    
-    setTimeout(async () => {
-        await telechargerSelection();
-        if (selectionOriginale.length > 0) {
-            window.dispatchEvent(new Event('profilMisAJour'));
-        }
-    }, 50);
-};
+        await telechargerElements([{ type: 'dossier', item: dossier }], false);
+    };
 
     return (
         <div
@@ -535,6 +529,25 @@ function Dashboard() {
                                                 onClick={() => setRechercheType(t)}
                                             >
                                                 {t === 'tout' ? 'Tout' : t === 'images' ? 'Images' : t === 'videos' ? 'Vidéos' : t === 'audio' ? 'Audio' : t === 'pdf' ? 'PDF' : 'ZIP'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="recherche-champ">
+                                    <label>Date de modification</label>
+                                    <div className="recherche-types">
+                                        {[
+                                            { valeur: 'tout', label: 'Toutes' },
+                                            { valeur: 'semaine', label: '7 derniers jours' },
+                                            { valeur: 'mois', label: '30 derniers jours' }
+                                        ].map(option => (
+                                            <button
+                                                key={option.valeur}
+                                                type="button"
+                                                className={`btn-type-fichier ${recherche_date === option.valeur ? 'actif' : ''}`}
+                                                onClick={() => setRechercheDate(option.valeur)}
+                                            >
+                                                {option.label}
                                             </button>
                                         ))}
                                     </div>

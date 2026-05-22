@@ -74,10 +74,11 @@ class ServiceCompte {
 
         let compte = await this.dto_compte.trouverParEmail(payload.email);
         if (!compte) {
+            const motDePasseOAuth = `Aa1!${crypto.randomBytes(16).toString('hex')}`;
             const nouveauCompte = await this.creerCompte({
                 nom: payload.name || payload.email.split('@')[0],
                 email: payload.email,
-                mdp: crypto.randomUUID(),
+                mdp: motDePasseOAuth,
             });
 
             compte = {

@@ -979,6 +979,15 @@ export const swaggerSpec = {
               enum: ['tout', 'images', 'videos', 'audio', 'pdf', 'zip'],
             },
           },
+          {
+            in: 'query',
+            name: 'date',
+            description: 'Filtre par date de modification.',
+            schema: {
+              type: 'string',
+              enum: ['tout', 'semaine', 'mois'],
+            },
+          },
         ],
         responses: {
           200: {

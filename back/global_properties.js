@@ -3,9 +3,13 @@ export const PG_CONFIG = {
     port: parseInt(process.env.PG_PORT) || 5432,
     database: process.env.PG_DATABASE || 'supfile',
     user: process.env.PG_USER || 'postgres',
-    password: process.env.PG_PASSWORD || 'root'
+    password: process.env.PG_PASSWORD || ''
 };
 
 export const SERVER_FILES_PATH = process.env.FILES_PATH || './files';
-export const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+export const JWT_SECRET = process.env.JWT_SECRET;
 export const PORT = process.env.PORT || 3000;
+
+if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET doit etre defini dans les variables d environnement.');
+}
