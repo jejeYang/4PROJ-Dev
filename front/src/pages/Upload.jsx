@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useLocation } from 'react-router-dom';
-import { FolderUp, X } from 'lucide-react';
+import { FolderUp, X, CheckCircle } from 'lucide-react';
 import '../styles/Upload.css';
 
 function Upload() {
@@ -9,6 +9,7 @@ function Upload() {
     const [fichiers, setFichiers] = useState([]);
     const [en_cours_de_televersement, setEnCoursDeTeleversement] = useState(false);
     const [barre_de_progression, setBarreProgression] = useState(0); 
+    const [upload_reussi, setUploadReussi] = useState(false);
     
     const url_localisation = useLocation();
 
@@ -92,6 +93,7 @@ function Upload() {
     const gestionTeleversement = async (event) => {
         event.preventDefault();
         setErreurUpload('');
+        setUploadReussi(false);
         
         if (fichiers.length === 0) {
             setErreurUpload('Veuillez sélectionner au moins un fichier');
@@ -142,6 +144,10 @@ function Upload() {
             );
 
             setFichiers([]);
+            setUploadReussi(true);
+            setTimeout(() => {
+                setUploadReussi(false);
+            }, 4000);
         } catch (error) {
             setErreurUpload(error.response?.data?.error || error.response?.data?.message || 'Erreur lors du téléversement');
         } finally {
@@ -173,6 +179,13 @@ function Upload() {
         <div className="conteneur-upload">
             <div className="carte-upload">
                 <h2>Uploader des fichiers</h2>
+                
+                {upload_reussi && (
+                    <div className="upload-banniere-succes">
+                        <CheckCircle size={18} />
+                        <span>Vos fichiers ont été téléversés avec succès !</span>
+                    </div>
+                )}
                 
                 <form onSubmit={gestionTeleversement}>
                     <div className="groupe-formulaire">
