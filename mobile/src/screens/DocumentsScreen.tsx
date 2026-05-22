@@ -63,6 +63,7 @@ export default function DocumentsScreen({ navigation }: any) {
     formatFileSize,
   } = useDocuments(navigation);
 
+  // Fonction pour déterminer l'icône à afficher selon le type de fichier
   const getFileIcon = (fileName: string) => {
     const extension = fileName.split('.').pop()?.toLowerCase();
     
@@ -78,6 +79,7 @@ export default function DocumentsScreen({ navigation }: any) {
     return require('../assets/lien.png');
   };
 
+  // Affiche le fil d'ariane
   const renderBreadcrumb = () => (
     <ScrollView
       horizontal
@@ -104,6 +106,7 @@ export default function DocumentsScreen({ navigation }: any) {
     </ScrollView>
   );
 
+  // Affiche contenu
   const renderFileItem = ({ item }: { item: DisplayItem }) => (
     <View style={[styles.fileItem, { backgroundColor: theme.isDark ? '#2C2C2E' : '#FFFFFF' }]}>
       <TouchableOpacity
@@ -152,6 +155,7 @@ export default function DocumentsScreen({ navigation }: any) {
     );
   }
 
+  // Affichage principal
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
       {renderBreadcrumb()}

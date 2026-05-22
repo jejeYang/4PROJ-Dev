@@ -33,6 +33,7 @@ export interface User {
   idCompte?: number;
   nomCompte?: string;
   adresseMailCompte?: string;
+  avatarUrl?: string;
 }
 
 export interface AuthResponse {

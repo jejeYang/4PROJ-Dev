@@ -1,12 +1,19 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Image,
+  ActivityIndicator,
+  Modal,
+} from 'react-native';
 import { useMobileTheme } from '../context/MobileThemeContext';
 import { useProfile } from '../hooks/useProfile';
 import { styles } from '../styles/ProfileScreen.styles';
 
 export default function ProfileScreen() {
-  const { theme, toggleTheme } = useMobileTheme();
-  
   // Récupère hooks et thème
   const {
     user,
@@ -18,24 +25,58 @@ export default function ProfileScreen() {
     setIsEditingProfile,
     isChangingPassword,
     setIsChangingPassword,
+    avatarUri,
+    isUploadingAvatar,
+    avatarError,
+    setAvatarError,
+    showDeleteModal,
+    setShowDeleteModal,
+    deletePassword,
+    setDeletePassword,
+    pickImage,
     handleUpdateProfile,
     handleChangePassword,
     handleDeleteAccount,
     handleLogout,
   } = useProfile();
+  const { theme, toggleTheme } = useMobileTheme();
 
-  // Affichage du formulaire de connexion
+  // Affichage de l'écran de profil
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
       <View style={styles.content}>
         {/* Avatar et nom */}
         <View style={styles.avatarSection}>
-          <View style={[styles.avatar, { backgroundColor: theme.primaryColor }]}>
-            <Text style={styles.avatarText}>
-              {formData.nom ? formData.nom.charAt(0).toUpperCase() : '?'}
-            </Text>
-          </View>
+          <TouchableOpacity 
+            style={styles.avatarContainer}
+            onPress={pickImage}
+            disabled={isUploadingAvatar}
+          >
+            {isUploadingAvatar ? (
+              <View style={[styles.avatar, { backgroundColor: theme.primaryColor }]}>
+                <ActivityIndicator size="large" color="#FFFFFF" />
+              </View>
+            ) : avatarUri && !avatarError ? (
+              <Image
+                source={{ uri: avatarUri }}
+                style={styles.avatarImage}
+                onError={() => setAvatarError(true)}
+              />
+            ) : (
+              <View style={[styles.avatar, { backgroundColor: theme.primaryColor }]}>
+                <Text style={styles.avatarText}>
+                  {formData.nom ? formData.nom.charAt(0).toUpperCase() : '?'}
+                </Text>
+              </View>
+            )}
+            <View style={styles.editAvatarBadge}>
+              <Text style={styles.editAvatarIcon}>📷</Text>
+            </View>
+          </TouchableOpacity>
           <Text style={[styles.name, { color: theme.textColor }]}>Mon Profil</Text>
+          <Text style={[styles.avatarHint, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
+            Appuyez sur l'avatar pour changer la photo
+          </Text>
         </View>
 
         {/* Section Thème */}
@@ -208,7 +249,10 @@ export default function ProfileScreen() {
           <Text style={[styles.dangerText, { color: theme.textColor }]}>
             La suppression de votre compte est définitive. Toutes vos données seront effacées.
           </Text>
-          <TouchableOpacity style={styles.dangerButton} onPress={handleDeleteAccount}>
+          <TouchableOpacity 
+            style={styles.dangerButton} 
+            onPress={() => setShowDeleteModal(true)}
+          >
             <Text style={styles.dangerButtonText}>Supprimer mon compte</Text>
           </TouchableOpacity>
         </View>
@@ -218,6 +262,56 @@ export default function ProfileScreen() {
           <Text style={styles.logoutButtonText}>Déconnexion</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Modale de confirmation de suppression */}
+      <Modal
+        visible={showDeleteModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowDeleteModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.backgroundColor }]}>
+            <Text style={[styles.modalTitle, { color: '#ff3b30' }]}>⚠️ Action Irréversible</Text>
+            <Text style={[styles.modalText, { color: theme.textColor }]}>
+              Attention : Toutes vos données seront définitivement effacées. 
+              Veuillez saisir votre mot de passe pour confirmer.
+            </Text>
+            
+            <TextInput
+              style={[
+                styles.input,
+                styles.modalInput,
+                { backgroundColor: theme.isDark ? '#3A3A3C' : '#F2F2F7', color: theme.textColor }
+              ]}
+              value={deletePassword}
+              onChangeText={setDeletePassword}
+              placeholder="Mot de passe de confirmation"
+              placeholderTextColor={theme.isDark ? '#8E8E93' : '#6C6C70'}
+              secureTextEntry
+              autoFocus
+            />
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.button, styles.cancelButton]}
+                onPress={() => {
+                  setShowDeleteModal(false);
+                  setDeletePassword('');
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.dangerButton]}
+                onPress={handleDeleteAccount}
+              >
+                <Text style={styles.buttonText}>Supprimer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }

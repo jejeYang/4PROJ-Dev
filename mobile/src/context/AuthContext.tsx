@@ -12,6 +12,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   googleLogin: (idToken: string) => Promise<void>;
   refreshUser: () => Promise<void>;
+  updateUserData: (userData: User) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -77,13 +78,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const saveAuth = async (authToken: string, userData: User) => {
-    // Normaliser les données utilisateur (compatibilité format BDD)
+    // Normaliser les données utilisateur pour garantir la cohérence dans l'application 
     const normalizedUser: User = {
       id: userData.id || userData.idCompte || 0,
       nom: userData.nom || userData.nomCompte || '',
       email: userData.email || userData.adresseMailCompte || '',
       stockageCompte: userData.stockageCompte || 0,
+      avatarUrl: userData.avatarUrl,
     };
+    
+    // Si l'avatarUrl contient localhost, le remplacer par l'IP locale du mobile
+    if (normalizedUser.avatarUrl && normalizedUser.avatarUrl.includes('localhost')) {
+      const { API_BASE_URL } = await import('../config');
+      normalizedUser.avatarUrl = normalizedUser.avatarUrl.replace('http://localhost:3000', API_BASE_URL);
+    }
     
     await AsyncStorage.setItem(TOKEN_KEY, authToken);
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(normalizedUser));
@@ -94,16 +102,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const refreshUser = async () => {
     try {
-      // Rafraîchir depuis AsyncStorage uniquement (comme le site web)
+      // Rafraîchir depuis AsyncStorage uniquement
       const storedUser = await AsyncStorage.getItem(USER_KEY);
       if (storedUser) {
         setUser(JSON.parse(storedUser));
       }
-    } catch (error: any) {
-      if (error?.response?.status === 401) {
-        return;
-      }
+    } catch (error) {
       console.error('Erreur lors du rafraîchissement du profil:', error);
+    }
+  };
+
+  const updateUserData = async (userData: User) => {
+    try {
+      console.log('Updating user data with:', userData);
+      
+      // Normaliser les données utilisateur (comme dans saveAuth)
+      const normalizedUser: User = {
+        id: userData.id || userData.idCompte || 0,
+        nom: userData.nom || userData.nomCompte || '',
+        email: userData.email || userData.adresseMailCompte || '',
+        stockageCompte: userData.stockageCompte || 0,
+        avatarUrl: userData.avatarUrl,
+      };
+      
+      console.log('Normalized user:', normalizedUser);
+      
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(normalizedUser));
+      setUser(normalizedUser);
+    } catch (error) {
+      console.error('Error in updateUserData:', error);
       throw error;
     }
   };
@@ -132,6 +159,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         logout,
         googleLogin,
         refreshUser,
+        updateUserData,
       }}
     >
       {children}

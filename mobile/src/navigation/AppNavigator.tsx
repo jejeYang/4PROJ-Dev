@@ -12,6 +12,7 @@ import DashboardScreen from '../screens/DashboardScreen';
 import DocumentsScreen from '../screens/DocumentsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import UploadScreen from '../screens/UploadScreen';
+import ShareScreen from '../screens/ShareScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -103,6 +104,11 @@ export default function AppNavigator() {
               name="Upload" 
               component={UploadScreen}
               options={{ title: 'Uploader des fichiers' }}
+            />
+            <Stack.Screen 
+              name="Share" 
+              component={ShareScreen}
+              options={{ title: 'Partages' }}
             />
             <Stack.Screen 
               name="Profile" 
