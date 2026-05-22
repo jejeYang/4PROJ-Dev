@@ -5,7 +5,10 @@ General :
 Front :
 - Ajouter des commentaires propres
 - Bouton télécharger un dossier
-- Enlever colonne date de création (vérifier que le responsive n'est pas affecté !)
+- Quand on essaie de se connecter et que cela echoue, il ne faut pas rediriger l'utilisateur
+- Quand on upload, afficher un message pour confirmer que l'upload a réussi
+- Mettre "Autre" au lieu de "Inconnu" dans type de fichier
+- Créer hooks pour Login, Register & Upload
 
 Back :
 - Restaurer un élement doit le remettre dans le dossier dans lequel il était plutôt qu'à la racine
@@ -13,9 +16,7 @@ Back :
 - Gestion date d'expiration des liens
 - Vérification de la compléxité du mot de passe lors de sa création
 
-Mobile :
-# Séparer les fonctions et le css du return
-
+Mobile :j
 # Modifier affichage pour fixer le header en haut (flex)
 
 # Connexion :

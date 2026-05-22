@@ -1,12 +1,15 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
-import { useAuth } from '../context/AuthContext';
+import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { useMobileTheme } from '../context/MobileThemeContext';
+import { useDashboard } from '../hooks/useDashboard';
+import { styles } from '../styles/DashboardScreen.styles';
 
 export default function DashboardScreen({ navigation }: any) {
-  const { user } = useAuth();
+  // Récupère hooks et thème
+  const { user, navigateToDocuments, navigateToUpload } = useDashboard(navigation);
   const { theme } = useMobileTheme();
 
+  // Affichage du tableau de bord
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
       <View style={styles.content}>
@@ -20,7 +23,7 @@ export default function DashboardScreen({ navigation }: any) {
         <View style={styles.quickActions}>
           <TouchableOpacity
             style={[styles.actionCard, { backgroundColor: theme.isDark ? '#2C2C2E' : '#FFFFFF' }]}
-            onPress={() => navigation.navigate('Documents')}
+            onPress={navigateToDocuments}
           >
             <Image source={require('../assets/espace-dossier.png')} style={styles.cardIconImage} />
             <Text style={[styles.cardTitle, { color: theme.textColor }]}>Mon Espace</Text>
@@ -31,7 +34,7 @@ export default function DashboardScreen({ navigation }: any) {
 
           <TouchableOpacity
             style={[styles.actionCard, styles.primaryCard, { backgroundColor: theme.primaryColor }]}
-            onPress={() => navigation.navigate('Upload')}
+            onPress={navigateToUpload}
           >
             <Image source={require('../assets/uploader-des-fichiers.png')} style={[styles.cardIconImage]} />
             <Text style={[styles.cardTitle, { color: '#FFFFFF' }]}>Uploader</Text>
@@ -44,55 +47,3 @@ export default function DashboardScreen({ navigation }: any) {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    padding: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    marginBottom: 30,
-  },
-  quickActions: {
-    gap: 16,
-  },
-  actionCard: {
-    padding: 24,
-    borderRadius: 12,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  primaryCard: {
-    shadowColor: '#007AFF',
-    shadowOpacity: 0.3,
-  },
-  cardIcon: {
-    fontSize: 40,
-    marginBottom: 12,
-  },
-  cardIconImage: {
-    width: 40,
-    height: 40,
-    marginBottom: 12,
-  },
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 6,
-  },
-  cardDescription: {
-    fontSize: 14,
-  },
-});

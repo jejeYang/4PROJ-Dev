@@ -1,41 +1,30 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Image,
 } from 'react-native';
-import { useAuth } from '../context/AuthContext';
 import { useMobileTheme } from '../context/MobileThemeContext';
+import { useLogin } from '../hooks/useLogin';
+import { styles } from '../styles/LoginScreen.styles';
 
 export default function LoginScreen({ navigation }: any) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  // Récupère hooks et thème
+  const { 
+    email, 
+    setEmail, 
+    password, 
+    setPassword, 
+    isLoading, 
+    handleLogin 
+  } = useLogin();
   const { theme } = useMobileTheme();
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      await login({ email, mdp: password });
-    } catch (error: any) {
-      Alert.alert('Erreur', error.response?.data?.message || 'Connexion échouée');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // Affichage du formulaire de connexion
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -97,57 +86,3 @@ export default function LoginScreen({ navigation }: any) {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 20,
-  },
-  logo: {
-    width: 120,
-    height: 120,
-    alignSelf: 'center',
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 20,
-    textAlign: 'center',
-    marginBottom: 40,
-  },
-  input: {
-    height: 50,
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    marginBottom: 15,
-    fontSize: 16,
-  },
-  button: {
-    height: 50,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  linkButton: {
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  linkText: {
-    fontSize: 16,
-  },
-});
