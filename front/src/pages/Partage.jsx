@@ -59,7 +59,6 @@ function Partage() {
                                             </div>
                                         </div>
                                         <div className="partage-element-lateral">
-                                            <span className="partage-date-fichier">Reçu le {new Date(p.dateCreation).toLocaleDateString()}</span>
                                             <button className="partage-bouton-danger-contour" onClick={(e) => { e.stopPropagation(); resilierPartageInterne(p.idDossier); }}>Quitter</button>
                                         </div>
                                     </div>
@@ -87,7 +86,6 @@ function Partage() {
                                             </div>
                                         </div>
                                         <div className="partage-element-lateral">
-                                            <span className="partage-date-fichier">Envoyé le {new Date(p.dateCreation).toLocaleDateString()}</span>
                                             <button className="partage-bouton-danger-contour" onClick={(e) => { e.stopPropagation(); resilierPartageInterne(p.idDossier); }}>Révoquer</button>
                                         </div>
                                     </div>

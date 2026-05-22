@@ -26,7 +26,6 @@ class CompteService {
     }
 
     async creerCompte(compte) {
-        // Validations (moved from DTO)
         if (!compte.nom || compte.nom.trim().length === 0) {
             throw new Error("Le nom est requis");
         }
@@ -43,8 +42,12 @@ class CompteService {
         if (!compte.mdp || compte.mdp.length === 0) {
             throw new Error("Le mot de passe est requis");
         }
-        if (compte.mdp.length < 6) {
-            throw new Error("Le mot de passe doit contenir au moins 6 caractères");
+        if (compte.mdp.length < 8) {
+            throw new Error("Le mot de passe doit contenir au moins 8 caractères");
+        }
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+        if (!passwordRegex.test(compte.mdp)) {
+            throw new Error("Le mot de passe doit contenir des caractères spéciaux, des majuscules et des chiffres");
         }
 
         // Vérifier que l'email n'existe pas déjà
@@ -141,7 +144,7 @@ class CompteService {
             const nouveauCompte = await this.creerCompte({
                 nom: payload.name || payload.email.split('@')[0],
                 email: payload.email,
-                mdp: crypto.randomUUID(), // Assumes crypto is available globally or needs import
+                mdp: crypto.randomUUID(), 
             });
 
             compte = {
@@ -161,7 +164,6 @@ class CompteService {
     }
 
     async mettreAJourCompte(idCompte, donnees) {
-        // Validations moved from DTO
         if (donnees.nom !== undefined) {
             if (donnees.nom.trim().length === 0) {
                 throw new Error("Le nom ne peut pas être vide");
@@ -178,7 +180,7 @@ class CompteService {
             }
 
             const existant = await this.compteRepository.findByEmail(donnees.email);
-            if (existant && existant.idCompte !== parseInt(idCompte)) {
+            if (existant && existant.idCompte !== Number.parseInt(idCompte)) {
                 throw new Error("Cet email est déjà utilisé");
             }
         }
