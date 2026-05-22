@@ -1,20 +1,9 @@
 General :
-- Le Docker doit également lancer le mobile
 - Modifier le message du Docker (lien expo mobile / qr code + lien front app)
 
 Front :
 - Ajouter des commentaires propres
-- Bouton télécharger un dossier
-- Quand on essaie de se connecter et que cela echoue, il ne faut pas rediriger l'utilisateur
-- Quand on upload, afficher un message pour confirmer que l'upload a réussi
-- Mettre "Autre" au lieu de "Inconnu" dans type de fichier
 - Créer hooks pour Login, Register & Upload
-
-Back :
-- Restaurer un élement doit le remettre dans le dossier dans lequel il était plutôt qu'à la racine
-- Récupérer la date de création d'un fichier
-- Gestion date d'expiration des liens
-- Vérification de la compléxité du mot de passe lors de sa création
 
 Mobile :
 # Modifier affichage pour fixer le header en haut (flex)

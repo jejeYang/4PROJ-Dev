@@ -11,6 +11,7 @@ import {
 import { useMobileTheme } from '../context/MobileThemeContext';
 import { useLogin } from '../hooks/useLogin';
 import { styles } from '../styles/LoginScreen.styles';
+import Footer from '../components/Footer';
 
 export default function LoginScreen({ navigation }: any) {
   // Récupère hooks et thème
@@ -83,6 +84,7 @@ export default function LoginScreen({ navigation }: any) {
           </Text>
         </TouchableOpacity>
       </View>
+      <Footer />
     </KeyboardAvoidingView>
   );
 }

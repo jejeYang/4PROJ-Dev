@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator } fr
 import { useMobileTheme } from '../context/MobileThemeContext';
 import { useDashboard } from '../hooks/useDashboard';
 import { styles } from '../styles/DashboardScreen.styles';
+import Footer from '../components/Footer';
 
 export default function DashboardScreen({ navigation }: any) {
   // Récupère hooks et thème
@@ -22,8 +23,9 @@ export default function DashboardScreen({ navigation }: any) {
 
   // Affichage du tableau de bord
   return (
-    <ScrollView style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
-      <View style={styles.content}>
+    <View style={[{ flex: 1, backgroundColor: theme.backgroundColor }]}>
+      <ScrollView style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
+        <View style={styles.content}>
         <Text style={[styles.title, { color: theme.textColor }]}>
           Bienvenue, {user?.nom} !
         </Text>
@@ -133,5 +135,7 @@ export default function DashboardScreen({ navigation }: any) {
         )}
       </View>
     </ScrollView>
+    <Footer />
+    </View>
   );
 }
