@@ -9,10 +9,16 @@ export const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    breadcrumb: {
-        padding: 12,
+    breadcrumbContainer: {
+        height: 50,
         borderBottomWidth: 1,
         borderBottomColor: '#E5E5EA',
+        justifyContent: 'center',
+    },
+    breadcrumbContent: {
+        paddingHorizontal: 12,
+        alignItems: 'center',
+        flexDirection: 'row',
     },
     breadcrumbItem: {
         flexDirection: 'row',

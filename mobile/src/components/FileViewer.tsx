@@ -55,13 +55,6 @@ function PDFViewer({ localUri, fileName, theme }: { localUri: string | null; fil
           flags: 1, // FLAG_GRANT_READ_URI_PERMISSION (Autorise l'app tierce à lire le PDF)
           type: 'application/pdf',
         });
-      } else {
-        // Fallback iOS (au cas où on appellerait ce bouton sur iOS)
-        await Sharing.shareAsync(localUri, {
-          mimeType: 'application/pdf',
-          dialogTitle: 'Ouvrir le PDF',
-          UTI: 'com.adobe.pdf',
-        });
       }
       
       setIsOpening(false);
@@ -381,27 +374,8 @@ export default function FileViewer({ visible, fileUrl, fileName, onClose }: File
     }
 
     if (isPDF) {
-  if (Platform.OS === 'ios') {
-    // iOS : le PDF s'affiche directement dans la WebView
-    return (
-      <WebView
-        source={{ uri: localUri }}
-        style={styles.webview}
-        startInLoadingState
-        renderLoading={() => (
-          <ActivityIndicator
-            size="large"
-            color={theme.primaryColor}
-            style={styles.webviewLoader}
-          />
-        )}
-      />
-    );
-  } else {
-    // Android : Affiche le bouton qui lance l'application PDF
-    return <PDFViewer localUri={localUri} fileName={fileName} theme={theme} />;
-  }
-}
+      return <PDFViewer localUri={localUri} fileName={fileName} theme={theme} />;
+    }
 
     if (isDoc) {
       return (

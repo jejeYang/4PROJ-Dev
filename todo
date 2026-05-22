@@ -1,9 +1,5 @@
-General :
-- Modifier le message du Docker (lien expo mobile / qr code + lien front app)
-
 Front :
 - Ajouter des commentaires propres
-- Créer hooks pour Login, Register & Upload
 
 Mobile :
 # Modifier affichage pour fixer le header en haut (flex)
@@ -11,19 +7,13 @@ Mobile :
 # Connexion :
 - Connexion via google
 
-# Page d'accueil :
-- Fichiers récents
-- Dossiers récents
-
 # Dashboard :
-- Renommage de dossier
+- Renommages de dossier & fichier
 - Voir date de modification
 ## Selection multiple :
 	- Suppression multiple
 	- Téléchargement multiple
 	- Déplacement multiple
-## Visualisation :
-	- La visualisation du PDF partage le PDF au lieu de le visualiser
 ## Partage :
 	- Choisir de partager à un utilisateur ou un invité
 

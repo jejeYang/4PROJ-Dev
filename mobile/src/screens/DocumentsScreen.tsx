@@ -81,29 +81,31 @@ export default function DocumentsScreen({ navigation, route }: any) {
 
   // Affiche le fil d'ariane
   const renderBreadcrumb = () => (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={[styles.breadcrumb, { backgroundColor: theme.isDark ? '#2C2C2E' : '#F2F2F7' }]}
-    >
-      {breadcrumb.map((crumb, index) => (
-        <View key={index} style={styles.breadcrumbItem}>
-          <TouchableOpacity onPress={() => navigateToLevel(index)}>
-            <Text
-              style={[
-                styles.breadcrumbText,
-                { color: index === breadcrumb.length - 1 ? theme.primaryColor : theme.textColor },
-              ]}
-            >
-              {crumb.name}
-            </Text>
-          </TouchableOpacity>
-          {index < breadcrumb.length - 1 && (
-            <Text style={[styles.breadcrumbSeparator, { color: theme.textColor }]}> / </Text>
-          )}
-        </View>
-      ))}
-    </ScrollView>
+    <View style={[styles.breadcrumbContainer, { backgroundColor: theme.isDark ? '#2C2C2E' : '#F2F2F7' }]}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.breadcrumbContent}
+      >
+        {breadcrumb.map((crumb, index) => (
+          <View key={index} style={styles.breadcrumbItem}>
+            <TouchableOpacity onPress={() => navigateToLevel(index)}>
+              <Text
+                style={[
+                  styles.breadcrumbText,
+                  { color: index === breadcrumb.length - 1 ? theme.primaryColor : theme.textColor },
+                ]}
+              >
+                {crumb.name}
+              </Text>
+            </TouchableOpacity>
+            {index < breadcrumb.length - 1 && (
+              <Text style={[styles.breadcrumbSeparator, { color: theme.textColor }]}> / </Text>
+            )}
+          </View>
+        ))}
+      </ScrollView>
+    </View>
   );
 
   // Affiche contenu
@@ -146,14 +148,6 @@ export default function DocumentsScreen({ navigation, route }: any) {
       </TouchableOpacity>
     </View>
   );
-
-  if (isLoading) {
-    return (
-      <View style={[styles.centerContainer, { backgroundColor: theme.backgroundColor }]}>
-        <ActivityIndicator size="large" color={theme.primaryColor} />
-      </View>
-    );
-  }
 
   // Affichage principal
   return (
@@ -208,23 +202,31 @@ export default function DocumentsScreen({ navigation, route }: any) {
         )}
       </View>
 
-      <FlatList
-        data={items}
-        keyExtractor={(item) => item.id}
-        renderItem={renderFileItem}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Image source={require('../assets/dossier.png')} style={styles.emptyIconImage} />
-            <Text style={[styles.emptyText, { color: theme.textColor }]}>Aucun document</Text>
-            <Text style={[styles.emptySubtext, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
-              Commencez par créer un dossier ou uploader un fichier
-            </Text>
-          </View>
-        }
-        refreshing={isLoading}
-        onRefresh={loadContent}
-        contentContainerStyle={items.length === 0 ? styles.emptyList : undefined}
-      />
+      {/* Chargement */}
+      {isLoading ? (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={theme.primaryColor} />
+        </View>
+      ) : (
+        <FlatList
+          data={items}
+          keyExtractor={(item) => item.id}
+          renderItem={renderFileItem}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Image source={require('../assets/dossier.png')} style={styles.emptyIconImage} />
+              <Text style={[styles.emptyText, { color: theme.textColor }]}>Aucun document</Text>
+              <Text style={[styles.emptySubtext, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
+                Commencez par créer un dossier ou uploader un fichier
+              </Text>
+            </View>
+          }
+          refreshing={isLoading}
+          onRefresh={loadContent}
+          contentContainerStyle={items.length === 0 ? styles.emptyList : undefined}
+        />
+      )}
+
 
       {/* Modal de création de dossier */}
       <Modal visible={showCreateModal} transparent animationType="slide" onRequestClose={() => setShowCreateModal(false)}>
