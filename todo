@@ -3,7 +3,4 @@ General :
 - Remplacer les emoji par une bibliothèque (ex : Flaticon)
 
 Back :
-- Restaurer un élement doit le remettre dans le dossier dans lequel il était plutôt qu'à la racine
-- Récupérer la date de création d'un fichier
-- Gestion date d'expiration des liens
-- Vérification de la compléxité du mot de passe lors de sa création
+///
