@@ -591,7 +591,7 @@ class DtoDossier {
     }
 
 // Recherche récursive de fichiers dans un dossier et ses sous-dossiers
-    async rechercherFichiers(dossierId, query, type) {
+    async rechercherFichiers(dossierId, query, type, dateFiltre) {
         const dossier = await this.recupererDossierParId(dossierId);
         const cheminComplet = await this.construireCheminComplet(dossierId);
         const cheminPhysique = path.join(SERVER_FILES_PATH, `user_${dossier.idCompteCreateur}`, cheminComplet);
@@ -643,6 +643,17 @@ class DtoDossier {
                             zip: ['zip', 'rar', '7z', 'tar', 'gz'],
                         };
                         if (!types[type]?.includes(ext)) match = false;
+                    }
+
+                    if (match && dateFiltre && dateFiltre !== 'tout') {
+                        const maintenant = Date.now();
+                        const modification = stat.mtime.getTime();
+                        const delais = {
+                            semaine: 7 * 24 * 60 * 60 * 1000,
+                            mois: 30 * 24 * 60 * 60 * 1000,
+                        };
+                        const delai = delais[dateFiltre];
+                        if (delai && modification < maintenant - delai) match = false;
                     }
 
                     if (match) {

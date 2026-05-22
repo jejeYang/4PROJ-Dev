@@ -64,8 +64,8 @@ export function useSelectionMultiple({ authHeader, dossier_actuel, dossier_racin
         }
     };
 
-    const telechargerSelection = async () => {
-        if (selection.length === 0) return;
+    const telechargerElements = async (elements = selection, viderSelection = true) => {
+        if (elements.length === 0) return;
 
         setActionEnCours({ active: true, type: 'Préparation de l\'archive par le serveur...', progression: 50 });
 
@@ -74,11 +74,11 @@ export function useSelectionMultiple({ authHeader, dossier_actuel, dossier_racin
             const sous_dossiers = fil_ariane.map(d => d.cheminDaccesDossier).join('/');
             const chemin_actuel = sous_dossiers ? `${nom_racine}/${sous_dossiers}` : nom_racine;
             
-            const liste_fichier = selection
+            const liste_fichier = elements
                 .filter(s => s.type === 'fichier')
                 .map(s => `${chemin_actuel}/${s.item.nom}`);
                 
-            const liste_dossier = selection
+            const liste_dossier = elements
                 .filter(s => s.type === 'dossier')
                 .map(s => `${chemin_actuel}/${s.item.cheminDaccesDossier}`);
 
@@ -101,7 +101,7 @@ export function useSelectionMultiple({ authHeader, dossier_actuel, dossier_racin
             saveAs(response.data, nom_archive_zip);
 
             setActionEnCours({ active: true, type: 'Téléchargement terminé !', progression: 100 });
-            setSelection([]);            
+            if (viderSelection) setSelection([]);            
         } catch (erreur) {
             console.error(erreur);
             if (erreur.response && erreur.response.data instanceof Blob) {
@@ -121,6 +121,10 @@ export function useSelectionMultiple({ authHeader, dossier_actuel, dossier_racin
         } finally {
             setTimeout(() => setActionEnCours({ active: false, type: '', progression: 0 }), 1000);
         }
+    };
+
+    const telechargerSelection = async () => {
+        await telechargerElements(selection, true);
     };
 
     const ouvrirModalRestaurerMultiple = () => {
@@ -192,7 +196,7 @@ export function useSelectionMultiple({ authHeader, dossier_actuel, dossier_racin
 
     return { 
         selection, setSelection, estSelectionne, switchSelection, toggleSelectionTout,
-        ouvrirModalSuppressionMultiple, supprimerSelection, telechargerSelection,
+        ouvrirModalSuppressionMultiple, supprimerSelection, telechargerSelection, telechargerElements,
         ouvrirModalRestaurerMultiple, restaurerSelection,
         ouvrirModalSuppressionDefinitiveMultiple, supprimerDefinitivementSelection
     };

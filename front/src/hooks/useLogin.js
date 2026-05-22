@@ -6,7 +6,7 @@ export function useLogin() {
     const navigate = useNavigate();
     const [donneesFormulaire, setDonneesFormulaire] = useState({ email: '', mdp: '' });
     const [erreurConnexion, setErreurConnexion] = useState('');
-    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '60122681226-56ehoh7uj46u1ot03dlct24srh1j83p0.apps.googleusercontent.com';
+    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
     const gestionChangement = (e) => {
         setDonneesFormulaire({ ...donneesFormulaire, [e.target.name]: e.target.value });

@@ -13,6 +13,6 @@ Exemple PowerShell :
 
 ```powershell
 $env:GOOGLE_CLIENT_ID = "votre-client-id.apps.googleusercontent.com"
-$env:JWT_SECRET = "un-secret-fort"
+$env:JWT_SECRET = "<secret_jwt_long_et_aleatoire>"
 node server.js
 ```

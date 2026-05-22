@@ -67,7 +67,7 @@ export function useRechercheTri({ authHeader, dossier_actuel, dossier_racine, ta
         });
     }, [tri_config, taille_dossiers]);
 
-    const lancerRecherche = async (query, type) => {
+    const lancerRecherche = async (query, type, dateFiltre = 'tout') => {
         const id_dossier_recherche = dossier_actuel ? dossier_actuel.idDossier : dossier_racine?.idDossier;
         if (!id_dossier_recherche) return;
 
@@ -76,6 +76,7 @@ export function useRechercheTri({ authHeader, dossier_actuel, dossier_racine, ta
             const params = new URLSearchParams();
             if (query) params.append('q', query);
             if (type && type !== 'tout') params.append('type', type);
+            if (dateFiltre && dateFiltre !== 'tout') params.append('date', dateFiltre);
 
             const res = await axios.get(`${API}/api/dossiers/${id_dossier_recherche}/rechercher?${params}`, { headers: authHeader() });
             setResultatsRecherche(res.data);

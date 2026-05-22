@@ -127,7 +127,13 @@ Pour un lancement local sans Docker :
 
 ## Démarrage rapide avec Docker
 
-Depuis la racine du projet :
+Depuis la racine du projet, créer d'abord le fichier `.env` local à partir du modèle :
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Renseigner au minimum `POSTGRES_PASSWORD` et `JWT_SECRET`, puis lancer :
 
 ```bash
 docker compose up --build
@@ -163,12 +169,13 @@ npm install
 
 ### 2. Configurer la base de données
 
-Créer une base PostgreSQL nommée `supfile`, puis définir la variable `DATABASE_URL`.
+Créer une base PostgreSQL nommée `supfile`, puis définir les variables `DATABASE_URL` et `JWT_SECRET`.
 
 Exemple :
 
 ```bash
-export DATABASE_URL="postgresql://postgres:root@localhost:5432/supfile"
+export DATABASE_URL="postgresql://postgres:<mot_de_passe>@localhost:5432/supfile"
+export JWT_SECRET="<secret_jwt_long_et_aleatoire>"
 ```
 
 ### 3. Initialiser Prisma
@@ -218,20 +225,20 @@ Scanner ensuite le QR code avec Expo Go ou ouvrir l'application depuis un simula
 | `PORT` | Port d'écoute de l'API | `3000` |
 | `DATABASE_URL` | URL de connexion PostgreSQL utilisée par Prisma | Requise hors Docker |
 | `FILES_PATH` | Chemin de stockage physique des fichiers | `back/storage/files` |
-| `JWT_SECRET` | Secret de signature des tokens JWT | `your-secret-key` |
-| `GOOGLE_CLIENT_ID` | Client ID OAuth 2.0 Google | Client ID de développement |
+| `JWT_SECRET` | Secret de signature des tokens JWT | Requis |
+| `GOOGLE_CLIENT_ID` | Client ID OAuth 2.0 Google | Optionnel |
 | `PG_HOST` | Hôte PostgreSQL utilisé par la config interne | `localhost` |
 | `PG_PORT` | Port PostgreSQL | `5432` |
 | `PG_DATABASE` | Nom de la base | `supfile` |
 | `PG_USER` | Utilisateur PostgreSQL | `postgres` |
-| `PG_PASSWORD` | Mot de passe PostgreSQL | `user` |
+| `PG_PASSWORD` | Mot de passe PostgreSQL | Aucun |
 
 Exemple PowerShell :
 
 ```powershell
-$env:DATABASE_URL = "postgresql://postgres:root@localhost:5432/supfile"
+$env:DATABASE_URL = "postgresql://postgres:<mot_de_passe>@localhost:5432/supfile"
 $env:GOOGLE_CLIENT_ID = "votre-client-id.apps.googleusercontent.com"
-$env:JWT_SECRET = "un-secret-fort"
+$env:JWT_SECRET = "<secret_jwt_long_et_aleatoire>"
 ```
 
 ### Frontend
@@ -459,7 +466,7 @@ npm run prisma:seed
 - La corbeille repose sur un dossier spécial `.corbeille`.
 - Un job planifié supprime les liens publics expirés chaque nuit.
 - Les tests automatisés ne sont pas encore configurés dans le projet.
-- Pour la production, remplacer les secrets par des valeurs sécurisées et ne pas conserver les valeurs de développement du `docker-compose.yml`.
+- Les secrets ne sont pas versionnés : conserver les vraies valeurs uniquement dans un fichier `.env` local.
 
 ## Licence
 
