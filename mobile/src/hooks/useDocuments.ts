@@ -47,7 +47,11 @@ export interface BreadcrumbItem {
     // États pour les liens de partage
     const [showShareModal, setShowShareModal] = useState(false);
     const [itemToShare, setItemToShare] = useState<DisplayItem | null>(null);
+    const [shareMode, setShareMode] = useState<'utilisateur' | 'invité'>('utilisateur');
     const [shareEmail, setShareEmail] = useState('');
+    const [sharePassword, setSharePassword] = useState('');
+    const [expiryDate, setExpiryDate] = useState<Date>(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+    const [showDatePicker, setShowDatePicker] = useState(false);
     const [shareLink, setShareLink] = useState('');
     
     // État pour le menu d'options
@@ -512,40 +516,56 @@ export interface BreadcrumbItem {
     // Fonction pour ouvrir le modal de partage
     const openShareModal = (item: DisplayItem) => {
         setItemToShare(item);
+        setShareMode('utilisateur');
         setShareEmail('');
+        setSharePassword('');
+        setExpiryDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+        setShowDatePicker(false);
         setShareLink('');
         setShowShareModal(true);
     };
 
-    // Fonction pour créer un lien de partage
-    const createShareLink = async () => {
-        if (!itemToShare || !shareEmail.trim()) {
-        Alert.alert('Erreur', 'Veuillez entrer une adresse email');
-        return;
-        }
+    // Fonction pour gérer le partage (utilisateur ou invité)
+    const handleShare = async () => {
+        if (!itemToShare) return;
+
         try {
-        const dossierId = itemToShare.type === 'folder' 
-            ? itemToShare.dossier?.idDossier 
-            : currentDossierId || userRootFolderId;
-        
-        if (!dossierId) {
-            Alert.alert('Erreur', 'Impossible de déterminer le dossier');
-            return;
-        }
-        const data: any = { email: shareEmail };
-        if (itemToShare.type === 'file' && itemToShare.fichier) {
-            data.fileName = itemToShare.fichier.nom;
-        }
-        const response = await lienApi.createShareLink(dossierId, data);
-        
-        if ((response as any).data?.lien?.url) {
-            const fullLink = `${API_BASE_URL}${(response as any).data.lien.url}`;
-            setShareLink(fullLink);
-            await Clipboard.setStringAsync(fullLink);
-            Alert.alert('Succès', 'Lien créé et copié dans le presse-papier !');
-        }
+            const dossierId = itemToShare.type === 'folder' 
+                ? itemToShare.dossier?.idDossier 
+                : currentDossierId || userRootFolderId;
+            
+            if (!dossierId) {
+                Alert.alert('Erreur', 'Impossible de déterminer le dossier');
+                return;
+            }
+
+            if (shareMode === 'utilisateur') {
+                // Mode utilisateur: partage vers un email
+                if (!shareEmail.trim()) {
+                    Alert.alert('Erreur', 'Veuillez entrer une adresse email');
+                    return;
+                }
+                await lienApi.shareToUser(dossierId, { email: shareEmail });
+                Alert.alert('Succès', 'Dossier partagé avec succès !');
+                setShowShareModal(false);
+                setShareEmail('');
+            } else {
+                // Mode invité: création de lien public
+                if (!sharePassword.trim()) {
+                    Alert.alert('Erreur', 'Veuillez entrer un mot de passe');
+                    return;
+                }
+                
+                const response = await lienApi.createGuestLink(dossierId, {
+                    motDePasse: sharePassword,
+                    dateExpiration: expiryDate.toISOString()
+                });
+                
+                const fullLink = `${API_BASE_URL}/api/liens/${response.token}`;
+                setShareLink(fullLink);
+            }
         } catch (error: any) {
-        Alert.alert('Erreur', error.response?.data?.error || 'Impossible de créer le lien');
+            Alert.alert('Erreur', error.response?.data?.error || 'Erreur lors du partage');
         }
     };
 
@@ -653,9 +673,18 @@ export interface BreadcrumbItem {
         showShareModal,
         setShowShareModal,
         itemToShare,
+        shareMode,
+        setShareMode,
         shareEmail,
         setShareEmail,
+        sharePassword,
+        setSharePassword,
+        expiryDate,
+        setExpiryDate,
+        showDatePicker,
+        setShowDatePicker,
         shareLink,
+        setShareLink,
         showOptionsModal,
         setShowOptionsModal,
         selectedItem,
@@ -673,7 +702,7 @@ export interface BreadcrumbItem {
         handleEmptyTrash,
         navigateInMoveModal,
         confirmMove,
-        createShareLink,
+        handleShare,
         copyShareLink,
         showItemOptions,
         handleOptionPress,

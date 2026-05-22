@@ -189,4 +189,15 @@ export const lienApi = {
   // Accéder à un lien de partage (invité)
   accessShareLink: (token: string) =>
     apiClient.get(`/api/liens/${token}`),
+
+  // Obtenir les détails d'un lien avec mot de passe
+  getLinkDetails: (token: string, password: string): Promise<{
+    type: string;
+    dossierId: number;
+    nom: string;
+    contenu?: any[];
+  }> =>
+    apiClient.get(`/api/liens/${token}/details`, {
+      params: { password }
+    }),
 };

@@ -13,6 +13,7 @@ import DocumentsScreen from '../screens/DocumentsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import UploadScreen from '../screens/UploadScreen';
 import ShareScreen from '../screens/ShareScreen';
+import LinkScreen from '../screens/LinkScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -126,6 +127,11 @@ export default function AppNavigator() {
             <Stack.Screen 
               name="Register" 
               component={RegisterScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen 
+              name="LinkScreen" 
+              component={LinkScreen}
               options={{ headerShown: false }}
             />
           </>
