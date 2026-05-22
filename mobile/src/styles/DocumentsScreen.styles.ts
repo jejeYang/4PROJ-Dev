@@ -105,7 +105,14 @@ export const styles = StyleSheet.create({
         fontWeight: '500',
         marginBottom: 4,
     },
+    fileDetails: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
     fileSize: {
+        fontSize: 13,
+    },
+    fileDate: {
         fontSize: 13,
     },
     trashButton: {

@@ -43,6 +43,11 @@ export interface BreadcrumbItem {
     const [moveDestination, setMoveDestination] = useState<number | null>(null);
     const [moveBreadcrumb, setMoveBreadcrumb] = useState<BreadcrumbItem[]>([{ id: null, name: 'Mes Documents' }]);
     const [moveAvailableFolders, setMoveAvailableFolders] = useState<Dossier[]>([]);
+
+    // États pour le renommage
+    const [showRenameModal, setShowRenameModal] = useState(false);
+    const [itemToRename, setItemToRename] = useState<DisplayItem | null>(null);
+    const [newName, setNewName] = useState('');
     
     // États pour les liens de partage
     const [showShareModal, setShowShareModal] = useState(false);
@@ -538,6 +543,43 @@ export interface BreadcrumbItem {
         Alert.alert('Erreur', error.response?.data?.error || 'Impossible de déplacer l\'élément');
         }
     };
+
+    // Fonction pour ouvrir la modale de renommage
+    const openRenameModal = (item: DisplayItem) => {
+        setItemToRename(item);
+        setNewName(item.name);
+        setShowRenameModal(true);
+    };
+
+    // Fonction pour confirmer le renommage
+    const handleRename = async () => {
+        if (!itemToRename || !newName.trim()) {
+            Alert.alert('Erreur', 'Le nom ne peut pas être vide');
+            return;
+        }
+
+        try {
+            if (itemToRename.type === 'folder' && itemToRename.dossier) {
+                await dossierApi.renameDossier(itemToRename.dossier.idDossier, { cheminDaccesDossier: newName.trim() });
+                Alert.alert('Succès', 'Dossier renommé avec succès');
+            } else if (itemToRename.type === 'file' && itemToRename.fichier) {
+                const dossierId = currentDossierId || userRootFolderId;
+                if (dossierId) {
+                    await dossierApi.renameFichier(dossierId, itemToRename.fichier.nom, { nouveauNom: newName.trim() });
+                    Alert.alert('Succès', 'Fichier renommé avec succès');
+                } else {
+                    throw new Error('Impossible de déterminer le dossier');
+                }
+            }
+            
+            setShowRenameModal(false);
+            setNewName('');
+            setItemToRename(null);
+            loadContent(); // Rafraîchir la liste
+        } catch (error: any) {
+            Alert.alert('Erreur', error.response?.data?.error || 'Impossible de renommer l\'élément');
+        }
+    };
     
     // Fonction pour ouvrir le modal de partage
     const openShareModal = (item: DisplayItem) => {
@@ -619,6 +661,9 @@ export interface BreadcrumbItem {
             break;
         case 'share':
             openShareModal(selectedItem);
+            break;
+        case 'rename':
+            openRenameModal(selectedItem);
             break;
         case 'trash':
             handleMoveToTrash(selectedItem);
@@ -703,6 +748,12 @@ export interface BreadcrumbItem {
         handleEmptyTrash,
         navigateInMoveModal,
         confirmMove,
+        showRenameModal,
+        setShowRenameModal,
+        itemToRename,
+        newName,
+        setNewName,
+        handleRename,
         createShareLink,
         copyShareLink,
         showItemOptions,

@@ -48,6 +48,7 @@ export interface Dossier {
   idDossierParent: number | null;
   cheminDaccesDossier: string;
   status?: string;
+  modifieLe?: string;
 }
 
 export interface Fichier {
@@ -92,9 +93,15 @@ export const dossierApi = {
   createDossier: (data: { cheminDaccesDossier: string; idDossierParent?: number }) =>
     apiClient.post<Dossier>(API_ENDPOINTS.DOSSIERS, data),
 
+  renameDossier: (idDossier: number, data: { cheminDaccesDossier: string }) =>
+    apiClient.put(`${API_ENDPOINTS.DOSSIERS}/${idDossier}`, data),
+
   deleteDossier: (id: number) =>
     apiClient.delete(`${API_ENDPOINTS.DOSSIERS}/${id}`),
   
+  renameFichier: (idDossier: number, nomFichier: string, data: { nouveauNom: string }) =>
+    apiClient.put(`/api/dossiers/${idDossier}/fichiers/${encodeFileName(nomFichier)}/renommer`, data),
+
   deleteFichier: (idDossier: number, nomFichier: string) =>
     apiClient.delete(`/api/dossiers/${idDossier}/fichiers/${encodeFileName(nomFichier)}`),
 

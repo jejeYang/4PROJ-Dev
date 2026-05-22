@@ -2,25 +2,15 @@ Front :
 - Ajouter des commentaires propres
 
 Mobile :
-# Modifier affichage pour fixer le header en haut (flex)
-
 # Connexion :
 - Connexion via google
 
-# Dashboard :
-- Renommages de dossier & fichier
-- Voir date de modification
 ## Selection multiple :
 	- Suppression multiple
 	- Téléchargement multiple
 	- Déplacement multiple
 ## Partage :
 	- Choisir de partager à un utilisateur ou un invité
-
-# Partage & collaboration :
-- Tout faire :
-- Ajouter page de partage
-- Ajouter page de lien
 
 # Recherche & filtres :
 - Tout faire

@@ -61,6 +61,12 @@ export default function DocumentsScreen({ navigation, route }: any) {
     showItemOptions,
     handleOptionPress,
     formatFileSize,
+    showRenameModal,
+    setShowRenameModal,
+    newName,
+    setNewName,
+    handleRename,
+    itemToRename,
   } = useDocuments(navigation, route);
 
   // Fonction pour déterminer l'icône à afficher selon le type de fichier
@@ -77,6 +83,17 @@ export default function DocumentsScreen({ navigation, route }: any) {
     if (extension && videoExtensions.includes(extension)) return require('../assets/referencement-video.png');
     if (extension && audioExtensions.includes(extension)) return require('../assets/fichier-audio.png');
     return require('../assets/lien.png');
+  };
+
+  // Fonction pour obtenir la date de modification à afficher
+  const getModificationDate = (item: DisplayItem) => {
+    let dateStr = '';
+    if (item.type === 'folder' && item.dossier?.modifieLe) {
+      dateStr = item.dossier.modifieLe;
+    } else if (item.type === 'file' && item.fichier?.dateModification) {
+      dateStr = item.fichier.dateModification;
+    }
+    return dateStr ? new Date(dateStr).toLocaleDateString('fr-FR') : '';
   };
 
   // Affiche le fil d'ariane
@@ -129,11 +146,18 @@ export default function DocumentsScreen({ navigation, route }: any) {
           <Text style={[styles.fileName, { color: theme.textColor }]} numberOfLines={1}>
             {item.name}
           </Text>
-          {item.size && (
-            <Text style={[styles.fileSize, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
-              {formatFileSize(item.size)}
-            </Text>
-          )}
+          <View style={styles.fileDetails}>
+            {item.size !== undefined && (
+              <Text style={[styles.fileSize, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
+                {formatFileSize(item.size)}
+              </Text>
+            )}
+            {getModificationDate(item) !== '' && (
+              <Text style={[styles.fileDate, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
+                {item.size !== undefined ? ' • ' : ''}Modifié le {getModificationDate(item)}
+              </Text>
+            )}
+          </View>
         </View>
       </TouchableOpacity>
       
@@ -247,6 +271,31 @@ export default function DocumentsScreen({ navigation, route }: any) {
               </TouchableOpacity>
               <TouchableOpacity style={[styles.modalButton, { backgroundColor: theme.primaryColor }]} onPress={handleCreateFolder}>
                 <Text style={styles.modalButtonText}>Créer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de renommage */}
+      <Modal visible={showRenameModal} transparent animationType="slide" onRequestClose={() => setShowRenameModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.backgroundColor }]}>
+            <Text style={[styles.modalTitle, { color: theme.textColor }]}>Renommer</Text>
+            <TextInput
+              style={[styles.modalInput, { backgroundColor: theme.isDark ? '#2C2C2E' : '#F2F2F7', color: theme.textColor }]}
+              placeholder="Nouveau nom"
+              placeholderTextColor={theme.isDark ? '#8E8E93' : '#6C6C70'}
+              value={newName}
+              onChangeText={setNewName}
+              autoFocus
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={[styles.modalButton, styles.cancelButton]} onPress={() => { setShowRenameModal(false); setNewName(''); }}>
+                <Text style={styles.cancelButtonText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalButton, { backgroundColor: theme.primaryColor }]} onPress={handleRename}>
+                <Text style={styles.modalButtonText}>Renommer</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -373,6 +422,10 @@ export default function DocumentsScreen({ navigation, route }: any) {
                           <Text style={[styles.optionText, { color: theme.textColor }]}>Télécharger en ZIP</Text>
                         </TouchableOpacity>
                       )}
+                      <TouchableOpacity style={[styles.optionItem, { borderBottomColor: theme.isDark ? '#2C2C2E' : '#E5E5EA' }]} onPress={() => handleOptionPress('rename')}>
+                        <Image source={require('../assets/galerie.png')} style={styles.optionIconImage} />
+                        <Text style={[styles.optionText, { color: theme.textColor }]}>Renommer</Text>
+                      </TouchableOpacity>
                       <TouchableOpacity style={[styles.optionItem, { borderBottomColor: theme.isDark ? '#2C2C2E' : '#E5E5EA' }]} onPress={() => handleOptionPress('move')}>
                         <Image source={require('../assets/deplacer-le-fichier.png')} style={styles.optionIconImage} />
                         <Text style={[styles.optionText, { color: theme.textColor }]}>Déplacer</Text>
