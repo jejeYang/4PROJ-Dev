@@ -12,6 +12,8 @@ import DashboardScreen from '../screens/DashboardScreen';
 import DocumentsScreen from '../screens/DocumentsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import UploadScreen from '../screens/UploadScreen';
+import ShareScreen from '../screens/ShareScreen';
+import ConditionsScreen from '../screens/ConditionsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -105,9 +107,19 @@ export default function AppNavigator() {
               options={{ title: 'Uploader des fichiers' }}
             />
             <Stack.Screen 
+              name="Share" 
+              component={ShareScreen}
+              options={{ title: 'Partages' }}
+            />
+            <Stack.Screen 
               name="Profile" 
               component={ProfileScreen}
               options={{ title: 'Mon profil' }}
+            />
+            <Stack.Screen
+              name="Conditions"
+              component={ConditionsScreen}
+              options={{ title: "Conditions d'utilisation" }}
             />
           </>
         ) : (
@@ -121,6 +133,11 @@ export default function AppNavigator() {
               name="Register" 
               component={RegisterScreen}
               options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="Conditions"
+              component={ConditionsScreen}
+              options={{ title: "Conditions d'utilisation" }}
             />
           </>
         )}

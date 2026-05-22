@@ -1,15 +1,31 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
-import { useAuth } from '../context/AuthContext';
+import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { useMobileTheme } from '../context/MobileThemeContext';
+import { useDashboard } from '../hooks/useDashboard';
+import { styles } from '../styles/DashboardScreen.styles';
+import Footer from '../components/Footer';
 
 export default function DashboardScreen({ navigation }: any) {
-  const { user } = useAuth();
+  // Récupère hooks et thème
+  const { 
+    user, 
+    storageStats, 
+    fileTypeStats, 
+    isLoadingStats, 
+    MAX_STORAGE, 
+    navigateToDocuments, 
+    navigateToUpload, 
+    navigateToShare, 
+    formatBytes, 
+    getBarColor 
+  } = useDashboard(navigation);
   const { theme } = useMobileTheme();
 
+  // Affichage du tableau de bord
   return (
-    <ScrollView style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
-      <View style={styles.content}>
+    <View style={[{ flex: 1, backgroundColor: theme.backgroundColor }]}>
+      <ScrollView style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
+        <View style={styles.content}>
         <Text style={[styles.title, { color: theme.textColor }]}>
           Bienvenue, {user?.nom} !
         </Text>
@@ -20,7 +36,7 @@ export default function DashboardScreen({ navigation }: any) {
         <View style={styles.quickActions}>
           <TouchableOpacity
             style={[styles.actionCard, { backgroundColor: theme.isDark ? '#2C2C2E' : '#FFFFFF' }]}
-            onPress={() => navigation.navigate('Documents')}
+            onPress={navigateToDocuments}
           >
             <Image source={require('../assets/espace-dossier.png')} style={styles.cardIconImage} />
             <Text style={[styles.cardTitle, { color: theme.textColor }]}>Mon Espace</Text>
@@ -31,7 +47,7 @@ export default function DashboardScreen({ navigation }: any) {
 
           <TouchableOpacity
             style={[styles.actionCard, styles.primaryCard, { backgroundColor: theme.primaryColor }]}
-            onPress={() => navigation.navigate('Upload')}
+            onPress={navigateToUpload}
           >
             <Image source={require('../assets/uploader-des-fichiers.png')} style={[styles.cardIconImage]} />
             <Text style={[styles.cardTitle, { color: '#FFFFFF' }]}>Uploader</Text>
@@ -39,60 +55,87 @@ export default function DashboardScreen({ navigation }: any) {
               Ajouter des fichiers
             </Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionCard, { backgroundColor: theme.isDark ? '#2C2C2E' : '#FFFFFF' }]}
+            onPress={navigateToShare}
+          >
+            <Text style={styles.cardIcon}>🔗</Text>
+            <Text style={[styles.cardTitle, { color: theme.textColor }]}>Partages</Text>
+            <Text style={[styles.cardDescription, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
+              Gérer mes partages
+            </Text>
+          </TouchableOpacity>
         </View>
+
+        {/* stockage */}
+        {isLoadingStats ? (
+          <View style={[styles.storageCard, { backgroundColor: theme.isDark ? '#2C2C2E' : '#FFFFFF' }]}>
+            <ActivityIndicator size="small" color={theme.primaryColor} />
+          </View>
+        ) : storageStats ? (
+          <View style={[styles.storageCard, { backgroundColor: theme.isDark ? '#2C2C2E' : '#FFFFFF' }]}>
+            <View style={styles.storageHeader}>
+              <Text style={[styles.storageTitle, { color: theme.textColor }]}>💾 Stockage</Text>
+              <Text style={[styles.storagePercentage, { color: theme.primaryColor }]}>
+                {Math.round((storageStats.utilise / MAX_STORAGE) * 100)}%
+              </Text>
+            </View>
+            <View style={[styles.storageBar, { backgroundColor: theme.isDark ? '#1C1C1E' : '#E5E5EA' }]}>
+              <View 
+                style={[
+                  styles.storageBarFill, 
+                  { 
+                    backgroundColor: theme.primaryColor,
+                    width: `${Math.min((storageStats.utilise / MAX_STORAGE) * 100, 100)}%`
+                  }
+                ]} 
+              />
+            </View>
+            <Text style={[styles.storageText, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
+              {formatBytes(storageStats.utilise)} utilisé sur {formatBytes(MAX_STORAGE)}
+            </Text>
+          </View>
+        ) : null}
+
+        {/* répartition des fichiers */}
+        {!isLoadingStats && fileTypeStats.length > 0 && (
+          <View style={[styles.distributionCard, { backgroundColor: theme.isDark ? '#2C2C2E' : '#FFFFFF' }]}>
+            <Text style={[styles.distributionTitle, { color: theme.textColor }]}>📊 Répartition des fichiers</Text>
+            {fileTypeStats.map((item, index) => {
+              const totalFiles = fileTypeStats.reduce((sum, t) => sum + t.count, 0);
+              const percentage = (item.count / totalFiles) * 100;
+              
+              return (
+                <View key={item.type} style={styles.distributionItem}>
+                  <View style={styles.distributionHeader}>
+                    <View style={styles.distributionLabel}>
+                      <Text style={styles.distributionEmoji}>{item.emoji}</Text>
+                      <Text style={[styles.distributionType, { color: theme.textColor }]}>{item.label}</Text>
+                    </View>
+                    <Text style={[styles.distributionCount, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
+                      {item.count} fichier{item.count > 1 ? 's' : ''}
+                    </Text>
+                  </View>
+                  <View style={[styles.distributionBar, { backgroundColor: theme.isDark ? '#1C1C1E' : '#E5E5EA' }]}>
+                    <View 
+                      style={[
+                        styles.distributionBarFill, 
+                        { 
+                          backgroundColor: getBarColor(index),
+                          width: `${percentage}%`
+                        }
+                      ]} 
+                    />
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        )}
       </View>
     </ScrollView>
+    <Footer />
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    padding: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    marginBottom: 30,
-  },
-  quickActions: {
-    gap: 16,
-  },
-  actionCard: {
-    padding: 24,
-    borderRadius: 12,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  primaryCard: {
-    shadowColor: '#007AFF',
-    shadowOpacity: 0.3,
-  },
-  cardIcon: {
-    fontSize: 40,
-    marginBottom: 12,
-  },
-  cardIconImage: {
-    width: 40,
-    height: 40,
-    marginBottom: 12,
-  },
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 6,
-  },
-  cardDescription: {
-    fontSize: 14,
-  },
-});

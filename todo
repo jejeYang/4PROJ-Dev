@@ -1,39 +1,19 @@
 General :
-- Le Docker doit également lancer le mobile
 - Modifier le message du Docker (lien expo mobile / qr code + lien front app)
 
 Front :
 - Ajouter des commentaires propres
-- Bouton télécharger un dossier
-- Enlever colonne date de création (vérifier que le responsive n'est pas affecté !)
-
-Back :
-- Restaurer un élement doit le remettre dans le dossier dans lequel il était plutôt qu'à la racine
-- Récupérer la date de création d'un fichier
-- Gestion date d'expiration des liens
-- Vérification de la compléxité du mot de passe lors de sa création
+- Créer hooks pour Login, Register & Upload
 
 Mobile :
-# Séparer les fonctions et le css du return
-
 # Modifier affichage pour fixer le header en haut (flex)
 
 # Connexion :
 - Connexion via google
 
 # Page d'accueil :
-- Bouton page partage
-- Etat du stockage
-- Repartition
 - Fichiers récents
 - Dossiers récents
-
-# Paramètres :
-- Pouvoir modifier l'image de profile
-## Suppression de compte :
-	- Bouton ne fonctionne pas
-	- Doit demander le mot de passe
-## Changer de mot de passe ne fonctionne pas
 
 # Dashboard :
 - Renommage de dossier

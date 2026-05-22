@@ -49,7 +49,7 @@ Le projet propose une plateforme complète avec une application web, une API RES
 - Expiration automatique des liens publics.
 - Documentation API interactive avec Swagger UI.
 - Interface web responsive.
-- Application mobile Expo pour Android, iOS et web.
+- Application mobile Expo pour Mobile et web.
 
 ## Diagramme de cas d'utilisation
 
