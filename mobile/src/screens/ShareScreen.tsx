@@ -1,149 +1,38 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   RefreshControl,
 } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect } from '@react-navigation/native';
-import { useAuth } from '../context/AuthContext';
 import { useMobileTheme } from '../context/MobileThemeContext';
-import { apiClient } from '../api/client';
-import { API_BASE_URL } from '../config';
-
-interface PartageRecu {
-  idDossier: number;
-  cheminDaccesDossier: string;
-  emailContact: string;
-  dateCreation: string;
-}
-
-interface PartageEnvoye {
-  idDossier: number;
-  cheminDaccesDossier: string;
-  emailContact: string;
-  dateCreation: string;
-}
-
-interface LienPublic {
-  idLien: number;
-  nom: string;
-  type: string;
-  url: string;
-  protege: boolean;
-  dateExpiration: string | null;
-  createdAt: string;
-}
+import { useShare } from '../hooks/useShare';
+import { styles } from '../styles/ShareScreen.styles';
 
 export default function ShareScreen({ navigation }: any) {
-  const { user } = useAuth();
   const { theme } = useMobileTheme();
-
-  const [partagesRecus, setPartagesRecus] = useState<PartageRecu[]>([]);
-  const [partagesEnvoyes, setPartagesEnvoyes] = useState<PartageEnvoye[]>([]);
-  const [liensPublics, setLiensPublics] = useState<LienPublic[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const fetchAllPartages = useCallback(async () => {
-    try {
-      const [resRecus, resEnvoyes, resLiens] = await Promise.all([
-        apiClient.get<PartageRecu[]>('/api/partage/recus'),
-        apiClient.get<PartageEnvoye[]>('/api/partage/envoyes'),
-        apiClient.get<LienPublic[]>('/api/partage/mes-liens'),
-      ]);
-
-      setPartagesRecus(resRecus);
-      setPartagesEnvoyes(resEnvoyes);
-      setLiensPublics(resLiens);
-    } catch (error: any) {
-      console.error('Erreur lors de la récupération des partages:', error);
-      Alert.alert('Erreur', 'Impossible de charger les partages');
-    } finally {
-      setIsLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+  const {
+    partagesRecus,
+    partagesEnvoyes,
+    liensPublics,
+    isLoading,
+    refreshing,
+    fetchAllPartages,
+    onRefresh,
+    supprimerLienPublic,
+    resilierPartageInterne,
+    allerVersDossier,
+    copierLien,
+  } = useShare(navigation);
 
   useFocusEffect(
     useCallback(() => {
       fetchAllPartages();
     }, [fetchAllPartages])
   );
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchAllPartages();
-  };
-
-  const supprimerLienPublic = async (idLien: number) => {
-    Alert.alert(
-      'Supprimer le lien',
-      'Êtes-vous sûr de vouloir supprimer ce lien de partage ?',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Supprimer',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await apiClient.delete(`/api/partage/lien/${idLien}`);
-              setLiensPublics(prev => prev.filter(l => l.idLien !== idLien));
-              Alert.alert('Succès', 'Lien supprimé avec succès');
-            } catch (error: any) {
-              Alert.alert('Erreur', 'Impossible de supprimer le lien');
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const resilierPartageInterne = async (idDossier: number, type: 'recu' | 'envoye') => {
-    const message = type === 'envoye' 
-      ? 'Cela supprimera l\'accès pour tous les participants. Confirmer ?'
-      : 'Voulez-vous quitter ce partage ?';
-    
-    Alert.alert(
-      type === 'envoye' ? 'Révoquer le partage' : 'Quitter le partage',
-      message,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: type === 'envoye' ? 'Révoquer' : 'Quitter',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await apiClient.delete(`/api/partage/interne/${idDossier}`);
-              fetchAllPartages();
-              Alert.alert('Succès', 'Partage révoqué avec succès');
-            } catch (error: any) {
-              Alert.alert('Erreur', 'Impossible de révoquer le partage');
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const allerVersDossier = (idDossier: number) => {
-    navigation.navigate('Documents', { folderId: idDossier });
-  };
-
-  const copierLien = async (url: string) => {
-    try {
-      const fullUrl = `${API_BASE_URL}${url}`;
-      await Clipboard.setStringAsync(fullUrl);
-      Alert.alert('Succès', 'Lien copié dans le presse-papier !');
-    } catch (error) {
-      Alert.alert('Erreur', 'Impossible de copier le lien');
-    }
-  };
 
   if (isLoading) {
     return (
@@ -311,113 +200,3 @@ export default function ShareScreen({ navigation }: any) {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  centered: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  content: {
-    padding: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    marginBottom: 30,
-  },
-  section: {
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  sectionHeader: {
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  sectionSubtitle: {
-    fontSize: 14,
-  },
-  emptyText: {
-    fontSize: 14,
-    textAlign: 'center',
-    paddingVertical: 20,
-  },
-  item: {
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-  },
-  itemMain: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  itemIcon: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  itemInfo: {
-    flex: 1,
-  },
-  itemTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  itemTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  itemSubtext: {
-    fontSize: 14,
-    marginBottom: 2,
-  },
-  itemDate: {
-    fontSize: 12,
-  },
-  copyHint: {
-    fontSize: 12,
-    marginTop: 6,
-    fontStyle: 'italic',
-  },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  badgeText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  dangerButton: {
-    backgroundColor: '#FF3B30',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
-  },
-  dangerButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-});

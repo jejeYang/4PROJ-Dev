@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -8,79 +8,30 @@ import {
   Platform,
   Image,
   Modal,
-  Alert,
 } from 'react-native';
 import { useMobileTheme } from '../context/MobileThemeContext';
 import { useLogin } from '../hooks/useLogin';
-import { lienApi } from '../api/api';
 import { styles } from '../styles/LoginScreen.styles';
 
 export default function LoginScreen({ navigation }: any) {
-  // États locaux pour la modal de lien public
-  const [showGuestLinkModal, setShowGuestLinkModal] = useState(false);
-  const [guestLinkInput, setGuestLinkInput] = useState('');
-  const [guestPassword, setGuestPassword] = useState('');
-  const [isAccessingLink, setIsAccessingLink] = useState(false);
-  
-  // Récupère hooks et thème
+  const { theme } = useMobileTheme();
   const { 
     email, 
     setEmail, 
     password, 
     setPassword, 
     isLoading, 
-    handleLogin 
-  } = useLogin();
-  const { theme } = useMobileTheme();
-
-  // Fonction pour gérer l'accès au lien public
-  const handleGuestLinkAccess = async () => {
-    if (!guestLinkInput.trim()) {
-      Alert.alert('Erreur', 'Veuillez entrer un lien ou un code');
-      return;
-    }
-
-    if (!guestPassword.trim()) {
-      Alert.alert('Erreur', 'Veuillez entrer le mot de passe');
-      return;
-    }
-
-    // Extraire le token du lien complet si nécessaire
-    const token = guestLinkInput.includes('/liens/') 
-      ? guestLinkInput.split('/liens/').pop()?.split('?')[0]
-      : guestLinkInput.trim();
-    
-    if (!token) {
-      Alert.alert('Erreur', 'Lien invalide');
-      return;
-    }
-
-    try {
-      setIsAccessingLink(true);
-      const linkDetails = await lienApi.getLinkDetails(token, guestPassword);
-      
-      // Fermer la modal et réinitialiser les champs
-      setShowGuestLinkModal(false);
-      setGuestLinkInput('');
-      setGuestPassword('');
-      
-      // Navigation vers l'écran du lien partagé
-      navigation.navigate('LinkScreen', { 
-        token, 
-        password: guestPassword,
-        linkDetails 
-      });
-    } catch (error: any) {
-      Alert.alert(
-        'Erreur', 
-        error.response?.data?.error || 'Impossible d\'accéder au lien. Vérifiez le lien et le mot de passe.'
-      );
-    } finally {
-      setIsAccessingLink(false);
-    }
-  };
-
-  // Affichage du formulaire de connexion
+    handleLogin,
+    showGuestLinkModal,
+    guestLinkInput,
+    setGuestLinkInput,
+    guestPassword,
+    setGuestPassword,
+    isAccessingLink,
+    openGuestLinkModal,
+    closeGuestLinkModal,
+    handleGuestLinkAccess,
+  } = useLogin(navigation);
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -141,7 +92,7 @@ export default function LoginScreen({ navigation }: any) {
 
         <TouchableOpacity
           style={[styles.linkButton, { marginTop: 10 }]}
-          onPress={() => setShowGuestLinkModal(true)}
+          onPress={openGuestLinkModal}
         >
           <Text style={[styles.linkText, { color: theme.primaryColor }]}>
             Vous avez un lien ? Accéder à votre lien public
@@ -153,7 +104,7 @@ export default function LoginScreen({ navigation }: any) {
           visible={showGuestLinkModal}
           transparent
           animationType="slide"
-          onRequestClose={() => setShowGuestLinkModal(false)}
+          onRequestClose={closeGuestLinkModal}
         >
           <View style={styles.modalOverlay}>
             <View style={[styles.modalContent, { backgroundColor: theme.backgroundColor }]}>
@@ -191,11 +142,7 @@ export default function LoginScreen({ navigation }: any) {
               <View style={styles.modalButtons}>
                 <TouchableOpacity
                   style={[styles.modalButton, styles.cancelButton]}
-                  onPress={() => {
-                    setShowGuestLinkModal(false);
-                    setGuestLinkInput('');
-                    setGuestPassword('');
-                  }}
+                  onPress={closeGuestLinkModal}
                   disabled={isAccessingLink}
                 >
                   <Text style={styles.cancelButtonText}>Annuler</Text>
