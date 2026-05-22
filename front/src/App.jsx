@@ -19,7 +19,13 @@ axios.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+            // Ignorer si on est sur un lien de partage de fichiers
             if (window.location.pathname.startsWith('/liens/')) {
+                return Promise.reject(error);
+            }
+            
+            // AJOUT : Ignorer si on est déjà sur la page de connexion pour éviter la boucle de redirection
+            if (window.location.pathname === '/login') {
                 return Promise.reject(error);
             }
             

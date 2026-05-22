@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import '../styles/Login.css';
 
 function Login() {
+    const navigate = useNavigate();
     const [donneesFormulaire, setDonneesFormulaire] = useState({ email: '', mdp: '' });
     const [erreurConnexion, setErreurConnexion] = useState('');
     const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '60122681226-56ehoh7uj46u1ot03dlct24srh1j83p0.apps.googleusercontent.com';
@@ -21,7 +23,8 @@ function Login() {
             localStorage.setItem('token', reponse.data.token);
             localStorage.setItem('user', JSON.stringify(reponse.data.utilisateur));
             
-            globalThis.location.href = '/';
+            window.dispatchEvent(new Event('profilMisAJour'));
+            navigate('/dashboard');
         } catch (error_) {
             setErreurConnexion(error_.response?.data?.message || 'Erreur de connexion au serveur');
         }
@@ -37,7 +40,8 @@ function Login() {
             localStorage.setItem('token', reponse.data.token);
             localStorage.setItem('user', JSON.stringify(reponse.data.utilisateur));
 
-            globalThis.location.href = '/';
+            window.dispatchEvent(new Event('profilMisAJour'));
+            navigate('/dashboard');
         } catch (error_) {
             setErreurConnexion(error_.response?.data?.message || 'Erreur de connexion Google');
         }

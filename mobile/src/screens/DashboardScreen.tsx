@@ -1,86 +1,26 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
-import { useAuth } from '../context/AuthContext';
+import React from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { useMobileTheme } from '../context/MobileThemeContext';
-import { apiClient } from '../api/client';
-import { getFileType, getFileTypeEmoji, getFileTypeLabel } from '../utils/fileUtils';
-
-interface StorageStats {
-  utilise: number;
-  total: number;
-}
-
-interface FileTypeStats {
-  type: string;
-  count: number;
-  emoji: string;
-  label: string;
-}
+import { useDashboard } from '../hooks/useDashboard';
+import { styles } from '../styles/DashboardScreen.styles';
 
 export default function DashboardScreen({ navigation }: any) {
-  const { user } = useAuth();
+  // Récupère hooks et thème
+  const { 
+    user, 
+    storageStats, 
+    fileTypeStats, 
+    isLoadingStats, 
+    MAX_STORAGE, 
+    navigateToDocuments, 
+    navigateToUpload, 
+    navigateToShare, 
+    formatBytes, 
+    getBarColor 
+  } = useDashboard(navigation);
   const { theme } = useMobileTheme();
-  
-  const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
-  const [fileTypeStats, setFileTypeStats] = useState<FileTypeStats[]>([]);
-  const [isLoadingStats, setIsLoadingStats] = useState(true);
 
-  const MAX_STORAGE = 30 * 1024 * 1024 * 1024; // 30 GB
-
-  const formatBytes = (bytes: number): string => {
-    if (bytes === 0) return '0 octets';
-    const k = 1024;
-    const sizes = ['octets', 'Ko', 'Mo', 'Go', 'To'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
-  };
-
-  const fetchStorageStats = useCallback(async () => {
-    try {
-      const response = await apiClient.get<{ 
-        stockage: StorageStats; 
-        tousLesFichiers: string[];
-      }>('/api/dossiers/stats/home');
-      
-      setStorageStats(response.stockage);
-      
-      // Calculer la répartition des types de fichiers
-      const typeCounts: { [key: string]: number } = {};
-      response.tousLesFichiers.forEach((fileName: string) => {
-        const type = getFileType(fileName);
-        typeCounts[type] = (typeCounts[type] || 0) + 1;
-      });
-      
-      // Convertir en tableau et trier par nombre
-      const fileTypes = Object.keys(typeCounts)
-        .map(type => ({
-          type,
-          count: typeCounts[type],
-          emoji: getFileTypeEmoji(type),
-          label: getFileTypeLabel(type)
-        }))
-        .sort((a, b) => b.count - a.count);
-      
-      setFileTypeStats(fileTypes);
-    } catch (error) {
-      console.error('Erreur lors de la récupération des stats:', error);
-    } finally {
-      setIsLoadingStats(false);
-    }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchStorageStats();
-    }, [fetchStorageStats])
-  );
-
-  const getBarColor = (index: number): string => {
-    const colors = ['#06BCC1', '#474973', '#4ae61f', '#6a166f', '#f48d25', '#FF6B6B', '#4ECDC4'];
-    return colors[index % colors.length];
-  };
-
+  // Affichage du tableau de bord
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
       <View style={styles.content}>
@@ -94,7 +34,7 @@ export default function DashboardScreen({ navigation }: any) {
         <View style={styles.quickActions}>
           <TouchableOpacity
             style={[styles.actionCard, { backgroundColor: theme.isDark ? '#2C2C2E' : '#FFFFFF' }]}
-            onPress={() => navigation.navigate('Documents')}
+            onPress={navigateToDocuments}
           >
             <Image source={require('../assets/espace-dossier.png')} style={styles.cardIconImage} />
             <Text style={[styles.cardTitle, { color: theme.textColor }]}>Mon Espace</Text>
@@ -105,7 +45,7 @@ export default function DashboardScreen({ navigation }: any) {
 
           <TouchableOpacity
             style={[styles.actionCard, styles.primaryCard, { backgroundColor: theme.primaryColor }]}
-            onPress={() => navigation.navigate('Upload')}
+            onPress={navigateToUpload}
           >
             <Image source={require('../assets/uploader-des-fichiers.png')} style={[styles.cardIconImage]} />
             <Text style={[styles.cardTitle, { color: '#FFFFFF' }]}>Uploader</Text>
@@ -116,7 +56,7 @@ export default function DashboardScreen({ navigation }: any) {
 
           <TouchableOpacity
             style={[styles.actionCard, { backgroundColor: theme.isDark ? '#2C2C2E' : '#FFFFFF' }]}
-            onPress={() => navigation.navigate('Share')}
+            onPress={navigateToShare}
           >
             <Text style={styles.cardIcon}>🔗</Text>
             <Text style={[styles.cardTitle, { color: theme.textColor }]}>Partages</Text>
@@ -195,140 +135,3 @@ export default function DashboardScreen({ navigation }: any) {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    padding: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    marginBottom: 20,
-  },
-  storageCard: {
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  storageHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  storageTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  storagePercentage: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  storageBar: {
-    height: 8,
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginBottom: 8,
-  },
-  storageBarFill: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  storageText: {
-    fontSize: 14,
-  },
-  distributionCard: {
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  distributionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 16,
-  },
-  distributionItem: {
-    marginBottom: 16,
-  },
-  distributionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  distributionLabel: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  distributionEmoji: {
-    fontSize: 20,
-    marginRight: 8,
-  },
-  distributionType: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  distributionCount: {
-    fontSize: 14,
-  },
-  distributionBar: {
-    height: 6,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  distributionBarFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  quickActions: {
-    gap: 16,
-  },
-  actionCard: {
-    padding: 24,
-    borderRadius: 12,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  primaryCard: {
-    shadowColor: '#007AFF',
-    shadowOpacity: 0.3,
-  },
-  cardIcon: {
-    fontSize: 40,
-    marginBottom: 12,
-  },
-  cardIconImage: {
-    width: 40,
-    height: 40,
-    marginBottom: 12,
-  },
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 6,
-  },
-  cardDescription: {
-    fontSize: 14,
-  },
-});
