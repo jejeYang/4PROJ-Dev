@@ -157,9 +157,7 @@ function Dashboard() {
             {error && !ouvre_modal.type && !formulaire_partage_ouvert && (
                 <div className="page-liste-erreur-globale">
                     <span>{error}</span>
-                    <button className="btn-fermer-erreur" onClick={() => setError('')} title="Fermer">
-                        <X size={18} />
-                    </button>
+                    <button className="btn-fermer-erreur" onClick={() => setError('')} title="Fermer">✕</button>
                 </div>
             )}
 
@@ -242,9 +240,7 @@ function Dashboard() {
                                         <span className="modal-lien-ariane" onClick={() => naviguerDeplacement(null)}>Mon Espace</span>
                                         {chemin_deplacement.map((dossier, index) => (
                                             <React.Fragment key={dossier.idDossier}>
-                                                <span className="separateur">
-                                                    <ChevronRight size={14} />
-                                                </span>
+                                                <span className="separateur">›</span>
                                                 <span className="modal-lien-ariane" onClick={() => naviguerDeplacement(dossier, index)}>
                                                     {dossier.cheminDaccesDossier}
                                                 </span>
@@ -494,7 +490,6 @@ function Dashboard() {
                             }
                             onClick={() => setModalRechercheOuverte(true)}
                         >
-                            <Search size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
                             Rechercher
                         </button>
                     )}
@@ -574,6 +569,9 @@ function Dashboard() {
                             <div className="col-extension tri" onClick={() => demanderTri('extension')}>
                                 Extension {tri_config.cle === 'extension' && (tri_config.direction === 'asc' ? '↑' : '↓')}
                             </div>
+                            <div className="col-date tri" onClick={() => demanderTri('dateCreation')}>
+                                Créé le {tri_config.cle === 'dateCreation' && (tri_config.direction === 'asc' ? '↑' : '↓')}
+                            </div>
                             <div className="col-date tri" onClick={() => demanderTri('modifieLe')}>
                                 Modifié le {tri_config.cle === 'modifieLe' && (tri_config.direction === 'asc' ? '↑' : '↓')}
                             </div>
@@ -583,25 +581,15 @@ function Dashboard() {
                             <div className="col-actions">
                                 {selection.length > 0 && !estDansCorbeille && (
                                     <div className="actions-multiples">
-                                        <button className="action-icon-btn action-danger" onClick={ouvrirModalSuppressionMultiple} title="Supprimer la sélection">
-                                            <Trash2 size={16} />
-                                        </button>
-                                        <button className="action-icon-btn action-primary" onClick={telechargerSelection} title="Télécharger la sélection en ZIP">
-                                            <Download size={16} />
-                                        </button>
-                                        <button className="action-icon-btn action-primary" onClick={() => abrirModalDeplacement()} title="Déplacer la sélection">
-                                            <Move size={16} />
-                                        </button>
+                                        <button className="action-icon-btn action-danger" onClick={ouvrirModalSuppressionMultiple} title="Supprimer la sélection">🗑️</button>
+                                        <button className="action-icon-btn action-primary" onClick={telechargerSelection} title="Télécharger la sélection en ZIP">⬇️</button>
+                                        <button className="action-icon-btn action-primary" onClick={() => ouvrirModalDeplacement()} title="Déplacer la sélection">↪️</button>
                                     </div>
                                 )}
                                 {selection.length > 0 && estDansCorbeille && (
                                     <div className="actions-multiples">
-                                        <button className="action-icon-btn action-primary" onClick={ouvrirModalRestaurerMultiple} title="Restaurer la sélection">
-                                            <RefreshCw size={16} />
-                                        </button>
-                                        <button className="action-icon-btn action-danger" onClick={ouvrirModalSuppressionDefinitiveMultiple} title="Supprimer définitivement la sélection">
-                                            <X size={16} />
-                                        </button>
+                                        <button className="action-icon-btn action-primary" onClick={ouvrirModalRestaurerMultiple} title="Restaurer la sélection">♻️</button>
+                                        <button className="action-icon-btn action-danger" onClick={ouvrirModalSuppressionDefinitiveMultiple} title="Supprimer définitivement la sélection">❌</button>
                                     </div>
                                 )}
                             </div>
@@ -631,6 +619,7 @@ function Dashboard() {
                                     </span>
                                 </div>
                                 <div className="col-extension">dossier</div>
+                                <div className="col-date">{new Date(dossier.dateCreation).toLocaleDateString('fr-FR')}</div>
                                 <div className="col-date">{new Date(dossier.modifieLe).toLocaleDateString('fr-FR')}</div>
                                 <div className="col-taille">{taille_dossiers[dossier.idDossier] !== undefined ? formatFileSize(taille_dossiers[dossier.idDossier]) : '...'}</div>
                                 <div className="col-actions">
@@ -638,6 +627,9 @@ function Dashboard() {
                                         <div className="actions-rapides" onClick={(e) => e.stopPropagation()}>
                                             {!estDansCorbeille ? (
                                                 <>
+                                                    <button className="action-icon-btn" onClick={() => telechargerSelection([{ type: 'dossier', item: dossier }])} title="Télécharger ZIP">
+                                                        <Download size={14} />
+                                                    </button>
                                                     <button className="action-icon-btn" onClick={() => partagerRessource({ id_dossier: dossier.idDossier })} title="Partager">
                                                         <Share2 size={14} />
                                                     </button>
@@ -696,6 +688,7 @@ function Dashboard() {
                                         </span>
                                     </div>
                                     <div className="col-extension">{extension || 'fichier'}</div> 
+                                    <div className="col-date">{new Date(fichier.dateCreation).toLocaleDateString('fr-FR')}</div>
                                     <div className="col-date">{new Date(fichier.dateModification).toLocaleDateString('fr-FR')}</div>
                                     <div className="col-taille">{formatFileSize(fichier.taille)}</div>
                                     <div className="col-actions">

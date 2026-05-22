@@ -12,6 +12,11 @@ function Home() {
 
     if (chargement) return <div className="accueil-conteneur"><div className="accueil-chargement">Chargement...</div></div>;
 
+    const typesFichiersModifies = stats?.typesFichiers?.map(item => ({
+        ...item,
+        name: item.name === 'inconnu' ? 'autre' : item.name
+    })) || [];
+
     return (
         <div className="accueil-conteneur">
             {estAuthentifie && stats ? (
@@ -96,8 +101,8 @@ function Home() {
                             </div>
                             <ResponsiveContainer width="100%" height={200}>
                                 <RechartsPieChart>
-                                    <Pie data={stats.typesFichiers} outerRadius={80} dataKey="value" stroke="none">
-                                        {stats.typesFichiers.map((e, i) => <Cell key={i} fill={COULEURS[i % COULEURS.length]} />)}
+                                    <Pie data={typesFichiersModifies} outerRadius={80} dataKey="value" stroke="none">
+                                        {typesFichiersModifies.map((e, i) => <Cell key={i} fill={COULEURS[i % COULEURS.length]} />)}
                                     </Pie>
                                     <Tooltip />
                                 </RechartsPieChart>
