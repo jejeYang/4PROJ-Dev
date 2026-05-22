@@ -302,4 +302,45 @@ export const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
     },
+    modeToggleContainer: {
+        flexDirection: 'row',
+        marginBottom: 20,
+        borderRadius: 8,
+        overflow: 'hidden',
+    },
+    modeButton: {
+        flex: 1,
+        paddingVertical: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: '#8E8E93',
+    },
+    modeButtonText: {
+        fontSize: 15,
+        fontWeight: '600',
+    },
+    modalLabel: {
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    datePickerButton: {
+        padding: 15,
+        borderRadius: 8,
+        alignItems: 'center',
+    },
+    datePickerText: {
+        fontSize: 16,
+    },
+    datePickerOkButton: {
+        marginTop: 10,
+        padding: 12,
+        borderRadius: 8,
+        alignItems: 'center',
+    },
+    datePickerOkButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
+    },
 });

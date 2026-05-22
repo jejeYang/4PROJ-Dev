@@ -25,6 +25,7 @@ interface FileViewerProps {
   fileUrl: string;
   fileName: string;
   onClose: () => void;
+  isPublic?: boolean;
 }
 
 const { width, height } = Dimensions.get('window');
@@ -94,27 +95,21 @@ function PDFViewer({ localUri, fileName, theme }: { localUri: string | null; fil
   );
 }
 
-// Sous-composant pour audio - Version SDK 54 avec contrôles complets
 function AudioViewer({ localUri, fileName, theme }: { localUri: string | null; fileName: string; theme: any }) {
-  // State local pour forcer le re-render
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [currentTime, setCurrentTime] = React.useState(0);
   const [duration, setDuration] = React.useState(0);
   const [isSeeking, setIsSeeking] = React.useState(false);
   
-  // Créer un objet source avec useMemo pour éviter les re-renders inutiles
   const source = React.useMemo(() => {
     return localUri ? { uri: localUri } : null;
   }, [localUri]);
   
-  // Ne créer le player que si source existe
   const audioPlayer = useAudioPlayer(source as any);
-  
-  // Essayer de charger/préparer le fichier audio
+
   React.useEffect(() => {
     if (localUri && audioPlayer) {
       console.log('AudioViewer - Tentative de chargement du fichier');
-      // Essayer de déclencher le chargement en appelant play puis pause immédiatement
       setTimeout(() => {
         try {
           audioPlayer.play();
@@ -239,7 +234,7 @@ function AudioViewer({ localUri, fileName, theme }: { localUri: string | null; f
   );
 }
 
-export default function FileViewer({ visible, fileUrl, fileName, onClose }: FileViewerProps) {
+export default function FileViewer({ visible, fileUrl, fileName, onClose, isPublic = false }: FileViewerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [localUri, setLocalUri] = useState<string | null>(null);
@@ -281,11 +276,15 @@ export default function FileViewer({ visible, fileUrl, fileName, onClose }: File
       setIsLoading(true);
       setError(null);
 
-      const token = await AsyncStorage.getItem('@supfile_token');
-      if (!token) {
-        setError('Non authentifié');
-        setIsLoading(false);
-        return;
+      // si le fichier est partagé, on peut le télécharger directement sans token
+      let token = null;
+      if (!isPublic) {
+        token = await AsyncStorage.getItem('@supfile_token');
+        if (!token) {
+          setError('Non authentifié');
+          setIsLoading(false);
+          return;
+        }
       }
 
       // Nettoie le nom de fichier pour le système de fichiers local
@@ -299,18 +298,22 @@ export default function FileViewer({ visible, fileUrl, fileName, onClose }: File
         from: fileUrl,
         to: fileUri,
         fileName: fileName,
-        cleanFileName: cleanFileName
+        cleanFileName: cleanFileName,
+        isPublic: isPublic
       });
 
-      // Télécharger le fichier
+      // Télécharger le fichier avec ou sans authentification
+      const downloadOptions: any = {};
+      if (!isPublic && token) {
+        downloadOptions.headers = {
+          'Authorization': `Bearer ${token}`,
+        };
+      }
+
       const downloadResult = await FileSystem.downloadAsync(
         fileUrl,
         fileUri,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        }
+        downloadOptions
       );
 
       console.log('FileViewer - Résultat téléchargement:', downloadResult);

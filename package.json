@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/jejeYang/4PROJ-Dev#readme",
   "dependencies": {
+    "@react-native-community/datetimepicker": "^9.1.0",
     "lucide-react": "^1.16.0"
   }
 }

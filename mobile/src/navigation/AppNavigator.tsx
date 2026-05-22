@@ -14,6 +14,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import UploadScreen from '../screens/UploadScreen';
 import ShareScreen from '../screens/ShareScreen';
 import ConditionsScreen from '../screens/ConditionsScreen';
+import LinkScreen from '../screens/LinkScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -138,6 +139,11 @@ export default function AppNavigator() {
               name="Conditions"
               component={ConditionsScreen}
               options={{ title: "Conditions d'utilisation" }}
+            />
+            <Stack.Screen 
+              name="LinkScreen" 
+              component={LinkScreen}
+              options={{ headerShown: false }}
             />
           </>
         )}

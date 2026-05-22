@@ -7,6 +7,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  Modal,
 } from 'react-native';
 import { useMobileTheme } from '../context/MobileThemeContext';
 import { useLogin } from '../hooks/useLogin';
@@ -14,18 +15,24 @@ import { styles } from '../styles/LoginScreen.styles';
 import Footer from '../components/Footer';
 
 export default function LoginScreen({ navigation }: any) {
-  // Récupère hooks et thème
+  const { theme } = useMobileTheme();
   const { 
     email, 
     setEmail, 
     password, 
     setPassword, 
     isLoading, 
-    handleLogin 
-  } = useLogin();
-  const { theme } = useMobileTheme();
-
-  // Affichage du formulaire de connexion
+    handleLogin,
+    showGuestLinkModal,
+    guestLinkInput,
+    setGuestLinkInput,
+    guestPassword,
+    setGuestPassword,
+    isAccessingLink,
+    openGuestLinkModal,
+    closeGuestLinkModal,
+    handleGuestLinkAccess,
+  } = useLogin(navigation);
   return (
     <View style={[{ flex: 1, backgroundColor: theme.backgroundColor }]}>
       <KeyboardAvoidingView
@@ -84,8 +91,83 @@ export default function LoginScreen({ navigation }: any) {
               Pas encore de compte ? S'inscrire
             </Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.linkButton, { marginTop: 10 }]}
+            onPress={openGuestLinkModal}
+          >
+            <Text style={[styles.linkText, { color: theme.primaryColor }]}>
+              Vous avez un lien ? Accéder à votre lien public
+            </Text>
+          </TouchableOpacity>
+
+          {/* Modal pour entrer le lien public */}
+          <Modal
+            visible={showGuestLinkModal}
+            transparent
+            animationType="slide"
+            onRequestClose={closeGuestLinkModal}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={[styles.modalContent, { backgroundColor: theme.backgroundColor }]}>
+                <Text style={[styles.modalTitle, { color: theme.textColor }]}>
+                  Accès lien public
+                </Text>
+                <Text style={[styles.modalDescription, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
+                  Collez le lien de partage
+                </Text>
+                <TextInput
+                  style={[styles.input, { 
+                    backgroundColor: theme.isDark ? '#2C2C2E' : '#F2F2F7',
+                    color: theme.textColor,
+                    marginTop: 15
+                  }]}
+                  placeholder="Lien de partage"
+                  placeholderTextColor={theme.isDark ? '#8E8E93' : '#C7C7CC'}
+                  value={guestLinkInput}
+                  onChangeText={setGuestLinkInput}
+                  autoCapitalize="none"
+                  autoFocus
+                />
+                <TextInput
+                  style={[styles.input, { 
+                    backgroundColor: theme.isDark ? '#2C2C2E' : '#F2F2F7',
+                    color: theme.textColor,
+                    marginTop: 15
+                  }]}
+                  placeholder="Mot de passe"
+                  placeholderTextColor={theme.isDark ? '#8E8E93' : '#C7C7CC'}
+                  value={guestPassword}
+                  onChangeText={setGuestPassword}
+                  secureTextEntry
+                />
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.cancelButton]}
+                    onPress={closeGuestLinkModal}
+                    disabled={isAccessingLink}
+                  >
+                    <Text style={styles.cancelButtonText}>Annuler</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalButton, { 
+                      backgroundColor: theme.primaryColor,
+                      opacity: isAccessingLink ? 0.6 : 1
+                    }]}
+                    onPress={handleGuestLinkAccess}
+                    disabled={isAccessingLink}
+                  >
+                    <Text style={styles.buttonText}>
+                      {isAccessingLink ? 'Vérification...' : 'Accéder'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
         </View>
       </KeyboardAvoidingView>
+
       <Footer />
     </View>
   );

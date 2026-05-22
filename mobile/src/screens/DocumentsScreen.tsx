@@ -9,7 +9,9 @@ import {
   Modal,
   ScrollView,
   Image,
+  Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useMobileTheme } from '../context/MobileThemeContext';
 import FileViewer from '../components/FileViewer';
 import { useDocuments, DisplayItem } from '../hooks/useDocuments';
@@ -36,9 +38,18 @@ export default function DocumentsScreen({ navigation, route }: any) {
     showShareModal,
     setShowShareModal,
     itemToShare,
+    shareMode,
+    setShareMode,
     shareEmail,
     setShareEmail,
+    sharePassword,
+    setSharePassword,
+    expiryDate,
+    setExpiryDate,
+    showDatePicker,
+    setShowDatePicker,
     shareLink,
+    setShareLink,
     showOptionsModal,
     setShowOptionsModal,
     selectedItem,
@@ -56,7 +67,7 @@ export default function DocumentsScreen({ navigation, route }: any) {
     handleEmptyTrash,
     navigateInMoveModal,
     confirmMove,
-    createShareLink,
+    handleShare,
     copyShareLink,
     showItemOptions,
     handleOptionPress,
@@ -339,43 +350,195 @@ export default function DocumentsScreen({ navigation, route }: any) {
       </Modal>
 
       {/* Modal de création de lien de partage */}
-      <Modal visible={showShareModal} transparent animationType="slide" onRequestClose={() => setShowShareModal(false)}>
+      <Modal visible={showShareModal} transparent animationType="slide" onRequestClose={() => {
+        setShowShareModal(false);
+        setShareEmail('');
+        setSharePassword('');
+        setShowDatePicker(false);
+        setShareLink('');
+      }}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.backgroundColor }]}>
             <Text style={[styles.modalTitle, { color: theme.textColor }]}>Partager "{itemToShare?.name}"</Text>
+            
             {!shareLink ? (
               <>
-                <Text style={[styles.modalDescription, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>Entrez l'adresse email de la personne avec qui vous souhaitez partager</Text>
-                <TextInput style={[styles.modalInput, { backgroundColor: theme.isDark ? '#2C2C2E' : '#F2F2F7', color: theme.textColor }]} placeholder="email@example.com" placeholderTextColor={theme.isDark ? '#8E8E93' : '#6C6C70'} value={shareEmail} onChangeText={setShareEmail} keyboardType="email-address" autoCapitalize="none" autoFocus />
+                {/* Boutons de sélection du mode de partage */}
+                <View style={styles.modeToggleContainer}>
+                  <TouchableOpacity 
+                    style={[
+                      styles.modeButton, 
+                      shareMode === 'utilisateur' && { backgroundColor: theme.primaryColor }
+                    ]} 
+                    onPress={() => setShareMode('utilisateur')}
+                  >
+                    <Text style={[
+                      styles.modeButtonText, 
+                      shareMode === 'utilisateur' ? { color: '#fff' } : { color: theme.textColor }
+                    ]}>
+                      Utilisateur
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[
+                      styles.modeButton, 
+                      shareMode === 'invité' && { backgroundColor: theme.primaryColor }
+                    ]} 
+                    onPress={() => setShareMode('invité')}
+                  >
+                    <Text style={[
+                      styles.modeButtonText, 
+                      shareMode === 'invité' ? { color: '#fff' } : { color: theme.textColor }
+                    ]}>
+                      Lien invité
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Partage à un autre utilisateur */}
+                {shareMode === 'utilisateur' ? (
+                  <>
+                    <Text style={[styles.modalDescription, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
+                      Entrez l'adresse email de l'utilisateur
+                    </Text>
+                    <TextInput 
+                      style={[styles.modalInput, { 
+                        backgroundColor: theme.isDark ? '#2C2C2E' : '#F2F2F7', 
+                        color: theme.textColor 
+                      }]} 
+                      placeholder="email@example.com" 
+                      placeholderTextColor={theme.isDark ? '#8E8E93' : '#6C6C70'} 
+                      value={shareEmail} 
+                      onChangeText={setShareEmail} 
+                      keyboardType="email-address" 
+                      autoCapitalize="none" 
+                      autoFocus 
+                    />
+                  </>
+                ) : (
+                  <>
+                    {/* Partage à un invité */}
+                    <Text style={[styles.modalDescription, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
+                      Créez un lien public avec mot de passe
+                    </Text>
+                    <TextInput 
+                      style={[styles.modalInput, { 
+                        backgroundColor: theme.isDark ? '#2C2C2E' : '#F2F2F7', 
+                        color: theme.textColor 
+                      }]} 
+                      placeholder="Mot de passe" 
+                      placeholderTextColor={theme.isDark ? '#8E8E93' : '#6C6C70'} 
+                      value={sharePassword} 
+                      onChangeText={setSharePassword} 
+                      secureTextEntry 
+                      autoFocus 
+                    />
+                    
+                    <Text style={[styles.modalLabel, { color: theme.textColor, marginTop: 10, marginBottom: 8 }]}>
+                      Date d'expiration
+                    </Text>
+                    <TouchableOpacity 
+                      style={[styles.datePickerButton, { 
+                        backgroundColor: theme.isDark ? '#2C2C2E' : '#F2F2F7',
+                        marginBottom: 20
+                      }]}
+                      onPress={() => setShowDatePicker(true)}
+                    >
+                      <Text style={[styles.datePickerText, { color: theme.textColor }]}>
+                        {expiryDate.toLocaleDateString('fr-FR', { 
+                          day: '2-digit', 
+                          month: '2-digit', 
+                          year: 'numeric' 
+                        })}
+                      </Text>
+                    </TouchableOpacity>
+
+                    {showDatePicker && (
+                      <>
+                        <DateTimePicker
+                          value={expiryDate}
+                          mode="date"
+                          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                          onChange={(event, selectedDate) => {
+                            if (Platform.OS === 'android') {
+                              setShowDatePicker(false);
+                            }
+                            if (selectedDate) {
+                              setExpiryDate(selectedDate);
+                            }
+                          }}
+                          minimumDate={new Date()}
+                        />
+                        {Platform.OS === 'ios' && (
+                          <TouchableOpacity 
+                            style={[styles.datePickerOkButton, { backgroundColor: theme.primaryColor }]}
+                            onPress={() => setShowDatePicker(false)}
+                          >
+                            <Text style={styles.datePickerOkButtonText}>OK</Text>
+                          </TouchableOpacity>
+                        )}
+                      </>
+                    )}
+                  </>
+                )}
               </>
             ) : (
               <>
-                <Text style={[styles.modalDescription, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>Lien de partage créé :</Text>
+                <Text style={[styles.modalDescription, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
+                  Lien de partage créé :
+                </Text>
                 <View style={[styles.linkContainer, { backgroundColor: theme.isDark ? '#2C2C2E' : '#F2F2F7' }]}>
-                  <Text style={[styles.linkText, { color: theme.primaryColor }]} numberOfLines={2}>{shareLink}</Text>
+                  <Text style={[styles.linkText, { color: theme.primaryColor }]} numberOfLines={2}>
+                    {shareLink}
+                  </Text>
                 </View>
-                <TouchableOpacity style={[styles.modalButton, { backgroundColor: theme.primaryColor, marginTop: 10 }]} onPress={copyShareLink}>
-                  <View style={styles.modalButtonContent}>
-                    <Image source={require('../assets/copier-le-lien.png')} style={styles.modalButtonIcon} />
-                    <Text style={styles.modalButtonText}> Copier le lien</Text>
-                  </View>
-                </TouchableOpacity>
               </>
             )}
+
             <View style={styles.modalButtons}>
               {!shareLink ? (
                 <>
-                  <TouchableOpacity style={[styles.modalButton, styles.cancelButton]} onPress={() => { setShowShareModal(false); setShareEmail(''); }}>
+                  <TouchableOpacity 
+                    style={[styles.modalButton, styles.cancelButton]} 
+                    onPress={() => { 
+                      setShowShareModal(false); 
+                      setShareEmail(''); 
+                      setSharePassword('');
+                      setShowDatePicker(false);
+                    }}
+                  >
                     <Text style={styles.cancelButtonText}>Annuler</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[styles.modalButton, { backgroundColor: theme.primaryColor }]} onPress={createShareLink}>
-                    <Text style={styles.modalButtonText}>Créer le lien</Text>
+                  <TouchableOpacity 
+                    style={[styles.modalButton, { backgroundColor: theme.primaryColor }]} 
+                    onPress={handleShare}
+                  >
+                    <Text style={styles.modalButtonText}>
+                      {shareMode === 'utilisateur' ? 'Partager' : 'Créer le lien'}
+                    </Text>
                   </TouchableOpacity>
                 </>
               ) : (
-                <TouchableOpacity style={[styles.modalButton, { backgroundColor: theme.primaryColor }]} onPress={() => { setShowShareModal(false); setShareEmail(''); }}>
-                  <Text style={styles.modalButtonText}>Fermer</Text>
-                </TouchableOpacity>
+                <>
+                  <TouchableOpacity 
+                    style={[styles.modalButton, styles.cancelButton]} 
+                    onPress={() => { 
+                      setShowShareModal(false); 
+                      setShareEmail(''); 
+                      setSharePassword('');
+                      setShowDatePicker(false);
+                      setShareLink('');
+                    }}
+                  >
+                    <Text style={styles.cancelButtonText}>Fermer</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.modalButton, { backgroundColor: theme.primaryColor }]} 
+                    onPress={copyShareLink}
+                  >
+                    <Text style={styles.modalButtonText}>Copier le lien</Text>
+                  </TouchableOpacity>
+                </>
               )}
             </View>
           </View>
@@ -430,10 +593,12 @@ export default function DocumentsScreen({ navigation, route }: any) {
                         <Image source={require('../assets/deplacer-le-fichier.png')} style={styles.optionIconImage} />
                         <Text style={[styles.optionText, { color: theme.textColor }]}>Déplacer</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity style={[styles.optionItem, { borderBottomColor: theme.isDark ? '#2C2C2E' : '#E5E5EA' }]} onPress={() => handleOptionPress('share')}>
-                        <Image source={require('../assets/lien.png')} style={styles.optionIconImage} />
-                        <Text style={[styles.optionText, { color: theme.textColor }]}>Créer un lien de partage</Text>
-                      </TouchableOpacity>
+                      {selectedItem.type === 'folder' && (
+                        <TouchableOpacity style={[styles.optionItem, { borderBottomColor: theme.isDark ? '#2C2C2E' : '#E5E5EA' }]} onPress={() => handleOptionPress('share')}>
+                          <Image source={require('../assets/lien.png')} style={styles.optionIconImage} />
+                          <Text style={[styles.optionText, { color: theme.textColor }]}>Créer un lien de partage</Text>
+                        </TouchableOpacity>
+                      )}
                     </>
                   )}
                 </>
