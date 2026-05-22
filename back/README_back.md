@@ -1,9 +1,7 @@
 # 4PROJ-Dev
 
 
-## Lancer le back :
-cd back
-docker compose up --build
+## Lancer le back se fait automatiquement avec la commande Docker à la racine du projet
 
 ## Google Auth (backend)
 Définir ces variables d'environnement avant de lancer l'API :
@@ -18,7 +16,3 @@ $env:GOOGLE_CLIENT_ID = "votre-client-id.apps.googleusercontent.com"
 $env:JWT_SECRET = "un-secret-fort"
 node server.js
 ```
-
-Route ajoutée :
-
-- `POST /api/auth/google` avec body `{ "idToken": "<credential_google>" }`
