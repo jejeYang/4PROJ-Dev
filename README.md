@@ -15,6 +15,7 @@ Le projet propose une plateforme complète avec une application web, une API RES
 ## Sommaire
 
 - [Fonctionnalités](#fonctionnalités)
+- [Diagramme de cas d'utilisation](#diagramme-de-cas-dutilisation)
 - [Architecture](#architecture)
 - [Technologies](#technologies)
 - [Prérequis](#prérequis)
@@ -22,6 +23,7 @@ Le projet propose une plateforme complète avec une application web, une API RES
 - [Installation locale](#installation-locale)
 - [Variables d'environnement](#variables-denvironnement)
 - [Documentation API Swagger](#documentation-api-swagger)
+- [Manuel utilisateur](#manuel-utilisateur)
 - [Application mobile](#application-mobile)
 - [Structure du projet](#structure-du-projet)
 - [Scripts utiles](#scripts-utiles)
@@ -48,6 +50,10 @@ Le projet propose une plateforme complète avec une application web, une API RES
 - Documentation API interactive avec Swagger UI.
 - Interface web responsive.
 - Application mobile Expo pour Android, iOS et web.
+
+## Diagramme de cas d'utilisation
+
+![Diagramme de cas d'utilisation de l'application SupFile](docs/Diagramme_de_cas_dutilisation.png)
 
 ## Architecture
 
@@ -288,6 +294,12 @@ x-lien-password: <mot-de-passe>
 
 ou via le paramètre de requête `password`.
 
+## Manuel utilisateur
+
+Un manuel de prise en main de l'interface web est disponible ici :
+
+[Consulter le manuel utilisateur au format Google Docs](docs/manuel-utilisateur-google-docs.docx)
+
 ## Application mobile
 
 L'application mobile se trouve dans le dossier `mobile`.
@@ -359,6 +371,11 @@ npm run web
 │   │   ├── navigation
 │   │   └── screens
 │   └── App.tsx
+├── docs
+│   ├── Diagramme_de_cas_dutilisation.png
+│   ├── diagramme-uml-base-donnees.drawio
+|   ├── diagramme-uml-base-donnees.drawio.png
+│   └── manuel-utilisateur-google-docs.docx
 ├── docker-compose.yml
 └── README.md
 ```
@@ -398,6 +415,10 @@ npm run web
 ## Base de données
 
 Le backend utilise Prisma avec PostgreSQL.
+
+Le diagramme UML de la base est disponible au format png :
+
+[Ouvrir le diagramme UML de la base de données](docs/diagramme-uml-base-donnees.drawio.png)
 
 Les modèles principaux sont :
 
