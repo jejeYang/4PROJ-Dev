@@ -135,4 +135,58 @@ export const styles = StyleSheet.create({
     cardDescription: {
         fontSize: 14,
     },
+    recentCard: {
+        borderRadius: 12,
+        marginBottom: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+        overflow: 'hidden',
+    },
+    recentHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingTop: 16,
+        paddingBottom: 8,
+    },
+    recentTitle: {
+        fontSize: 17,
+        fontWeight: '600',
+    },
+    recentVoirTout: {
+        fontSize: 13,
+        fontWeight: '500',
+    },
+    recentItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+    },
+    recentItemEmoji: {
+        fontSize: 22,
+        marginRight: 12,
+        width: 30,
+        textAlign: 'center',
+    },
+    recentItemInfo: {
+        flex: 1,
+    },
+    recentItemNom: {
+        fontSize: 14,
+        fontWeight: '500',
+        marginBottom: 2,
+    },
+    recentItemMeta: {
+        fontSize: 12,
+    },
+    recentChevron: {
+        fontSize: 20,
+        marginLeft: 8,
+    },
 });

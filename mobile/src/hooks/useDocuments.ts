@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -23,7 +23,7 @@ export interface BreadcrumbItem {
     fichier?: Fichier;
     }
 
-    export function useDocuments(navigation: any) {
+    export function useDocuments(navigation: any, route: any) {
     const { user } = useAuth();
     
     const [items, setItems] = useState<DisplayItem[]>([]);
@@ -57,6 +57,36 @@ export interface BreadcrumbItem {
     // États pour le visualiseur de fichiers
     const [showFileViewer, setShowFileViewer] = useState(false);
     const [fileToView, setFileToView] = useState<{ url: string; name: string } | null>(null);
+
+    useEffect(() => {
+        const checkTargetFolder = async () => {
+            const targetId = route?.params?.targetFolderId;
+            
+            if (targetId && targetId !== currentDossierId) {
+                try {
+                    // On récupère les infos du dossier pour avoir son vrai nom dans le fil d'Ariane
+                    const dossier = await dossierApi.getDossierById(targetId);
+                    const folderName = dossier.cheminDaccesDossier.split('/').pop() || 'Dossier';
+                    
+                    setCurrentDossierId(targetId);
+                    setBreadcrumb([
+                        { id: null, name: 'Mes Documents' }, 
+                        { id: targetId, name: folderName }
+                    ]);
+
+                    // On efface le paramètre pour ne pas rester bloqué sur ce dossier
+                    // si l'utilisateur navigue ailleurs puis revient
+                    navigation.setParams({ targetFolderId: undefined });
+                } catch (error) {
+                    console.error("Erreur lors de la récupération du dossier cible:", error);
+                    // Fallback de sécurité
+                    setCurrentDossierId(targetId);
+                }
+            }
+        };
+
+        checkTargetFolder();
+    }, [route?.params?.targetFolderId]);
 
     // Fonction pour charger le contenu du dossier actuel
     const loadContent = async () => {

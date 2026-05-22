@@ -15,7 +15,7 @@ import FileViewer from '../components/FileViewer';
 import { useDocuments, DisplayItem } from '../hooks/useDocuments';
 import { styles } from '../styles/DocumentsScreen.styles';
 
-export default function DocumentsScreen({ navigation }: any) {
+export default function DocumentsScreen({ navigation, route }: any) {
   const { theme } = useMobileTheme();
 
   const {
@@ -61,7 +61,7 @@ export default function DocumentsScreen({ navigation }: any) {
     showItemOptions,
     handleOptionPress,
     formatFileSize,
-  } = useDocuments(navigation);
+  } = useDocuments(navigation, route);
 
   // Fonction pour déterminer l'icône à afficher selon le type de fichier
   const getFileIcon = (fileName: string) => {
