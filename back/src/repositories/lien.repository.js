@@ -64,6 +64,17 @@ class LienRepository {
             },
         });
     }
+
+    async deleteExpired(dateActuelle) {
+        return prisma.lienGenere.deleteMany({
+            where: {
+                dateExpiration: {
+                    not: null,
+                    lte: dateActuelle,
+                },
+            },
+        });
+    }
 }
 
 export default LienRepository;
