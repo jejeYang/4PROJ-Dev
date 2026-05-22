@@ -34,10 +34,6 @@ export function useRechercheTri({ authHeader, dossier_actuel, dossier_racine, ta
                     valA = ''; 
                     valB = ''; 
                 }
-                else if (tri_config.cle === 'dateCreation') { 
-                    valA = new Date(a.dateCreation || 0).getTime(); 
-                    valB = new Date(b.dateCreation || 0).getTime(); 
-                }
                 else if (tri_config.cle === 'modifieLe') { 
                     valA = new Date(a.modifieLe || 0).getTime(); 
                     valB = new Date(b.modifieLe || 0).getTime(); 
@@ -54,10 +50,6 @@ export function useRechercheTri({ authHeader, dossier_actuel, dossier_racine, ta
                 else if (tri_config.cle === 'extension') { 
                     valA = (separerNomExtension(a.nom).extension || '').toLowerCase(); 
                     valB = (separerNomExtension(b.nom).extension || '').toLowerCase(); 
-                }
-                else if (tri_config.cle === 'dateCreation') { 
-                    valA = new Date(a.dateCreation || a.dateModification || 0).getTime(); 
-                    valB = new Date(b.dateCreation || b.dateModification || 0).getTime(); 
                 }
                 else if (tri_config.cle === 'modifieLe') { 
                     valA = new Date(a.modifieLe || a.dateModification || 0).getTime(); 

@@ -554,9 +554,6 @@ function Dashboard() {
                             <div className="col-extension tri" onClick={() => demanderTri('extension')}>
                                 Extension {tri_config.cle === 'extension' && (tri_config.direction === 'asc' ? '↑' : '↓')}
                             </div>
-                            <div className="col-date tri" onClick={() => demanderTri('dateCreation')}>
-                                Créé le {tri_config.cle === 'dateCreation' && (tri_config.direction === 'asc' ? '↑' : '↓')}
-                            </div>
                             <div className="col-date tri" onClick={() => demanderTri('modifieLe')}>
                                 Modifié le {tri_config.cle === 'modifieLe' && (tri_config.direction === 'asc' ? '↑' : '↓')}
                             </div>
@@ -604,7 +601,6 @@ function Dashboard() {
                                     </span>
                                 </div>
                                 <div className="col-extension">dossier</div>
-                                <div className="col-date">{new Date(dossier.dateCreation).toLocaleDateString('fr-FR')}</div>
                                 <div className="col-date">{new Date(dossier.modifieLe).toLocaleDateString('fr-FR')}</div>
                                 <div className="col-taille">{taille_dossiers[dossier.idDossier] !== undefined ? formatFileSize(taille_dossiers[dossier.idDossier]) : '...'}</div>
                                 <div className="col-actions">
@@ -659,7 +655,6 @@ function Dashboard() {
                                         </span>
                                     </div>
                                     <div className="col-extension">{extension || 'fichier'}</div> 
-                                    <div className="col-date">{new Date(fichier.dateCreation).toLocaleDateString('fr-FR')}</div>
                                     <div className="col-date">{new Date(fichier.dateModification).toLocaleDateString('fr-FR')}</div>
                                     <div className="col-taille">{formatFileSize(fichier.taille)}</div>
                                     <div className="col-actions">
