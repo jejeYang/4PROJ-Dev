@@ -27,9 +27,20 @@ export interface BreadcrumbItem {
     const { user } = useAuth();
     
     const [items, setItems] = useState<DisplayItem[]>([]);
+    const [filteredItems, setFilteredItems] = useState<DisplayItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [breadcrumb, setBreadcrumb] = useState<BreadcrumbItem[]>([{ id: null, name: 'Mon Espace' }]);
     const [currentDossierId, setCurrentDossierId] = useState<number | null>(null);
+    
+    // États pour la recherche et les filtres
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filterType, setFilterType] = useState<'tous' | 'image' | 'video' | 'audio' | 'pdf' | 'zip'>('tous');
+    const [filterDate, setFilterDate] = useState<'tous' | '7jours' | 'cemois'>('tous');
+    const [showFilters, setShowFilters] = useState(false);
+    
+    // États pour le tri
+    const [sortConfig, setSortConfig] = useState<{ key: 'nom' | 'extension' | 'modifieLe' | 'taille'; direction: 'asc' | 'desc' }>({ key: 'nom', direction: 'asc' });
+    const [showSortModal, setShowSortModal] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [newFolderName, setNewFolderName] = useState('');
     const [userRootFolderId, setUserRootFolderId] = useState<number | null>(null);
@@ -88,7 +99,6 @@ export interface BreadcrumbItem {
                     navigation.setParams({ targetFolderId: undefined });
                 } catch (error) {
                     console.error("Erreur lors de la récupération du dossier cible:", error);
-                    // Fallback de sécurité
                     setCurrentDossierId(targetId);
                 }
             }
@@ -198,6 +208,7 @@ export interface BreadcrumbItem {
 
         // Trier les dossiers en premier puis les fichiers par ordre alphabétique
         setItems(displayItems);
+        applyFilters(displayItems);
         } catch (error: any) {
         console.error('Erreur chargement:', error);
         Alert.alert('Erreur', 'Impossible de charger les documents');
@@ -213,11 +224,156 @@ export interface BreadcrumbItem {
         }, [currentDossierId])
     );
 
+    // Fonction pour basculer le tri
+    const toggleSort = (key: 'nom' | 'extension' | 'modifieLe' | 'taille') => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    // Fonction pour trier les éléments
+    const sortItems = (itemsToSort: DisplayItem[]): DisplayItem[] => {
+        return [...itemsToSort].sort((a, b) => {
+            let valA: any;
+            let valB: any;
+
+            if (sortConfig.key === 'nom') {
+                valA = a.name.toLowerCase();
+                valB = b.name.toLowerCase();
+            } else if (sortConfig.key === 'extension') {
+                // Les dossiers n'ont pas d'extension, on les met en premier
+                if (a.type === 'folder') valA = '';
+                else valA = (a.name.split('.').pop() || '').toLowerCase();
+                
+                if (b.type === 'folder') valB = '';
+                else valB = (b.name.split('.').pop() || '').toLowerCase();
+            } else if (sortConfig.key === 'modifieLe') {
+                let dateA: Date;
+                let dateB: Date;
+                
+                if (a.type === 'folder' && a.dossier?.modifieLe) {
+                    dateA = new Date(a.dossier.modifieLe);
+                } else if (a.type === 'file' && a.fichier?.dateModification) {
+                    dateA = new Date(a.fichier.dateModification);
+                } else {
+                    dateA = new Date(0);
+                }
+                
+                if (b.type === 'folder' && b.dossier?.modifieLe) {
+                    dateB = new Date(b.dossier.modifieLe);
+                } else if (b.type === 'file' && b.fichier?.dateModification) {
+                    dateB = new Date(b.fichier.dateModification);
+                } else {
+                    dateB = new Date(0);
+                }
+                
+                valA = dateA.getTime();
+                valB = dateB.getTime();
+            } else if (sortConfig.key === 'taille') {
+                // Pour les dossiers, on pourrait calculer leur taille totale mais c'est complexe
+                // Pour l'instant on met 0 pour les dossiers
+                if (a.type === 'folder') valA = 0;
+                else valA = a.fichier?.taille || 0;
+                
+                if (b.type === 'folder') valB = 0;
+                else valB = b.fichier?.taille || 0;
+            }
+
+            if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+    };
+
+    // Fonction pour déterminer le type de fichier selon l'extension
+    const getFileType = (fileName: string): 'image' | 'video' | 'audio' | 'pdf' | 'zip' | 'other' => {
+        const extension = fileName.split('.').pop()?.toLowerCase();
+        
+        const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico'];
+        const videoExtensions = ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm', 'm4v'];
+        const audioExtensions = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a', 'wma', 'opus', 'aiff', 'alac'];
+        
+        if (extension && imageExtensions.includes(extension)) return 'image';
+        if (extension && videoExtensions.includes(extension)) return 'video';
+        if (extension && audioExtensions.includes(extension)) return 'audio';
+        if (extension === 'pdf') return 'pdf';
+        if (extension === 'zip') return 'zip';
+        return 'other';
+    };
+
+    // Fonction pour appliquer tous les filtres
+    const applyFilters = (itemsToFilter: DisplayItem[] = items) => {
+        let filtered = [...itemsToFilter];
+
+        // Filtre par nom
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            filtered = filtered.filter(item => 
+                item.name.toLowerCase().includes(query)
+            );
+        }
+
+        // Filtre par type de fichier
+        if (filterType !== 'tous') {
+            filtered = filtered.filter(item => {
+                if (item.type === 'folder') return false; // Les dossiers ne sont pas filtrés par type
+                return getFileType(item.name) === filterType;
+            });
+        }
+
+        // Filtre par date
+        if (filterDate !== 'tous') {
+            const now = new Date();
+            filtered = filtered.filter(item => {
+                let dateStr = '';
+                if (item.type === 'folder' && item.dossier?.modifieLe) {
+                    dateStr = item.dossier.modifieLe;
+                } else if (item.type === 'file' && item.fichier?.dateModification) {
+                    dateStr = item.fichier.dateModification;
+                }
+                
+                if (!dateStr) return false;
+                
+                const itemDate = new Date(dateStr);
+                
+                if (filterDate === '7jours') {
+                    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    return itemDate >= sevenDaysAgo;
+                } else if (filterDate === 'cemois') {
+                    return itemDate.getMonth() === now.getMonth() && itemDate.getFullYear() === now.getFullYear();
+                }
+                
+                return true;
+            });
+        }
+
+        // Applique le tri après les filtres
+        const sorted = sortItems(filtered);
+        setFilteredItems(sorted);
+    };
+
+    // Fonction pour réinitialiser les filtres
+    const resetFilters = () => {
+        setSearchQuery('');
+        setFilterType('tous');
+        setFilterDate('tous');
+        setFilteredItems(items);
+    };
+
+    // Effet pour appliquer les filtres et le tri quand ils changent
+    useEffect(() => {
+        applyFilters();
+    }, [searchQuery, filterType, filterDate, sortConfig, items]);
+
     // Fonction pour extraire le nom de fichier depuis le chemin d'accès
     const navigateToFolder = (dossier: Dossier) => {
         const folderName = dossier.cheminDaccesDossier.split('/').pop() || dossier.cheminDaccesDossier;
         setBreadcrumb([...breadcrumb, { id: dossier.idDossier, name: folderName }]);
         setCurrentDossierId(dossier.idDossier);
+        // Réinitialiser les filtres lors de la navigation
+        resetFilters();
     };
 
     // Fonction pour extraire le nom de fichier depuis le chemin d'accès
@@ -239,6 +395,8 @@ export interface BreadcrumbItem {
             setCorbeilleId(nouveauDossier.idDossier);
             setBreadcrumb([...breadcrumb, { id: nouveauDossier.idDossier, name: 'Corbeille' }]);
             setCurrentDossierId(nouveauDossier.idDossier);
+            // Réinitialiser les filtres lors de la navigation
+            resetFilters();
         } catch (error: any) {
             console.error('Erreur création corbeille:', error);
             Alert.alert('Erreur', error.response?.data?.error || 'Impossible d\'accéder à la corbeille');
@@ -247,6 +405,8 @@ export interface BreadcrumbItem {
         }
         setBreadcrumb([...breadcrumb, { id: corbeilleId, name: 'Corbeille' }]);
         setCurrentDossierId(corbeilleId);
+        // Réinitialiser les filtres lors de la navigation
+        resetFilters();
     };
 
     // Fonction pour naviguer dans le breadcrumb
@@ -254,6 +414,8 @@ export interface BreadcrumbItem {
         const newBreadcrumb = breadcrumb.slice(0, index + 1);
         setBreadcrumb(newBreadcrumb);
         setCurrentDossierId(newBreadcrumb[newBreadcrumb.length - 1].id);
+        // Réinitialiser les filtres lors de la navigation
+        resetFilters();
     };
 
     // Fonction pour créer un nouveau dossier
@@ -731,7 +893,8 @@ export interface BreadcrumbItem {
     };
 
     return {
-        items,
+        items: filteredItems,
+        allItems: items,
         isLoading,
         breadcrumb,
         showCreateModal,
@@ -740,6 +903,20 @@ export interface BreadcrumbItem {
         setNewFolderName,
         isInTrash,
         trashSize,
+        searchQuery,
+        setSearchQuery,
+        filterType,
+        setFilterType,
+        filterDate,
+        setFilterDate,
+        showFilters,
+        setShowFilters,
+        resetFilters,
+        sortConfig,
+        setSortConfig,
+        toggleSort,
+        showSortModal,
+        setShowSortModal,
         showMoveModal,
         setShowMoveModal,
         itemToMove,

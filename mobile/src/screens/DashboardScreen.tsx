@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { useMobileTheme } from '../context/MobileThemeContext';
-import { useDashboard, obtenirEmojiFichier, formatFileSize } from '../hooks/useDashboard';
+import { useDashboard, obtenirEmojiFichier, obtenirIconeFichier, formatFileSize } from '../hooks/useDashboard';
 import { styles } from '../styles/DashboardScreen.styles';
 import Footer from '../components/Footer';
 
@@ -62,7 +62,7 @@ export default function DashboardScreen({ navigation }: any) {
               style={[styles.actionCard, { backgroundColor: cardBg }]}
               onPress={navigateToShare}
             >
-              <Text style={styles.cardIcon}>🔗</Text>
+              <Image source={require('../assets/lien.png')} style={styles.cardIconImage} />
               <Text style={[styles.cardTitle, { color: theme.textColor }]}>Partages</Text>
               <Text style={[styles.cardDescription, { color: subtleColor }]}>Gérer mes partages</Text>
             </TouchableOpacity>
@@ -76,7 +76,10 @@ export default function DashboardScreen({ navigation }: any) {
           ) : storageStats ? (
             <View style={[styles.storageCard, { backgroundColor: cardBg }]}>
               <View style={styles.storageHeader}>
-                <Text style={[styles.storageTitle, { color: theme.textColor }]}>💾 Stockage</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Image source={require('../assets/disque-dur.png')} style={styles.storageIcon} />
+                  <Text style={[styles.storageTitle, { color: theme.textColor }]}>Stockage</Text>
+                </View>
                 <Text style={[styles.storagePercentage, { color: theme.primaryColor }]}>
                   {Math.round((storageStats.utilise / MAX_STORAGE) * 100)}%
                 </Text>
@@ -111,7 +114,7 @@ export default function DashboardScreen({ navigation }: any) {
                   // Redirige à l'intérieur du dossier cliqué
                   onPress={() => navigateToDossier(dossier.idDossier)}
                 >
-                  <Text style={styles.recentItemEmoji}>📁</Text>
+                  <Image source={require('../assets/dossier.png')} style={styles.recentItemIcon} />
                   <View style={styles.recentItemInfo}>
                     <Text style={[styles.recentItemNom, { color: theme.textColor }]} numberOfLines={1}>
                       {dossier.nom}
@@ -139,7 +142,7 @@ export default function DashboardScreen({ navigation }: any) {
                   // Redirige vers le dossier parent du fichier cliqué
                   onPress={() => navigateToDossier(fichier.idDossierParent)}
                 >
-                  <Text style={styles.recentItemEmoji}>{obtenirEmojiFichier(fichier.nom)}</Text>
+                  <Image source={obtenirIconeFichier(fichier.nom)} style={styles.recentItemIcon} />
                   <View style={styles.recentItemInfo}>
                     <Text style={[styles.recentItemNom, { color: theme.textColor }]} numberOfLines={1}>
                       {fichier.nom}
@@ -157,7 +160,10 @@ export default function DashboardScreen({ navigation }: any) {
           {/* Répartition des fichiers */}
           {!isLoadingStats && fileTypeStats.length > 0 && (
             <View style={[styles.distributionCard, { backgroundColor: cardBg }]}>
-              <Text style={[styles.distributionTitle, { color: theme.textColor }]}>📊 Répartition des fichiers</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+                <Image source={require('../assets/diagramme-circulaire.png')} style={styles.distributionIcon} />
+                <Text style={[styles.distributionTitle, { marginBottom: 0, color: theme.textColor }]}>Répartition des fichiers</Text>
+              </View>
               {fileTypeStats.map((item, index) => {
                 const totalFiles = fileTypeStats.reduce((sum, t) => sum + t.count, 0);
                 const percentage = (item.count / totalFiles) * 100;
@@ -165,7 +171,7 @@ export default function DashboardScreen({ navigation }: any) {
                   <View key={item.type} style={styles.distributionItem}>
                     <View style={styles.distributionHeader}>
                       <View style={styles.distributionLabel}>
-                        <Text style={styles.distributionEmoji}>{item.emoji}</Text>
+                        <Image source={item.icon} style={styles.distributionIcon} />
                         <Text style={[styles.distributionType, { color: theme.textColor }]}>{item.label}</Text>
                       </View>
                       <Text style={[styles.distributionCount, { color: subtleColor }]}>

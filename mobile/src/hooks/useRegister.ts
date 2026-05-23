@@ -10,6 +10,30 @@ export function useRegister() {
     const [isLoading, setIsLoading] = useState(false);
     const { register } = useAuth();
 
+    const validatePassword = (pwd: string): { isValid: boolean; message?: string } => {
+        if (pwd.length < 6) {
+            return { isValid: false, message: 'Le mot de passe doit contenir au moins 6 caractères' };
+        }
+        
+        if (!/[A-Z]/.test(pwd)) {
+            return { isValid: false, message: 'Le mot de passe doit contenir au moins une majuscule' };
+        }
+        
+        if (!/[a-z]/.test(pwd)) {
+            return { isValid: false, message: 'Le mot de passe doit contenir au moins une minuscule' };
+        }
+        
+        if (!/[0-9]/.test(pwd)) {
+            return { isValid: false, message: 'Le mot de passe doit contenir au moins un chiffre' };
+        }
+        
+        if (!/[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\/';~]/.test(pwd)) {
+            return { isValid: false, message: 'Le mot de passe doit contenir au moins un caractère spécial' };
+        }
+        
+        return { isValid: true };
+    };
+
     const handleRegister = async () => {
         if (!nom || !email || !password || !confirmPassword) {
         Alert.alert('Erreur', 'Veuillez remplir tous les champs');
@@ -21,8 +45,9 @@ export function useRegister() {
         return;
         }
 
-        if (password.length < 6) {
-        Alert.alert('Erreur', 'Le mot de passe doit contenir au moins 6 caractères');
+        const validation = validatePassword(password);
+        if (!validation.isValid) {
+        Alert.alert('Erreur', validation.message || 'Mot de passe invalide');
         return;
         }
 

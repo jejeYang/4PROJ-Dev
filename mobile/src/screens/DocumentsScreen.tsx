@@ -30,6 +30,19 @@ export default function DocumentsScreen({ navigation, route }: any) {
     setNewFolderName,
     isInTrash,
     trashSize,
+    searchQuery,
+    setSearchQuery,
+    filterType,
+    setFilterType,
+    filterDate,
+    setFilterDate,
+    showFilters,
+    setShowFilters,
+    resetFilters,
+    sortConfig,
+    toggleSort,
+    showSortModal,
+    setShowSortModal,
     showMoveModal,
     setShowMoveModal,
     itemToMove,
@@ -189,6 +202,137 @@ export default function DocumentsScreen({ navigation, route }: any) {
     <View style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
       {renderBreadcrumb()}
 
+      {/* Barre de recherche */}
+      {!isInTrash && (
+        <View style={styles.searchContainer}>
+          <View style={[styles.searchBar, { backgroundColor: theme.isDark ? '#2C2C2E' : '#F2F2F7' }]}>
+            <Image source={require('../assets/recherche.png')} style={styles.searchIcon} />
+            <TextInput
+              style={[styles.searchInput, { color: theme.textColor }]}
+              placeholder="Rechercher un fichier..."
+              placeholderTextColor={theme.isDark ? '#8E8E93' : '#C7C7CC'}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery !== '' && (
+              <TouchableOpacity 
+                style={styles.clearButton}
+                onPress={() => setSearchQuery('')}
+              >
+                <Text style={[styles.clearButtonText, { color: theme.textColor }]}>×</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          <View style={styles.filterSortButtonsContainer}>
+            <TouchableOpacity 
+              style={styles.filterToggleButton}
+              onPress={() => setShowFilters(!showFilters)}
+            >
+              <Text style={[styles.filterToggleText, { color: theme.primaryColor }]}>
+                {showFilters ? '▲ Masquer les filtres' : '▼ Afficher les filtres'}
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.sortButton}
+              onPress={() => setShowSortModal(true)}
+            >
+              <View style={styles.sortButtonContent}>
+                <Image source={require('../assets/trier-par-ordre-decroissant.png')} style={styles.sortButtonIcon} />
+                <Text style={[styles.sortButtonText, { color: theme.primaryColor }]}>Tri</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Filtres */}
+      {!isInTrash && showFilters && (
+        <View style={[styles.filtersContainer, { backgroundColor: theme.isDark ? '#1C1C1E' : '#F9F9F9' }]}>
+          {/* Filtre par type */}
+          <View style={styles.filterSection}>
+            <Text style={[styles.filterLabel, { color: theme.textColor }]}>TYPE DE FICHIER</Text>
+            <View style={styles.filterButtons}>
+              {['tous', 'image', 'video', 'audio', 'pdf', 'zip'].map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  style={[
+                    styles.filterButton,
+                    {
+                      backgroundColor: filterType === type ? theme.primaryColor : 'transparent',
+                      borderColor: filterType === type ? theme.primaryColor : (theme.isDark ? '#3A3A3C' : '#E5E5EA'),
+                    }
+                  ]}
+                  onPress={() => setFilterType(type as any)}
+                >
+                  <Text style={[
+                    styles.filterButtonText,
+                    { color: filterType === type ? '#FFFFFF' : theme.textColor }
+                  ]}>
+                    {type === 'tous' ? 'Tous' : 
+                     type === 'image' ? 'Images' :
+                     type === 'video' ? 'Vidéos' :
+                     type === 'audio' ? 'Audio' :
+                     type === 'pdf' ? 'PDF' : 'ZIP'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Filtre par date */}
+          <View style={styles.filterSection}>
+            <Text style={[styles.filterLabel, { color: theme.textColor }]}>DATE DE MODIFICATION</Text>
+            <View style={styles.filterButtons}>
+              {[
+                { key: 'tous', label: 'Toutes' },
+                { key: '7jours', label: '7 derniers jours' },
+                { key: 'cemois', label: 'Ce mois-ci' }
+              ].map((date) => (
+                <TouchableOpacity
+                  key={date.key}
+                  style={[
+                    styles.filterButton,
+                    {
+                      backgroundColor: filterDate === date.key ? theme.primaryColor : 'transparent',
+                      borderColor: filterDate === date.key ? theme.primaryColor : (theme.isDark ? '#3A3A3C' : '#E5E5EA'),
+                    }
+                  ]}
+                  onPress={() => setFilterDate(date.key as any)}
+                >
+                  <Text style={[
+                    styles.filterButtonText,
+                    { color: filterDate === date.key ? '#FFFFFF' : theme.textColor }
+                  ]}>
+                    {date.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Bouton réinitialiser */}
+          {(searchQuery !== '' || filterType !== 'tous' || filterDate !== 'tous') && (
+            <>
+              <View style={{ alignItems: 'center', marginVertical: 8 }}>
+                <Text style={[{ fontSize: 13, opacity: 0.7 }, { color: theme.textColor }]}>
+                  {items.length} résultat{items.length > 1 ? 's' : ''} trouvé{items.length > 1 ? 's' : ''}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.resetFiltersButton, { borderColor: theme.isDark ? '#3A3A3C' : '#E5E5EA' }]}
+                onPress={resetFilters}
+              >
+                <Text style={[styles.resetFiltersText, { color: theme.primaryColor }]}>
+                  Réinitialiser les filtres
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      )}
+
       <View style={styles.actionBar}>
         {!isInTrash ? (
           <>
@@ -282,6 +426,54 @@ export default function DocumentsScreen({ navigation, route }: any) {
               </TouchableOpacity>
               <TouchableOpacity style={[styles.modalButton, { backgroundColor: theme.primaryColor }]} onPress={handleCreateFolder}>
                 <Text style={styles.modalButtonText}>Créer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de tri */}
+      <Modal visible={showSortModal} transparent animationType="slide" onRequestClose={() => setShowSortModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.backgroundColor }]}>
+            <Text style={[styles.modalTitle, { color: theme.textColor }]}>Trier par</Text>
+            
+            <View style={styles.sortOptionsContainer}>
+              {[
+                { key: 'nom', label: 'Nom' },
+                { key: 'extension', label: 'Extension' },
+                { key: 'modifieLe', label: 'Date de modification' },
+                { key: 'taille', label: 'Taille' }
+              ].map((option) => (
+                <TouchableOpacity
+                  key={option.key}
+                  style={[
+                    styles.sortOption,
+                    {
+                      backgroundColor: sortConfig.key === option.key ? (theme.isDark ? '#2C2C2E' : '#F2F2F7') : 'transparent',
+                      borderColor: theme.isDark ? '#3A3A3C' : '#E5E5EA',
+                    }
+                  ]}
+                  onPress={() => toggleSort(option.key as any)}
+                >
+                  <Text style={[styles.sortOptionText, { color: theme.textColor }]}>
+                    {option.label}
+                  </Text>
+                  {sortConfig.key === option.key && (
+                    <Text style={[styles.sortDirection, { color: theme.primaryColor }]}>
+                      {sortConfig.direction === 'asc' ? '↑ Ascendant' : '↓ Descendant'}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={[styles.modalButton, { backgroundColor: theme.primaryColor }]} 
+                onPress={() => setShowSortModal(false)}
+              >
+                <Text style={styles.modalButtonText}>Fermer</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -586,7 +778,7 @@ export default function DocumentsScreen({ navigation, route }: any) {
                         </TouchableOpacity>
                       )}
                       <TouchableOpacity style={[styles.optionItem, { borderBottomColor: theme.isDark ? '#2C2C2E' : '#E5E5EA' }]} onPress={() => handleOptionPress('rename')}>
-                        <Image source={require('../assets/galerie.png')} style={styles.optionIconImage} />
+                        <Image source={require('../assets/renommer-le-fichier.png')} style={styles.optionIconImage} />
                         <Text style={[styles.optionText, { color: theme.textColor }]}>Renommer</Text>
                       </TouchableOpacity>
                       <TouchableOpacity style={[styles.optionItem, { borderBottomColor: theme.isDark ? '#2C2C2E' : '#E5E5EA' }]} onPress={() => handleOptionPress('move')}>

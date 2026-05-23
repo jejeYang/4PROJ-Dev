@@ -9,7 +9,6 @@ export function useLogin(navigation?: any) {
     const [isLoading, setIsLoading] = useState(false);
     const { login } = useAuth();
 
-    // États pour la modal de lien public
     const [showGuestLinkModal, setShowGuestLinkModal] = useState(false);
     const [guestLinkInput, setGuestLinkInput] = useState('');
     const [guestPassword, setGuestPassword] = useState('');
@@ -26,6 +25,8 @@ export function useLogin(navigation?: any) {
             await login({ email, mdp: password });
         } catch (error: any) {
             Alert.alert('Erreur', error.response?.data?.message || 'Connexion échouée');
+            // Vider le champ mot de passe après une erreur de connexion
+            setPassword('');
         } finally {
             setIsLoading(false);
         }

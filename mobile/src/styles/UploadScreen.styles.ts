@@ -81,6 +81,11 @@ export const styles = StyleSheet.create({
         fontSize: 24,
         marginRight: 12,
     },
+    folderIconImage: {
+        width: 24,
+        height: 24,
+        marginRight: 12,
+    },
     folderName: {
         flex: 1,
         fontSize: 16,
@@ -130,6 +135,11 @@ export const styles = StyleSheet.create({
         fontSize: 32,
         marginBottom: 8,
     },
+    optionIconImage: {
+        width: 32,
+        height: 32,
+        marginBottom: 8,
+    },
     optionText: {
         color: '#FFFFFF',
         fontSize: 14,
@@ -142,6 +152,11 @@ export const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: '600',
         marginBottom: 12,
+    },
+    sectionTitleIcon: {
+        width: 20,
+        height: 20,
+        marginRight: 8,
     },
     fileItem: {
         flexDirection: 'row',
@@ -206,6 +221,11 @@ export const styles = StyleSheet.create({
     },
     emptyIcon: {
         fontSize: 64,
+        marginBottom: 16,
+    },
+    emptyIconImage: {
+        width: 64,
+        height: 64,
         marginBottom: 16,
     },
     emptyText: {

@@ -127,6 +127,21 @@ export const styles = StyleSheet.create({
         height: 40,
         marginBottom: 12,
     },
+    storageIcon: {
+        width: 22,
+        height: 22,
+        marginRight: 8,
+    },
+    distributionIcon: {
+        width: 20,
+        height: 20,
+        marginRight: 8,
+    },
+    recentItemIcon: {
+        width: 30,
+        height: 30,
+        marginRight: 12,
+    },
     cardTitle: {
         fontSize: 20,
         fontWeight: '600',

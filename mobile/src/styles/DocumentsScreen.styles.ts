@@ -343,4 +343,125 @@ export const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
     },
+    // Styles pour la recherche et les filtres
+    searchContainer: {
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+    },
+    searchBar: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderRadius: 10,
+        paddingHorizontal: 12,
+        height: 44,
+    },
+    searchIcon: {
+        width: 20,
+        height: 20,
+        marginRight: 8,
+        opacity: 0.6,
+    },
+    searchInput: {
+        flex: 1,
+        fontSize: 16,
+    },
+    clearButton: {
+        padding: 4,
+    },
+    clearButtonText: {
+        fontSize: 18,
+        opacity: 0.6,
+    },
+    filterToggleButton: {
+        marginTop: 8,
+        paddingVertical: 8,
+        alignItems: 'center',
+    },
+    filterToggleText: {
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    filtersContainer: {
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+    },
+    filterSection: {
+        marginBottom: 12,
+    },
+    filterLabel: {
+        fontSize: 13,
+        fontWeight: '600',
+        marginBottom: 8,
+        opacity: 0.7,
+    },
+    filterButtons: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+    },
+    filterButton: {
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: 20,
+        borderWidth: 1,
+    },
+    filterButtonText: {
+        fontSize: 13,
+        fontWeight: '600',
+    },
+    resetFiltersButton: {
+        marginTop: 8,
+        paddingVertical: 10,
+        alignItems: 'center',
+        borderRadius: 8,
+        borderWidth: 1,
+    },
+    resetFiltersText: {
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    filterSortButtonsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 8,
+    },
+    sortButton: {
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        alignItems: 'center',
+    },
+    sortButtonContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    sortButtonIcon: {
+        width: 16,
+        height: 16,
+        marginRight: 6,
+    },
+    sortButtonText: {
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    sortOptionsContainer: {
+        marginVertical: 12,
+    },
+    sortOption: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 16,
+        borderRadius: 8,
+        borderWidth: 1,
+        marginBottom: 8,
+    },
+    sortOptionText: {
+        fontSize: 16,
+        fontWeight: '500',
+    },
+    sortDirection: {
+        fontSize: 14,
+        fontWeight: '600',
+    },
 });

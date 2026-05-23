@@ -48,6 +48,10 @@ export const styles = StyleSheet.create({
     editAvatarIcon: {
         fontSize: 16,
     },
+    editAvatarIconImage: {
+        width: 18,
+        height: 18,
+    },
     avatarHint: {
         fontSize: 12,
         textAlign: 'center',

@@ -5,13 +5,13 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useMobileTheme } from '../context/MobileThemeContext';
 import { useUpload } from '../hooks/useUpload';
 import { styles } from '../styles/UploadScreen.styles';
 
 export default function UploadScreen({ navigation }: any) {
-  // Récupère hooks et thème
   const {
     selectedFiles,
     uploading,
@@ -125,7 +125,7 @@ export default function UploadScreen({ navigation }: any) {
                     ]}
                     onPress={() => navigateToFolder(dossier)}
                   >
-                    <Text style={styles.folderIcon}>📁</Text>
+                    <Image source={require('../assets/dossier.png')} style={styles.folderIconImage} />
                     <Text style={[styles.folderName, { color: theme.textColor }]}>
                       {dossier.cheminDaccesDossier.split('/').pop() || dossier.cheminDaccesDossier}
                     </Text>
@@ -146,7 +146,7 @@ export default function UploadScreen({ navigation }: any) {
             style={[styles.optionButton, { backgroundColor: theme.primaryColor }]}
             onPress={pickDocument}
           >
-            <Text style={styles.optionIcon}>📄</Text>
+            <Image source={require('../assets/docs.png')} style={styles.optionIconImage} />
             <Text style={styles.optionText}>Document</Text>
           </TouchableOpacity>
 
@@ -154,7 +154,7 @@ export default function UploadScreen({ navigation }: any) {
             style={[styles.optionButton, { backgroundColor: theme.primaryColor }]}
             onPress={pickImage}
           >
-            <Text style={styles.optionIcon}>🖼️</Text>
+            <Image source={require('../assets/galerie.png')} style={styles.optionIconImage} />
             <Text style={styles.optionText}>Galerie</Text>
           </TouchableOpacity>
 
@@ -162,16 +162,19 @@ export default function UploadScreen({ navigation }: any) {
             style={[styles.optionButton, { backgroundColor: theme.primaryColor }]}
             onPress={takePhoto}
           >
-            <Text style={styles.optionIcon}>📷</Text>
+            <Image source={require('../assets/camera.png')} style={styles.optionIconImage} />
             <Text style={styles.optionText}>Photo</Text>
           </TouchableOpacity>
         </View>
 
         {selectedFiles.length > 0 && (
           <View style={styles.filesSection}>
-            <Text style={[styles.sectionTitle, { color: theme.textColor }]}>
-              Fichiers sélectionnés ({selectedFiles.length})
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <Image source={require('../assets/exportation-de-fichiers.png')} style={styles.sectionTitleIcon} />
+              <Text style={[styles.sectionTitle, { marginBottom: 0, color: theme.textColor }]}>
+                Fichiers sélectionnés ({selectedFiles.length})
+              </Text>
+            </View>
 
             {selectedFiles.map((file, index) => (
               <View
@@ -233,7 +236,7 @@ export default function UploadScreen({ navigation }: any) {
 
         {selectedFiles.length === 0 && (
           <View style={[styles.emptyState, { backgroundColor: theme.isDark ? '#2C2C2E' : '#F2F2F7' }]}>
-            <Text style={styles.emptyIcon}>📤</Text>
+            <Image source={require('../assets/exportation-de-fichiers.png')} style={styles.emptyIconImage} />
             <Text style={[styles.emptyText, { color: theme.textColor }]}>
               Aucun fichier sélectionné
             </Text>

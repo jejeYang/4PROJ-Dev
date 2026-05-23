@@ -70,7 +70,7 @@ export default function ProfileScreen() {
               </View>
             )}
             <View style={styles.editAvatarBadge}>
-              <Text style={styles.editAvatarIcon}>📷</Text>
+              <Image source={require('../assets/camera.png')} style={styles.editAvatarIconImage} />
             </View>
           </TouchableOpacity>
           <Text style={[styles.name, { color: theme.textColor }]}>Mon Profil</Text>
