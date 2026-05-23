@@ -8,14 +8,12 @@ export interface PartageRecu {
   idDossier: number;
   cheminDaccesDossier: string;
   emailContact: string;
-  dateCreation: string;
 }
 
 export interface PartageEnvoye {
   idDossier: number;
   cheminDaccesDossier: string;
   emailContact: string;
-  dateCreation: string;
 }
 
 export interface LienPublic {

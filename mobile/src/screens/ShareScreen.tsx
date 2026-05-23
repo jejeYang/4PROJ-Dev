@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useMobileTheme } from '../context/MobileThemeContext';
@@ -55,10 +56,13 @@ export default function ShareScreen({ navigation }: any) {
           Gérez vos accès, vos envois et vos liens publics.
         </Text>
 
-        {/* PARTAGES REÇUS */}
+        {/* partages reçus */}
         <View style={[styles.section, { backgroundColor: theme.isDark ? '#2C2C2E' : '#FFFFFF' }]}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.textColor }]}>📥 Partages reçus</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Image source={require('../assets/recu.png')} style={styles.sectionTitleIcon} />
+              <Text style={[styles.sectionTitle, { color: theme.textColor }]}>Partages reçus</Text>
+            </View>
             <Text style={[styles.sectionSubtitle, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
               Dossiers partagés par d'autres utilisateurs
             </Text>
@@ -75,16 +79,13 @@ export default function ShareScreen({ navigation }: any) {
                 onPress={() => allerVersDossier(p.idDossier)}
               >
                 <View style={styles.itemMain}>
-                  <Text style={styles.itemIcon}>📥</Text>
+                  <Image source={require('../assets/recu.png')} style={styles.itemIconImage} />
                   <View style={styles.itemInfo}>
                     <Text style={[styles.itemTitle, { color: theme.textColor }]}>
                       {p.cheminDaccesDossier}
                     </Text>
                     <Text style={[styles.itemSubtext, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
                       De : {p.emailContact || 'Utilisateur inconnu'}
-                    </Text>
-                    <Text style={[styles.itemDate, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
-                      Reçu le {new Date(p.dateCreation).toLocaleDateString()}
                     </Text>
                   </View>
                 </View>
@@ -101,10 +102,13 @@ export default function ShareScreen({ navigation }: any) {
           )}
         </View>
 
-        {/* PARTAGES ENVOYÉS */}
+        {/* partages envoyés */}
         <View style={[styles.section, { backgroundColor: theme.isDark ? '#2C2C2E' : '#FFFFFF' }]}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.textColor }]}>📤 Partages envoyés</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Image source={require('../assets/expedie.png')} style={styles.sectionTitleIcon} />
+              <Text style={[styles.sectionTitle, { color: theme.textColor }]}>Partages envoyés</Text>
+            </View>
             <Text style={[styles.sectionSubtitle, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
               Dossiers que vous avez partagés
             </Text>
@@ -121,16 +125,13 @@ export default function ShareScreen({ navigation }: any) {
                 onPress={() => allerVersDossier(p.idDossier)}
               >
                 <View style={styles.itemMain}>
-                  <Text style={styles.itemIcon}>📤</Text>
+                  <Image source={require('../assets/expedie.png')} style={styles.itemIconImage} />
                   <View style={styles.itemInfo}>
                     <Text style={[styles.itemTitle, { color: theme.textColor }]}>
                       {p.cheminDaccesDossier}
                     </Text>
                     <Text style={[styles.itemSubtext, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
                       Vers : {p.emailContact || 'Utilisateur inconnu'}
-                    </Text>
-                    <Text style={[styles.itemDate, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
-                      Envoyé le {new Date(p.dateCreation).toLocaleDateString()}
                     </Text>
                   </View>
                 </View>
@@ -145,10 +146,13 @@ export default function ShareScreen({ navigation }: any) {
           )}
         </View>
 
-        {/* LIENS PUBLICS */}
+        {/* liens publics */}
         <View style={[styles.section, { backgroundColor: theme.isDark ? '#2C2C2E' : '#FFFFFF' }]}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.textColor }]}>🔗 Liens publics</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Image source={require('../assets/lien.png')} style={styles.sectionTitleIcon} />
+              <Text style={[styles.sectionTitle, { color: theme.textColor }]}>Liens publics</Text>
+            </View>
             <Text style={[styles.sectionSubtitle, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
               Liens de partage pour invités
             </Text>
@@ -167,12 +171,15 @@ export default function ShareScreen({ navigation }: any) {
                   style={styles.itemMain}
                   onPress={() => copierLien(l.url)}
                 >
-                  <Text style={styles.itemIcon}>{l.type === 'dossier' ? '📁' : '📄'}</Text>
+                  <Image 
+                    source={l.type === 'dossier' ? require('../assets/dossier.png') : require('../assets/docs.png')} 
+                    style={styles.itemIconImage} 
+                  />
                   <View style={styles.itemInfo}>
                     <View style={styles.itemTitleRow}>
                       <Text style={[styles.itemTitle, { color: theme.textColor }]}>{l.nom}</Text>
                       <View style={[styles.badge, { backgroundColor: l.protege ? '#FF9500' : '#34C759' }]}>
-                        <Text style={styles.badgeText}>{l.protege ? '🔒 Protégé' : '🔓 Public'}</Text>
+                        <Text style={styles.badgeText}>{l.protege ? 'Protégé' : 'Public'}</Text>
                       </View>
                     </View>
                     <Text style={[styles.itemSubtext, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
@@ -182,7 +189,7 @@ export default function ShareScreen({ navigation }: any) {
                       Créé le {new Date(l.createdAt).toLocaleDateString()}
                     </Text>
                     <Text style={[styles.copyHint, { color: theme.primaryColor }]}>
-                      👆 Appuyez pour copier le lien
+                      Appuyez pour copier le lien
                     </Text>
                   </View>
                 </TouchableOpacity>

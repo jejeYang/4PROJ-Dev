@@ -60,6 +60,16 @@ export const styles = StyleSheet.create({
     fontSize: 24,
     marginRight: 12,
   },
+  itemIconImage: {
+    width: 24,
+    height: 24,
+    marginRight: 12,
+  },
+  sectionTitleIcon: {
+    width: 20,
+    height: 20,
+    marginRight: 8,
+  },
   itemInfo: {
     flex: 1,
   },

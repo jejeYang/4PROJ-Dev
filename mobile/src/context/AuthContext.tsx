@@ -51,8 +51,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const response = await authApi.login(credentials);
       await saveAuth(response.token, response.utilisateur);
-    } catch (error) {
-      console.error('Erreur lors de la connexion:', error);
+    } catch (error: any) {
+      // Ne pas logger les erreurs 401 (identifiants incorrects) qui sont attendues
+      if (error?.response?.status !== 401) {
+        console.error('Erreur lors de la connexion:', error);
+      }
       throw error;
     }
   };
@@ -61,8 +64,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const response = await authApi.register(data);
       await saveAuth(response.token, response.utilisateur);
-    } catch (error) {
-      console.error('Erreur lors de l\'inscription:', error);
+    } catch (error: any) {
+      // Ne pas logger les erreurs 400/401 (données invalides) qui sont attendues
+      if (error?.response?.status !== 400 && error?.response?.status !== 401) {
+        console.error('Erreur lors de l\'inscription:', error);
+      }
       throw error;
     }
   };
@@ -71,14 +77,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const response = await authApi.googleAuth(idToken);
       await saveAuth(response.token, response.utilisateur);
-    } catch (error) {
-      console.error('Erreur lors de la connexion Google:', error);
+    } catch (error: any) {
+      // Ne pas logger les erreurs 401 (identifiants incorrects) qui sont attendues
+      if (error?.response?.status !== 401) {
+        console.error('Erreur lors de la connexion Google:', error);
+      }
       throw error;
     }
   };
 
   const saveAuth = async (authToken: string, userData: User) => {
-    // Normaliser les données utilisateur pour garantir la cohérence dans l'application 
+    // Normalise les données utilisateur pour garantir la cohérence dans l'application 
     const normalizedUser: User = {
       id: userData.id || userData.idCompte || 0,
       nom: userData.nom || userData.nomCompte || '',
@@ -116,7 +125,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       console.log('Updating user data with:', userData);
       
-      // Normaliser les données utilisateur (comme dans saveAuth)
+      // Normalise les données utilisateur
       const normalizedUser: User = {
         id: userData.id || userData.idCompte || 0,
         nom: userData.nom || userData.nomCompte || '',

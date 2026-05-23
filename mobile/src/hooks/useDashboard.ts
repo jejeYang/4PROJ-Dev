@@ -12,6 +12,7 @@ export interface FileTypeStats {
     type: string;
     count: number;
     emoji: string;
+    icon: any;
     label: string;
 }
 
@@ -49,6 +50,20 @@ const getFileTypeEmoji = (type: string): string => {
     return map[type] || '📁';
 };
 
+// Image par type de fichier
+const getFileTypeIcon = (type: string): any => {
+    const map: Record<string, any> = {
+        image: require('../assets/image.png'),
+        pdf: require('../assets/docs.png'),
+        document: require('../assets/docs.png'),
+        video: require('../assets/referencement-video.png'),
+        audio: require('../assets/fichier-audio.png'),
+        archive: require('../assets/archive.png'),
+        other: require('../assets/docs.png')
+    };
+    return map[type] || require('../assets/docs.png');
+};
+
 // Label par type de fichier
 const getFileTypeLabel = (type: string): string => {
     const map: Record<string, string> = {
@@ -70,6 +85,18 @@ export function obtenirEmojiFichier(nom: string): string {
     if (['mp3', 'wav', 'ogg', 'flac'].includes(ext)) return '🎵';
     if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return '📦';
     return '📄';
+}
+
+export function obtenirIconeFichier(nom: string): any {
+    const ext = nom.split('.').pop()?.toLowerCase() || '';
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(ext)) return require('../assets/image.png');
+    if (['pdf'].includes(ext)) return require('../assets/docs.png');
+    if (['doc', 'docx', 'odt', 'rtf', 'txt'].includes(ext)) return require('../assets/docs.png');
+    if (['xls', 'xlsx', 'csv', 'ppt', 'pptx'].includes(ext)) return require('../assets/diagramme-circulaire.png');
+    if (['mp4', 'avi', 'mov', 'mkv', 'webm'].includes(ext)) return require('../assets/referencement-video.png');
+    if (['mp3', 'wav', 'ogg', 'flac'].includes(ext)) return require('../assets/fichier-audio.png');
+    if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return require('../assets/archive.png');
+    return require('../assets/docs.png');
 }
 
 export function formatFileSize(bytes: number): string {
@@ -100,7 +127,6 @@ export function useDashboard(navigation: any) {
         // Envoie vers l'écran Documents en passant l'ID du dossier cible
         navigation.navigate('Documents', { targetFolderId: dossierId });
     } else {
-        // Fallback vers la racine si l'ID est introuvable
         navigation.navigate('Documents');
     }
 };
@@ -124,7 +150,21 @@ export function useDashboard(navigation: any) {
             const response: any = await apiClient.get('/api/dossiers/stats/home');
 
             const statsData = response.data || response;
-            setStorageStats(statsData.stockage);
+            
+            // Vérifie que les données de stockage sont valides
+            const stockageData = statsData.stockage || {};
+            const stockageUtilise = typeof stockageData.utilise === 'number' && !isNaN(stockageData.utilise) 
+                ? stockageData.utilise 
+                : 0;
+            const stockageTotal = typeof stockageData.total === 'number' && !isNaN(stockageData.total) 
+                ? stockageData.total 
+                : MAX_STORAGE;
+            
+            setStorageStats({
+                utilise: stockageUtilise,
+                total: stockageTotal
+            });
+            
             setDerniersDossiers(statsData.derniersDossiers || []);
             setDerniersFichiers(statsData.derniersFichiers || []);
 
@@ -141,6 +181,7 @@ export function useDashboard(navigation: any) {
                     type,
                     count: typeCounts[type],
                     emoji: getFileTypeEmoji(type),
+                    icon: getFileTypeIcon(type),
                     label: getFileTypeLabel(type)
                 }))
                 .sort((a, b) => b.count - a.count);

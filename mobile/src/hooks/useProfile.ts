@@ -63,13 +63,13 @@ export function useProfile() {
     // Charger l'avatar depuis l'URL si disponible
     useEffect(() => {
         if (user?.avatarUrl) {
-        setAvatarUri(user.avatarUrl);
-        setAvatarError(false);
+            setAvatarUri(user.avatarUrl);
+            setAvatarError(false);
         } else if (user?.id) {
-        const defaultAvatarUrl = `${API_BASE_URL}/api/users/avatar/${user.id}?t=${Date.now()}`;
-        setAvatarUri(defaultAvatarUrl);
+            const defaultAvatarUrl = `${API_BASE_URL}/api/users/avatar/${user.id}?t=${Date.now()}`;
+            setAvatarUri(defaultAvatarUrl);
         }
-    }, [user?.id, user?.avatarUrl]);
+    }, [user?.id]);
 
     const pickImage = async () => {
         try {
@@ -113,15 +113,11 @@ export function useProfile() {
 
         await apiClient.uploadFile('/api/users/avatar', formDataToUpload);
 
-        const newAvatarUrl = `${API_BASE_URL}/api/users/avatar/${user?.id}?t=${Date.now()}`;
+        // Rafraîchir les données utilisateur depuis le serveur
+        await refreshUser();
         
-        if (user) {
-            await updateUserData({
-            ...user,
-            avatarUrl: newAvatarUrl,
-            });
-        }
-
+        // Mettre à jour l'état local avec timestamp pour forcer le rechargement de l'image
+        const newAvatarUrl = `${API_BASE_URL}/api/users/avatar/${user?.id}?t=${Date.now()}`;
         setAvatarUri(newAvatarUrl);
         setAvatarError(false);
         Alert.alert('Succès', 'Photo de profil mise à jour avec succès');
@@ -170,14 +166,39 @@ export function useProfile() {
         }
     };
 
+    const validatePassword = (pwd: string): { isValid: boolean; message?: string } => {
+        if (pwd.length < 6) {
+            return { isValid: false, message: 'Le mot de passe doit contenir au moins 6 caractères' };
+        }
+        
+        if (!/[A-Z]/.test(pwd)) {
+            return { isValid: false, message: 'Le mot de passe doit contenir au moins une majuscule' };
+        }
+        
+        if (!/[a-z]/.test(pwd)) {
+            return { isValid: false, message: 'Le mot de passe doit contenir au moins une minuscule' };
+        }
+        
+        if (!/[0-9]/.test(pwd)) {
+            return { isValid: false, message: 'Le mot de passe doit contenir au moins un chiffre' };
+        }
+        
+        if (!/[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\/';~]/.test(pwd)) {
+            return { isValid: false, message: 'Le mot de passe doit contenir au moins un caractère spécial' };
+        }
+        
+        return { isValid: true };
+    };
+
     const handleChangePassword = async () => {
         if (passwordData.nouveau !== passwordData.confirmation) {
         Alert.alert('Erreur', 'Les mots de passe ne correspondent pas');
         return;
         }
 
-        if (passwordData.nouveau.length < 6) {
-        Alert.alert('Erreur', 'Le mot de passe doit contenir au moins 6 caractères');
+        const validation = validatePassword(passwordData.nouveau);
+        if (!validation.isValid) {
+        Alert.alert('Erreur', validation.message || 'Mot de passe invalide');
         return;
         }
 
