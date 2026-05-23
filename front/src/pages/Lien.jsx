@@ -109,7 +109,6 @@ const Lien = () => {
                             <div className="col-checkbox" style={{ width: '20px' }}></div>
                             <div className="col-nom">Nom</div>
                             <div className="col-extension">Extension</div>
-                            <div className="col-date">Créé le</div>
                             <div className="col-date">Modifié le</div>
                             <div className="col-taille">Taille</div>
                             <div className="col-actions">Actions</div>
@@ -125,7 +124,6 @@ const Lien = () => {
                                     </span>
                                 </div>
                                 <div className="col-extension">dossier</div>
-                                <div className="col-date">-</div>
                                 <div className="col-date">-</div>
                                 <div className="col-taille">...</div>
                                 <div className="col-actions">
