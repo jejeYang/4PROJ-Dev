@@ -15,6 +15,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useMobileTheme } from '../context/MobileThemeContext';
 import FileViewer from '../components/FileViewer';
 import { useDocuments, DisplayItem } from '../hooks/useDocuments';
+import { useMultipleSelection } from '../hooks/useMultipleSelection';
 import { styles } from '../styles/DocumentsScreen.styles';
 
 export default function DocumentsScreen({ navigation, route }: any) {
@@ -67,11 +68,14 @@ export default function DocumentsScreen({ navigation, route }: any) {
     handleEmptyTrash,
     navigateInMoveModal,
     confirmMove,
+    openMoveModal,
     handleShare,
     copyShareLink,
     showItemOptions,
     handleOptionPress,
     formatFileSize,
+    handleMultipleDelete,
+    handleMultipleDownload,
     showRenameModal,
     setShowRenameModal,
     newName,
@@ -79,6 +83,8 @@ export default function DocumentsScreen({ navigation, route }: any) {
     handleRename,
     itemToRename,
   } = useDocuments(navigation, route);
+
+  const { selection, isSelected, toggleSelection, toggleSelectAll, clearSelection } = useMultipleSelection();
 
   // Fonction pour déterminer l'icône à afficher selon le type de fichier
   const getFileIcon = (fileName: string) => {
@@ -138,25 +144,31 @@ export default function DocumentsScreen({ navigation, route }: any) {
 
   // Affiche contenu
   const renderFileItem = ({ item }: { item: DisplayItem }) => (
-    <View style={[styles.fileItem, { backgroundColor: theme.isDark ? '#2C2C2E' : '#FFFFFF' }]}>
+    <View style={[styles.fileItem, { backgroundColor: theme.isDark ? '#2C2C2E' : '#FFFFFF' }, isSelected(item) && { borderColor: theme.primaryColor, borderWidth: 1 }]}>
       <TouchableOpacity
         style={styles.fileItemContent}
         onPress={() => {
-          if (item.type === 'folder' && item.dossier) navigateToFolder(item.dossier);
-          else handleFilePress(item);
+          // Si le mode sélection est actif, on sélectionne. Sinon on ouvre normalement.
+          if (selection.length > 0) {
+            toggleSelection(item);
+          } else {
+            if (item.type === 'folder' && item.dossier) navigateToFolder(item.dossier);
+            else handleFilePress(item);
+          }
         }}
-        onLongPress={() => showItemOptions(item)}
+        onLongPress={() => toggleSelection(item)}
       >
+        {selection.length > 0 && (
+            <View style={[styles.checkbox, isSelected(item) && { backgroundColor: theme.primaryColor, borderColor: theme.primaryColor }]}>
+                {isSelected(item) && <Text style={{ color: 'white', fontSize: 12, fontWeight: 'bold' }}>✓</Text>}
+            </View>
+        )}
+
         <View style={styles.fileIcon}>
-          <Image 
-            source={item.type === 'folder' ? require('../assets/dossier.png') : getFileIcon(item.name)} 
-            style={styles.iconImage}
-          />
+          <Image source={item.type === 'folder' ? require('../assets/dossier.png') : getFileIcon(item.name)} style={styles.iconImage} />
         </View>
         <View style={styles.fileInfo}>
-          <Text style={[styles.fileName, { color: theme.textColor }]} numberOfLines={1}>
-            {item.name}
-          </Text>
+          <Text style={[styles.fileName, { color: theme.textColor }]} numberOfLines={1}>{item.name}</Text>
           <View style={styles.fileDetails}>
             {item.size !== undefined && (
               <Text style={[styles.fileSize, { color: theme.isDark ? '#8E8E93' : '#6C6C70' }]}>
@@ -172,15 +184,17 @@ export default function DocumentsScreen({ navigation, route }: any) {
         </View>
       </TouchableOpacity>
       
-      {!isInTrash && (
+      {selection.length === 0 && !isInTrash && (
         <TouchableOpacity style={styles.trashButton} onPress={() => handleMoveToTrash(item)}>
           <Image source={require('../assets/corbeille.png')} style={styles.trashIconImage} />
         </TouchableOpacity>
       )}
       
-      <TouchableOpacity onPress={() => showItemOptions(item)} style={styles.moreButton}>
-        <Text style={{ fontSize: 20, color: theme.textColor }}>⋮</Text>
-      </TouchableOpacity>
+      {selection.length === 0 && (
+        <TouchableOpacity onPress={() => showItemOptions(item)} style={styles.moreButton}>
+          <Text style={{ fontSize: 20, color: theme.textColor }}>⋮</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -189,53 +203,67 @@ export default function DocumentsScreen({ navigation, route }: any) {
     <View style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
       {renderBreadcrumb()}
 
-      <View style={styles.actionBar}>
-        {!isInTrash ? (
-          <>
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: theme.primaryColor }]}
-              onPress={() => setShowCreateModal(true)}
-            >
-              <View style={styles.actionButtonContent}>
-                <Image source={require('../assets/dossier.png')} style={styles.actionButtonIcon} />
-                <Text style={styles.actionButtonText}> Nouveau</Text>
+      {selection.length > 0 ? (
+        <View style={[styles.multipleActionBar, { backgroundColor: theme.primaryColor }]}>
+          <TouchableOpacity onPress={clearSelection} style={styles.multipleActionBtn}>
+            <Text style={styles.multipleActionText}>Annuler</Text>
+          </TouchableOpacity>
+          <Text style={styles.multipleActionTitle}>{selection.length} élément(s)</Text>
+          <TouchableOpacity onPress={() => toggleSelectAll(items)} style={styles.multipleActionBtn}>
+            <Text style={styles.multipleActionText}>{selection.length === items.length ? 'Aucun' : 'Tout'}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={styles.actionBar}>
+          {!isInTrash ? (
+            <>
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: theme.primaryColor }]}
+                onPress={() => setShowCreateModal(true)}
+              >
+                <View style={styles.actionButtonContent}>
+                  <Image source={require('../assets/dossier.png')} style={styles.actionButtonIcon} />
+                  <Text style={styles.actionButtonText} numberOfLines={1} adjustsFontSizeToFit>Nouveau</Text>
+                </View>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: theme.primaryColor }]}
+                onPress={() => navigation.navigate('Upload')}
+              >
+                <View style={styles.actionButtonContent}>
+                  <Image source={require('../assets/uploader-des-fichiers.png')} style={styles.actionButtonIcon} />
+                  <Text style={styles.actionButtonText} numberOfLines={1} adjustsFontSizeToFit>Upload</Text>
+                </View>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: '#FF3B30' }]}
+                onPress={navigateToTrash}
+              >
+                <View style={styles.actionButtonContent}>
+                  <Image source={require('../assets/corbeille.png')} style={styles.actionButtonIcon} />
+                  <Text style={styles.actionButtonText} numberOfLines={1} adjustsFontSizeToFit>Corbeille</Text>
+                </View>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <View style={[styles.trashInfoContainer, { backgroundColor: theme.isDark ? '#2C2C2E' : '#F2F2F7' }]}>
+                <Text style={[styles.trashInfoText, { color: theme.textColor }]}>
+                  Taille totale : {formatFileSize(trashSize)}
+                </Text>
               </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: theme.primaryColor }]}
-              onPress={() => navigation.navigate('Upload')}
-            >
-              <View style={styles.actionButtonContent}>
-                <Image source={require('../assets/uploader-des-fichiers.png')} style={styles.actionButtonIcon} />
-                <Text style={styles.actionButtonText}> Upload</Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: '#FF3B30' }]}
-              onPress={navigateToTrash}
-            >
-              <View style={styles.actionButtonContent}>
-                <Image source={require('../assets/corbeille.png')} style={styles.actionButtonIcon} />
-                <Text style={styles.actionButtonText}> Corbeille</Text>
-              </View>
-            </TouchableOpacity>
-          </>
-        ) : (
-          <>
-            <View style={[styles.trashInfoContainer, { backgroundColor: theme.isDark ? '#2C2C2E' : '#F2F2F7' }]}>
-              <Text style={[styles.trashInfoText, { color: theme.textColor }]}>
-                Taille totale : {formatFileSize(trashSize)}
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: '#FF3B30', flex: 0.6 }]}
-              onPress={handleEmptyTrash}
-            >
-              <Text style={styles.actionButtonText}>Vider</Text>
-            </TouchableOpacity>
-          </>
-        )}
-      </View>
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: '#FF3B30', flex: 0.6 }]}
+                onPress={handleEmptyTrash}
+              >
+                <Text style={styles.actionButtonText}>Vider</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      )}
 
       {/* Chargement */}
       {isLoading ? (
@@ -262,6 +290,34 @@ export default function DocumentsScreen({ navigation, route }: any) {
         />
       )}
 
+      {selection.length > 0 && !isInTrash && (
+        <View style={[styles.multipleBottomBar, { backgroundColor: theme.isDark ? '#2C2C2E' : '#FFFFFF', borderTopColor: theme.isDark ? '#3A3A3C' : '#E5E5EA' }]}>
+            
+            <TouchableOpacity style={styles.bottomBarBtn} onPress={() => handleMultipleDelete(selection, clearSelection)}>
+                <Image source={require('../assets/corbeille.png')} style={[styles.bottomBarIcon]} />
+                <Text style={{ color: '#FF3B30', fontSize: 12, marginTop: 4 }}>Supprimer</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.bottomBarBtn} onPress={() => handleMultipleDownload(selection, clearSelection)}>
+                <Image source={require('../assets/telecharger-zip.png')} style={[styles.bottomBarIcon]} />
+                <Text style={{ color: theme.textColor, fontSize: 12, marginTop: 4 }}>Télécharger</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.bottomBarBtn} onPress={() => openMoveModal(selection)}>
+                <Image source={require('../assets/deplacer-le-fichier.png')} style={[styles.bottomBarIcon]} />
+                <Text style={{ color: theme.textColor, fontSize: 12, marginTop: 4 }}>Déplacer</Text>
+            </TouchableOpacity>
+            
+        </View>
+      )}
+      {selection.length > 0 && isInTrash && (
+        <View style={[styles.multipleBottomBar, { backgroundColor: theme.isDark ? '#2C2C2E' : '#FFFFFF', borderTopColor: theme.isDark ? '#3A3A3C' : '#E5E5EA' }]}>
+            <TouchableOpacity style={styles.bottomBarBtn} onPress={() => handleMultipleDownload(selection, clearSelection)}>
+                <Image source={require('../assets/telecharger-zip.png')} style={[styles.bottomBarIcon]} />
+                <Text style={{ color: theme.textColor, fontSize: 12, marginTop: 4 }}>Télécharger</Text>
+            </TouchableOpacity>
+        </View>
+      )}
 
       {/* Modal de création de dossier */}
       <Modal visible={showCreateModal} transparent animationType="slide" onRequestClose={() => setShowCreateModal(false)}>

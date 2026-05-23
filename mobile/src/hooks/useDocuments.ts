@@ -470,8 +470,10 @@ export interface BreadcrumbItem {
     };
 
     // Fonction pour ouvrir le modal de déplacement
-    const openMoveModal = async (item: DisplayItem) => {
-        setItemToMove(item);
+    const openMoveModal = async (itemsToMoveParam: DisplayItem | DisplayItem[]) => {
+        const itemsArray = Array.isArray(itemsToMoveParam) ? itemsToMoveParam : [itemsToMoveParam];
+        // On utilise itemToMove pour stocker le tableau complet (il faudra modifier son typage si TypeScript râle)
+        setItemToMove(itemsArray as any); 
         setMoveDestination(userRootFolderId);
         setMoveBreadcrumb([{ id: null, name: 'Mes Documents' }]);
         
@@ -480,9 +482,9 @@ export interface BreadcrumbItem {
                 const folders = await dossierApi.getSousDossiers(userRootFolderId);
                 // Filtrer pour ne pas afficher le dossier à déplacer lui-même et la corbeille
                 const availableFolders = folders.filter(f => {
-                const folderName = f.cheminDaccesDossier.split('/').pop() || f.cheminDaccesDossier;
-                return folderName !== '.corbeille' && 
-                        (item.type !== 'folder' || f.idDossier !== item.dossier?.idDossier);
+                    const folderName = f.cheminDaccesDossier.split('/').pop() || f.cheminDaccesDossier;
+                    // Exclure la corbeille et les dossiers qu'on est en train de déplacer
+                    return folderName !== '.corbeille' && !itemsArray.some(item => item.type === 'folder' && item.dossier?.idDossier === f.idDossier);
                 });
                 setMoveAvailableFolders(availableFolders);
             }
@@ -528,23 +530,28 @@ export interface BreadcrumbItem {
 
     // Fonction pour confirmer le déplacement
     const confirmMove = async () => {
-        if (!itemToMove || moveDestination === null) return;
-        try {
-        if (itemToMove.type === 'folder' && itemToMove.dossier) {
-            await dossierApi.moveDossier(itemToMove.dossier.idDossier, moveDestination);
-            Alert.alert('Succès', 'Dossier déplacé avec succès');
-        } else if (itemToMove.type === 'file' && itemToMove.fichier) {
-            const sourceFolder = currentDossierId || userRootFolderId;
-            if (sourceFolder) {
-            await dossierApi.moveFichier(sourceFolder, itemToMove.fichier.nom, moveDestination);
-            Alert.alert('Succès', 'Fichier déplacé avec succès');
-            }
-        }
+        const itemsToMoveArray = Array.isArray(itemToMove) ? itemToMove : [itemToMove];
+        if (!itemsToMoveArray.length || moveDestination === null) return;
+        
+        setIsLoading(true);
         setShowMoveModal(false);
-        setItemToMove(null);
-        loadContent();
+        const sourceFolder = currentDossierId || userRootFolderId;
+
+        try {
+            for (const item of itemsToMoveArray) {
+                if (item?.type === 'folder' && item.dossier) {
+                    await dossierApi.moveDossier(item.dossier.idDossier, moveDestination);
+                } else if (item?.type === 'file' && item.fichier && sourceFolder) {
+                    await dossierApi.moveFichier(sourceFolder, item.fichier.nom, moveDestination);
+                }
+            }
+            Alert.alert('Succès', 'Éléments déplacés avec succès');
+            setItemToMove(null);
+            loadContent();
         } catch (error: any) {
-        Alert.alert('Erreur', error.response?.data?.error || 'Impossible de déplacer l\'élément');
+            Alert.alert('Erreur', error.response?.data?.error || 'Impossible de déplacer l\'élément');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -730,6 +737,100 @@ export interface BreadcrumbItem {
         return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
     };
 
+    // Suppression en masse de la selection multiple
+    const handleMultipleDelete = (selection: DisplayItem[], clearSelection: () => void) => {
+        if (selection.length === 0) return;
+        Alert.alert(
+            'Supprimer la sélection',
+            `Voulez-vous déplacer ${selection.length} élément(s) vers la corbeille ?`,
+            [
+                { text: 'Annuler', style: 'cancel' },
+                {
+                    text: 'Supprimer',
+                    style: 'destructive',
+                    onPress: async () => {
+                        setIsLoading(true);
+                        const parentId = currentDossierId || userRootFolderId;
+                        try {
+                            for (const item of selection) {
+                                if (item.type === 'folder' && item.dossier) {
+                                    await dossierApi.moveToTrash(item.dossier.idDossier);
+                                } else if (item.type === 'file' && item.fichier && parentId) {
+                                    await dossierApi.moveFileToTrash(parentId, item.fichier.nom);
+                                }
+                            }
+                            clearSelection();
+                            loadContent();
+                            Alert.alert('Succès', 'Éléments supprimés');
+                        } catch (error: any) {
+                            Alert.alert('Erreur', 'Impossible de supprimer certains éléments');
+                        } finally {
+                            setIsLoading(false);
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    // Téléchargement en masse de la sélection
+    const handleMultipleDownload = async (selection: DisplayItem[], clearSelection: () => void) => {
+        if (selection.length === 0) return;
+
+        try {
+            Alert.alert('Téléchargement', 'Préparation de l\'archive ZIP par le serveur...');
+            const token = await AsyncStorage.getItem('@supfile_token');
+            if (!token) {
+                Alert.alert('Erreur', 'Non authentifié');
+                return;
+            }
+
+            // Reconstruction du chemin actuel (similaire au fil d'ariane sur le web)
+            const userId = user?.id || user?.idCompte;
+            const currentPath = breadcrumb.slice(1).map(b => b.name).join('/');
+            const basePath = `user_${userId}`;
+            const cheminActuel = currentPath ? `${basePath}/${currentPath}` : basePath;
+
+            const listeFichier = selection
+                .filter(s => s.type === 'file')
+                .map(s => `${cheminActuel}/${s.name}`);
+                
+            const listeDossier = selection
+                .filter(s => s.type === 'folder')
+                .map(s => `${cheminActuel}/${s.name}`);
+
+            // Construction sécurisée des paramètres d'URL
+            const queryParts = [];
+            if (listeFichier.length > 0) queryParts.push(`listeFichier=${encodeURIComponent(JSON.stringify(listeFichier))}`);
+            if (listeDossier.length > 0) queryParts.push(`listeDossier=${encodeURIComponent(JSON.stringify(listeDossier))}`);
+            const queryString = queryParts.join('&');
+
+            const zipUrl = `${API_BASE_URL}/api/telechargerZip?${queryString}`;
+            const docDir = (FileSystem as any).documentDirectory || (FileSystem as any).cacheDirectory || '';
+            const zipUri = docDir + `Selection_${new Date().getTime()}.zip`;
+
+            const downloadResult = await FileSystem.downloadAsync(zipUrl, zipUri, {
+                headers: { 'Authorization': `Bearer ${token}` },
+            });
+
+            if (downloadResult.status === 200) {
+                const isAvailable = await Sharing.isAvailableAsync();
+                if (isAvailable) {
+                    await Sharing.shareAsync(downloadResult.uri);
+                    clearSelection();
+                } else {
+                    Alert.alert('Succès', 'Archive téléchargée: ' + downloadResult.uri);
+                    clearSelection();
+                }
+            } else {
+                Alert.alert('Erreur', 'Impossible de télécharger la sélection');
+            }
+        } catch (error: any) {
+            console.error('Erreur téléchargement multiple:', error);
+            Alert.alert('Erreur', error.message || 'Impossible de créer l\'archive');
+        }
+    };
+
     return {
         items,
         isLoading,
@@ -776,7 +877,10 @@ export interface BreadcrumbItem {
         handleMoveToTrash,
         handleEmptyTrash,
         navigateInMoveModal,
+        openMoveModal,
         confirmMove,
+        handleMultipleDelete,
+        handleMultipleDownload,
         showRenameModal,
         setShowRenameModal,
         itemToRename,
@@ -787,6 +891,6 @@ export interface BreadcrumbItem {
         copyShareLink,
         showItemOptions,
         handleOptionPress,
-        formatFileSize,
+        formatFileSize
     };
 }

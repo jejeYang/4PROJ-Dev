@@ -34,8 +34,10 @@ export const styles = StyleSheet.create({
     },
     actionBar: {
         flexDirection: 'row',
-        padding: 12,
-        gap: 8,
+        paddingVertical: 12,
+        paddingHorizontal: 8,
+        justifyContent: 'space-between',
+        width: '100%',
     },
     actionButton: {
         flex: 1,
@@ -43,10 +45,15 @@ export const styles = StyleSheet.create({
         borderRadius: 8,
         justifyContent: 'center',
         alignItems: 'center',
+        marginHorizontal: 4,
+        overflow: 'hidden',
     },
     actionButtonContent: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
+        width: '100%',
+        paddingHorizontal: 2,
     },
     actionButtonIcon: {
         width: 18,
@@ -55,8 +62,9 @@ export const styles = StyleSheet.create({
     },
     actionButtonText: {
         color: '#FFFFFF',
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: '600',
+        flexShrink: 1,
     },
     trashInfoContainer: {
         flex: 1,
@@ -125,6 +133,52 @@ export const styles = StyleSheet.create({
     },
     moreButton: {
         padding: 8,
+    },
+    checkbox: {
+        width: 20,
+        height: 20,
+        borderRadius: 10,
+        borderWidth: 2,
+        borderColor: '#8E8E93',
+        marginRight: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    multipleActionBar: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        height: 54,
+    },
+    multipleActionBtn: {
+        padding: 8,
+    },
+    multipleActionText: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    multipleActionTitle: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    multipleBottomBar: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        paddingVertical: 12,
+        paddingBottom: 24,
+        borderTopWidth: 1,
+    },
+    bottomBarBtn: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        flex: 1,
+    },
+    bottomBarIcon: {
+        width: 24,
+        height: 24,
     },
     emptyList: {
         flex: 1,
