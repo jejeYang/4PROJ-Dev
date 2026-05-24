@@ -1,9 +1,8 @@
 export const swaggerSpec = {
-  openapi: '3.0.3',
   info: {
     title: 'SupFile API',
     version: '1.0.0',
-    description: 'Documentation OpenAPI des endpoints backend SupFile.',
+    description: 'Documentation des endpoints backend SupFile.',
   },
   servers: [
     {

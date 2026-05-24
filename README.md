@@ -1,11 +1,9 @@
 # SupFile
+SupFile est une application de gestion, stockage et partage de fichiers développée dans le cadre du projet de fin de 4e année à SUPINFO Tours.
 
-SupFile est une application de gestion, stockage et partage de fichiers développée dans le cadre d'un projet de 4e année à SUPINFO Tours.
-
-Le projet propose une plateforme complète avec une application web, une API REST, une base PostgreSQL et une application mobile Expo. Les utilisateurs peuvent créer un compte, organiser leurs fichiers par dossiers, téléverser des documents, gérer une corbeille, partager des dossiers avec d'autres utilisateurs et générer des liens publics protégés.
+Le projet propose une plateforme complète avec une application web, une API REST, une base PostgreSQL et une application mobile Expo. Les utilisateurs peuvent créer un compte, organiser leurs fichiers par dossiers, téléverser des documents, gérer leurs dossiers & fichiers, partager des dossiers avec d'autres utilisateurs et générer des liens publics protégés.
 
 ## Équipe projet
-
 - Cyprien Fournier
 - Alex Gontier
 - Jeremy Yang
@@ -13,7 +11,6 @@ Le projet propose une plateforme complète avec une application web, une API RES
 - Alexandre Chuzel-Marmot
 
 ## Sommaire
-
 - [Fonctionnalités](#fonctionnalités)
 - [Diagramme de cas d'utilisation](#diagramme-de-cas-dutilisation)
 - [Architecture](#architecture)
@@ -24,7 +21,6 @@ Le projet propose une plateforme complète avec une application web, une API RES
 - [Variables d'environnement](#variables-denvironnement)
 - [Documentation API Swagger](#documentation-api-swagger)
 - [Manuel utilisateur](#manuel-utilisateur)
-- [Application mobile](#application-mobile)
 - [Structure du projet](#structure-du-projet)
 - [Scripts utiles](#scripts-utiles)
 - [Base de données](#base-de-données)
@@ -36,27 +32,23 @@ Le projet propose une plateforme complète avec une application web, une API RES
 - Authentification par email et mot de passe.
 - Authentification Google OAuth.
 - Création, modification et suppression de compte.
-- Mise à jour du profil utilisateur et de l'avatar.
 - Création, renommage, déplacement et suppression de dossiers.
+- Renommage, déplacement et suppression de fichiers.
 - Téléversement simple et multiple de fichiers.
-- Visualisation et téléchargement de fichiers.
-- Téléchargement d'une sélection de fichiers ou dossiers au format ZIP.
-- Recherche de fichiers par nom et par type.
+- Visualisation rapide de fichiers.
+- Téléchargement d'éelements au format ZIP, déplacement d'elements et suppression d'elements, via selection multiple.
+- Recherche, filtres et tri.
 - Gestion d'une corbeille avec restauration ou suppression définitive.
 - Partage interne de dossiers entre utilisateurs.
-- Génération de liens publics de partage.
-- Protection optionnelle des liens publics par mot de passe.
-- Expiration automatique des liens publics.
+- Génération de liens publics de partage avec mot de passe & date d'expiration.
 - Documentation API interactive avec Swagger UI.
 - Interface web responsive.
-- Application mobile Expo pour Mobile et web.
+- Application mobile Expo.
 
 ## Diagramme de cas d'utilisation
-
 ![Diagramme de cas d'utilisation de l'application SupFile](docs/Diagramme_de_cas_dutilisation.png)
 
 ## Architecture
-
 Le projet est organisé en trois applications principales :
 
 - `back` : API REST Express, Prisma, PostgreSQL, gestion des fichiers et documentation Swagger.
@@ -72,7 +64,6 @@ Les services Docker lancent :
 ## Technologies
 
 ### Backend
-
 - Node.js
 - Express
 - Prisma ORM
@@ -85,7 +76,6 @@ Les services Docker lancent :
 - Swagger UI Express
 
 ### Frontend web
-
 - React
 - Vite
 - React Router
@@ -95,7 +85,6 @@ Les services Docker lancent :
 - Recharts
 
 ### Mobile
-
 - Expo
 - React Native
 - TypeScript
@@ -106,27 +95,22 @@ Les services Docker lancent :
 - Expo File System
 
 ### Infrastructure
-
 - Docker
 - Docker Compose
 - PostgreSQL 16 Alpine
 
 ## Prérequis
-
 Pour lancer le projet avec Docker :
-
 - Docker
 - Docker Compose
 
 Pour un lancement local sans Docker :
-
 - Node.js 22 recommandé
 - npm
 - PostgreSQL
-- Expo Go pour tester l'application mobile sur téléphone
+- Expo Go version 54 pour l'application mobile sur téléphone
 
 ## Démarrage rapide avec Docker
-
 Depuis la racine du projet, créer d'abord le fichier `.env` local à partir du modèle :
 
 ```powershell
@@ -152,69 +136,20 @@ Pour arrêter les conteneurs :
 docker compose down
 ```
 
-Pour supprimer aussi le volume PostgreSQL :
-
-```bash
-docker compose down -v
-```
-
 ## Installation locale
+### Installer les prérequis du mobile
+- Installer Expo Go version 54 sur son mobile (https://expo.dev/)
+- Connecter par USB son mobile à son ordinateur, avec autorisation de transfert de fichier.
+- Avoir son mobile et son ordinateur sur le même réseau
+- Mettre l'ip de votre ordi dans l'ip de mobile/src/config.ts 
 
-### 1. Installer les dépendances backend
-
-```bash
-cd back
-npm install
-```
-
-### 2. Configurer la base de données
-
-Créer une base PostgreSQL nommée `supfile`, puis définir les variables `DATABASE_URL` et `JWT_SECRET`.
-
-Exemple :
-
-```bash
-export DATABASE_URL="postgresql://postgres:<mot_de_passe>@localhost:5432/supfile"
-export JWT_SECRET="<secret_jwt_long_et_aleatoire>"
-```
-
-### 3. Initialiser Prisma
-
-```bash
-cd back
-npm run prisma:generate
-npm run prisma:migrate
-npm run prisma:seed
-```
-
-### 4. Lancer le backend
-
-```bash
-cd back
-npm start
-```
-
-Le backend démarre sur [http://localhost:3000](http://localhost:3000).
-
-### 5. Installer et lancer le frontend
-
-```bash
-cd front
-npm install
-npm run dev
-```
-
-Le frontend démarre sur [http://localhost:5173](http://localhost:5173).
-
-### 6. Installer et lancer le mobile
-
+### Lancer l'application mobile
 ```bash
 cd mobile
 npm install
 npm start
 ```
-
-Scanner ensuite le QR code avec Expo Go ou ouvrir l'application depuis un simulateur.
+Sur Expo Go, utiliser le lien ex://192.168.x.x:8081, ou scanner le QR code
 
 ## Variables d'environnement
 
@@ -256,6 +191,12 @@ npm run dev
 
 ### Mobile
 
+| Variable | Description |
+| --- | --- |
+| `EXPO_PUBLIC_GOOGLE_CLIENT_ID` | Client ID OAuth Google utilisé par le mobile |
+| `EXPO_PUBLIC_GOOGLE_ANDROID_ID` | Client ID OAuth Google utilisé par Android |
+| `EXPO_PUBLIC_GOOGLE_IOS_ID` | Client ID OAuth Google utilisé par IOS |
+
 L'application mobile utilise l'URL déclarée dans :
 
 ```text
@@ -271,11 +212,9 @@ export const API_BASE_URL = 'http://192.168.x.x:3000';
 Le téléphone et l'ordinateur doivent être connectés au même réseau.
 
 ## Documentation API Swagger
-
-Une documentation OpenAPI est disponible côté backend :
+Une documentation est disponible côté backend :
 
 - Interface Swagger UI : [http://localhost:3000/api-docs](http://localhost:3000/api-docs)
-- Spécification JSON : [http://localhost:3000/swagger.json](http://localhost:3000/swagger.json)
 
 La documentation couvre notamment :
 
@@ -302,36 +241,9 @@ x-lien-password: <mot-de-passe>
 ou via le paramètre de requête `password`.
 
 ## Manuel utilisateur
-
 Un manuel de prise en main de l'interface web est disponible ici :
 
 [Consulter le manuel utilisateur au format Google Docs](docs/manuel-utilisateur-google-docs.docx)
-
-## Application mobile
-
-L'application mobile se trouve dans le dossier `mobile`.
-
-Prérequis :
-
-- Installer Expo Go sur le téléphone.
-- Vérifier que la version Expo utilisée est compatible avec le projet.
-- Mettre à jour `mobile/src/config.ts` avec l'IP locale du backend.
-- Connecter le téléphone et l'ordinateur au même réseau.
-
-Lancement :
-
-```bash
-cd mobile
-npm start
-```
-
-Commandes disponibles :
-
-```bash
-npm run android
-npm run ios
-npm run web
-```
 
 ## Structure du projet
 
@@ -375,8 +287,12 @@ npm run web
 │   │   ├── components
 │   │   ├── config.ts
 │   │   ├── context
+│   │   ├── hooks
 │   │   ├── navigation
 │   │   └── screens
+│   │   └── styles
+│   │   └── types
+│   │   └── utils
 │   └── App.tsx
 ├── docs
 │   ├── Diagramme_de_cas_dutilisation.png
@@ -426,6 +342,7 @@ Le backend utilise Prisma avec PostgreSQL.
 Le diagramme UML de la base est disponible au format png :
 
 [Ouvrir le diagramme UML de la base de données](docs/diagramme-uml-base-donnees.drawio.png)
+![Diagramme UML de la base de données](docs/diagramme-uml-base-donnees.drawio.png)
 
 Les modèles principaux sont :
 
@@ -444,7 +361,6 @@ npm run prisma:seed
 ```
 
 ## Comptes de démonstration
-
 Le seed crée des comptes de test :
 
 | Email | Rôle |
@@ -460,14 +376,10 @@ npm run prisma:seed
 ```
 
 ## Notes de développement
-
 - Les fichiers utilisateurs sont stockés physiquement dans `back/storage/files` en local.
 - En Docker, ce dossier est monté dans le conteneur backend sur `/app/files`.
 - La corbeille repose sur un dossier spécial `.corbeille`.
 - Un job planifié supprime les liens publics expirés chaque nuit.
-- Les tests automatisés ne sont pas encore configurés dans le projet.
-- Les secrets ne sont pas versionnés : conserver les vraies valeurs uniquement dans un fichier `.env` local.
 
 ## Licence
-
 Projet académique réalisé à SUPINFO Tours.
