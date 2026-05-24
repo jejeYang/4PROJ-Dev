@@ -10,6 +10,9 @@ Le projet propose une plateforme complète avec une application web, une API RES
 - Killian Moreau
 - Alexandre Chuzel-Marmot
 
+## Dépôt Git publique
+Le dépôtt Git est accessible publiquement sur https://github.com/jejeYang/4PROJ-Dev.git 
+
 ## Sommaire
 - [Fonctionnalités](#fonctionnalités)
 - [Diagramme de cas d'utilisation](#diagramme-de-cas-dutilisation)
